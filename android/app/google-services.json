@@ -9,10 +9,23 @@
       "client_info": {
         "mobilesdk_app_id": "1:731940586001:android:d74841431c0d651eada7b0",
         "android_client_info": {
-          "package_name": "com.maruti.stationery.maruti_stationery"
+          "package_name": "com.example.maruti_stationery"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "731940586001-rdmjro13spv1l2ucsp9mcr9r2vinnu63.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.maruti_stationery",
+            "certificate_hash": "7f11d6eab440cf8dc987a296073156e3ac058267"
+          }
+        },
+        {
+          "client_id": "731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCJQlqHLouQLYOyX9s1IizQLCENqbgvsO4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
