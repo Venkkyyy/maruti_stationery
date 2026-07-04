@@ -2,7 +2,6 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:maruti_stationery/providers/theme_provider.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -11,25 +10,11 @@ import 'core/router/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Force portrait orientation
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  // Transparent status bar over content
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  // Initialize Firebase (wrapped in try-catch in case options/config are not yet deployed)
+  // Initialize Firebase
   try {
-    await Firebase.initializeApp(
-      // options: DefaultFirebaseOptions.currentPlatform,
-    );
+    debugPrint("Firebase init START");
+    await Firebase.initializeApp();
+    debugPrint("Firebase init END");
 
     // Enable Crashlytics even in debug (optional during dev)
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
@@ -46,11 +31,13 @@ void main() async {
     debugPrint("Firebase initialization bypassed or failed: $e");
   }
 
+  debugPrint("runApp START");
   runApp(
     const ProviderScope(
       child: MarutiApp(),
     ),
   );
+  debugPrint("runApp END");
 }
 
 class MarutiApp extends ConsumerWidget {

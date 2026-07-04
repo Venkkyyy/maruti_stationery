@@ -1,7 +1,6 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:maruti_stationery/core/constants/app_colors.dart';
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});

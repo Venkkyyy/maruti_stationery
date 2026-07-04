@@ -53,13 +53,6 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   Future<void> signInWithGoogle() async {
-    state = const AsyncLoading();
-    try {
-      await ref.read(authServiceProvider).signInWithGoogle();
-      state = const AsyncData(null);
-    } catch (e) {
-      state = AsyncError(e, StackTrace.current);
-      rethrow;
-    }
+    await ref.read(authServiceProvider).signInWithGoogle();
   }
 }

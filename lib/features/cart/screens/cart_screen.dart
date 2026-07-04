@@ -1,8 +1,6 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:maruti_stationery/core/constants/app_colors.dart';
-import 'package:maruti_stationery/core/constants/app_text_styles.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -20,10 +18,6 @@ class _CartScreenState extends State<CartScreen> {
         backgroundColor: context.colors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

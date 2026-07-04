@@ -47,7 +47,11 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _contentController, curve: Curves.easeOut));
 
-    _checkController.forward().then((_) => _contentController.forward());
+    _checkController.forward().then((_) {
+      if (mounted) {
+        _contentController.forward();
+      }
+    });
   }
 
   @override

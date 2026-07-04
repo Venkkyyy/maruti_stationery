@@ -38,7 +38,7 @@ class _AddressScreenState extends State<AddressScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
-          onPressed: () => context.go('/cart'),
+          onPressed: () => context.pop(),
         ),
         title: Text(
           'Delivery Address',
@@ -121,7 +121,7 @@ class _AddressScreenState extends State<AddressScreen> {
             child: SizedBox(
               height: 54,
               child: ElevatedButton(
-                onPressed: () => context.go('/checkout/payment'),
+                onPressed: () => context.push('/checkout/payment'),
                 child: const Text('Continue to Payment'),
               ),
             ),

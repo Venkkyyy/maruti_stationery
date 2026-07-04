@@ -12,18 +12,10 @@ class PhoneInputScreen extends ConsumerStatefulWidget {
 }
 
 class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
-  final _emailController = TextEditingController();
-  final _focusNode = FocusNode();
   bool _isLoading = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
   Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
@@ -111,39 +103,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                     ),
                     const SizedBox(height: 36),
 
-                    Container(
-                      decoration: BoxDecoration(
-                        color: context.colors.background,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: context.colors.border),
-                      ),
-                      child: TextField(
-                        controller: _emailController,
-                        focusNode: _focusNode,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'your@gmail.com',
-                          hintStyle: TextStyle(
-                            color: context.colors.textHint,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                          fillColor: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
 
                     SizedBox(
                       width: double.infinity,
