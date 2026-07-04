@@ -26,6 +26,7 @@ void main() async {
     };
 
     // Catch async errors
+    
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       debugPrint('Async Error: $error\n$stack');
