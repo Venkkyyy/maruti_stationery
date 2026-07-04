@@ -20,11 +20,15 @@ void main() async {
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
 
     // Catch Flutter errors
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      FlutterError.dumpErrorToConsole(errorDetails);
+    };
 
     // Catch async errors
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      debugPrint('Async Error: $error\n$stack');
       return true;
     };
   } catch (e) {
