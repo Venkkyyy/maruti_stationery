@@ -1,0 +1,83 @@
+{
+  "name": "emulator",
+  "displayName": "Android iOS Emulator",
+  "description": "Run Android and iOS simulators from Visual Studio Code.",
+  "version": "0.0.1",
+  "publisher": "copilot",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:emulator.run"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "emulator.run",
+        "title": "Emulator: Select and Run",
+        "icon": "$(device-mobile)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "emulator.run",
+          "when": "config.emulator.hasEditorTitleIcon",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Emulator",
+      "properties": {
+        "emulator.emulatorPath": {
+          "type": "string",
+          "default": "~/Library/Android/sdk/emulator",
+          "description": "Default Android emulator executable path."
+        },
+        "emulator.emulatorPathMac": {
+          "type": "string",
+          "default": "~/Library/Android/sdk/emulator",
+          "description": "Android emulator path on macOS."
+        },
+        "emulator.emulatorPathLinux": {
+          "type": "string",
+          "default": "~/Android/Sdk/emulator",
+          "description": "Android emulator path on Linux."
+        },
+        "emulator.emulatorPathWindows": {
+          "type": "string",
+          "default": "",
+          "description": "Android emulator path on Windows."
+        },
+        "emulator.emulatorPathWSL": {
+          "type": "string",
+          "default": "",
+          "description": "Android emulator path in WSL."
+        },
+        "emulator.simulatorPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Xcode Simulator app. Leave empty to auto-detect it."
+        },
+        "emulator.hasEditorTitleIcon": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the emulator icon in the editor title bar."
+        },
+        "emulator.androidColdBoot": {
+          "type": "boolean",
+          "default": false,
+          "description": "Launch Android emulators with a cold boot option."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/extension.test.js"
+  }
+}

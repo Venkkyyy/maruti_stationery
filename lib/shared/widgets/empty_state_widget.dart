@@ -25,7 +25,7 @@ class EmptyStateWidget extends StatelessWidget {
   });
 
   /// Empty cart
-  EmptyStateWidget.cart({super.key, this.onButtonPressed})
+  const EmptyStateWidget.cart({super.key, this.onButtonPressed})
       : title = 'Your bag is empty',
         subtitle = 'Add items to get started',
         icon = Icons.shopping_bag_outlined,
@@ -34,7 +34,7 @@ class EmptyStateWidget extends StatelessWidget {
         buttonText = 'Browse Catalog';
 
   /// Empty wishlist
-  EmptyStateWidget.wishlist({super.key, this.onButtonPressed})
+  const EmptyStateWidget.wishlist({super.key, this.onButtonPressed})
       : title = 'Your wishlist is empty',
         subtitle = 'Save items you love to buy later',
         icon = Icons.favorite_border_rounded,
@@ -43,7 +43,7 @@ class EmptyStateWidget extends StatelessWidget {
         buttonText = 'Explore Products';
 
   /// Empty orders
-  EmptyStateWidget.orders({super.key, this.onButtonPressed})
+  const EmptyStateWidget.orders({super.key, this.onButtonPressed})
       : title = 'No orders yet',
         subtitle = 'Your order history will appear here',
         icon = Icons.receipt_long_outlined,
@@ -52,7 +52,7 @@ class EmptyStateWidget extends StatelessWidget {
         buttonText = 'Shop Now';
 
   /// No search results
-  EmptyStateWidget.search({super.key, this.onButtonPressed})
+  const EmptyStateWidget.search({super.key, this.onButtonPressed})
       : title = 'No results found',
         subtitle = 'Try different keywords or browse categories',
         icon = Icons.search_off_rounded,

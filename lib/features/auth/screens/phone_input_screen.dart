@@ -1,46 +1,52 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
-import 'package:maruti_stationery/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maruti_stationery/providers/auth_provider.dart';
 
-class PhoneInputScreen extends StatefulWidget {
+class PhoneInputScreen extends ConsumerStatefulWidget {
   const PhoneInputScreen({super.key});
 
   @override
-  State<PhoneInputScreen> createState() => _PhoneInputScreenState();
+  ConsumerState<PhoneInputScreen> createState() => _PhoneInputScreenState();
 }
 
-class _PhoneInputScreenState extends State<PhoneInputScreen> {
-  final _phoneController = TextEditingController();
+class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
+  final _emailController = TextEditingController();
   final _focusNode = FocusNode();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _sendOTP() async {
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+      if (!mounted) return;
+      context.go('/home');
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a valid 10-digit mobile number'),
+          content: Text(
+            e
+                .toString()
+                .replaceFirst('Exception: ', '')
+                .replaceFirst('AppException: ', ''),
+          ),
           backgroundColor: context.colors.error,
         ),
       );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    // Simulate OTP send delay
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go('/auth/phone/otp', extra: 'mock-verification-id');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -51,7 +57,6 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Back button
             Align(
               alignment: Alignment.topLeft,
               child: IconButton(
@@ -70,7 +75,6 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                   children: [
                     const SizedBox(height: 20),
 
-                    // Icon
                     Container(
                       width: 64,
                       height: 64,
@@ -79,16 +83,15 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
-                        Icons.phone_android_rounded,
+                        Icons.mail_outline_rounded,
                         color: context.colors.primary,
                         size: 32,
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Title
                     Text(
-                      'Enter your\nmobile number',
+                      'Continue with\nyour Google account',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -98,9 +101,8 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Subtitle
                     Text(
-                      'We\'ll send a 6-digit OTP to verify your number. Standard rates apply.',
+                      'Use your Gmail account to sign in securely and continue to your shopping experience.',
                       style: TextStyle(
                         fontSize: 14,
                         color: context.colors.textSecondary,
@@ -109,104 +111,62 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                     ),
                     const SizedBox(height: 36),
 
-                    // Phone field
                     Container(
                       decoration: BoxDecoration(
                         color: context.colors.background,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: context.colors.border),
                       ),
-                      child: Row(
-                        children: [
-                          // Country code
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                right: BorderSide(color: context.colors.border),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  '🇮🇳',
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '+91',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: context.colors.textSecondary,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
+                      child: TextField(
+                        controller: _emailController,
+                        focusNode: _focusNode,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'your@gmail.com',
+                          hintStyle: TextStyle(
+                            color: context.colors.textHint,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
                           ),
-                          // Phone number input
-                          Expanded(
-                            child: TextField(
-                              controller: _phoneController,
-                              focusNode: _focusNode,
-                              keyboardType: TextInputType.phone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(10),
-                              ],
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: context.colors.textPrimary,
-                                letterSpacing: 2,
-                              ),
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                hintText: '00000 00000',
-                                hintStyle: TextStyle(
-                                  color: context.colors.textHint,
-                                  fontSize: 18,
-                                  letterSpacing: 2,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                                fillColor: Colors.transparent,
-                              ),
-                            ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
                           ),
-                        ],
+                          fillColor: Colors.transparent,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // Send OTP button
                     SizedBox(
                       width: double.infinity,
                       height: 54,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _sendOTP,
+                        onPressed: _isLoading ? null : _signInWithGoogle,
                         child: _isLoading
                             ? const SizedBox(
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
-                            : const Text('Send OTP'),
+                            : const Text('Continue with Google'),
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
-                    // Terms
                     Center(
                       child: Text.rich(
                         TextSpan(
@@ -246,9 +206,3 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     );
   }
 }
-
-
-
-
-
-

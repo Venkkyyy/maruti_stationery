@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../core/errors/app_exception.dart';
@@ -20,6 +21,42 @@ class AuthService {
       return UserModel.fromFirestore(doc);
     }
     return null;
+  }
+
+  Future<UserModel?> signInWithGoogle() async {
+    try {
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        throw const AppException('Google sign-in cancelled');
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      await _createOrUpdateUser(userCredential.user!);
+      return await getUser(userCredential.user!.uid);
+    } on FirebaseAuthException catch (e) {
+      throw AppException(_mapAuthError(e.code));
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+  String _mapAuthError(String code) {
+    return switch (code) {
+      'account-exists-with-different-credential' => 'This account already exists with a different sign-in method.',
+      'invalid-credential' => 'The sign-in credentials are invalid.',
+      'operation-not-allowed' => 'Google sign-in is not enabled for this project.',
+      'user-disabled' => 'This account has been disabled.',
+      'user-not-found' => 'No user found for this account.',
+      'wrong-password' => 'Wrong password.',
+      _ => 'Google sign-in failed. Please try again.',
+    };
   }
 
   // Step 1: Send OTP
@@ -94,15 +131,21 @@ class AuthService {
     final doc = await ref.get();
     
     if (!doc.exists) {
-      // First time login
       await ref.set({
-        'phone': firebaseUser.phoneNumber,
+        'name': firebaseUser.displayName ?? '',
+        'email': firebaseUser.email ?? '',
+        'phone': firebaseUser.phoneNumber ?? '',
+        'photoUrl': firebaseUser.photoURL ?? '',
+        'provider': 'google',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } else {
-      // Returning user — just update lastSeen
       await ref.update({
+        'name': firebaseUser.displayName ?? '',
+        'email': firebaseUser.email ?? '',
+        'photoUrl': firebaseUser.photoURL ?? '',
+        'provider': 'google',
         'lastSeen': FieldValue.serverTimestamp(),
       });
     }
@@ -139,5 +182,6 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    await GoogleSignIn().signOut();
   }
 }

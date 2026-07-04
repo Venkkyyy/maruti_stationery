@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "731940586001",
+    "project_id": "maruti-stationery-d7862",
+    "storage_bucket": "maruti-stationery-d7862.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731940586001:android:d74841431c0d651eada7b0",
+        "android_client_info": {
+          "package_name": "com.maruti.stationery.maruti_stationery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJQlqHLouQLYOyX9s1IizQLCENqbgvsO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

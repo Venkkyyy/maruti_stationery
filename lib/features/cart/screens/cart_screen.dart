@@ -232,7 +232,7 @@ class _CartScreenState extends State<CartScreen> {
             children: [
               Icon(Icons.check_circle, size: 14, color: context.colors.success),
               const SizedBox(width: 6),
-              Text('Available offers for you', style: TextStyle(color: context.colors.success.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500)),
+              Text('Available offers for you', style: TextStyle(color: context.colors.success.withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.w500)),
             ],
           ),
         ],

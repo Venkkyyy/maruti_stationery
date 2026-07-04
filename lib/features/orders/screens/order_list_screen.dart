@@ -136,8 +136,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
     required VoidCallback onTap,
   }) {
     Color statusColor;
-    if (status == 'Shipped') statusColor = context.colors.primary;
-    else if (status == 'Delivered') statusColor = context.colors.success;
+    if (status == 'Shipped') {
+      statusColor = context.colors.primary;
+    } else if (status == 'Delivered') statusColor = context.colors.success;
     else statusColor = Colors.orange;
 
     return Container(
@@ -164,7 +165,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -196,7 +197,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     const SizedBox(height: 4),
                     Text(details, style: TextStyle(fontSize: 12, color: context.colors.textSecondary)),
                     const SizedBox(height: 8),
-                    Text('+ 1 more item', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.primary.withOpacity(0.7))),
+                    Text('+ 1 more item', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.primary.withValues(alpha: 0.7))),
                   ],
                 ),
               ),
