@@ -1,15 +1,18 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../providers/auth_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _textController;
@@ -50,9 +53,19 @@ class _SplashScreenState extends State<SplashScreen>
       _textController.forward();
     });
 
-    // Navigate after 2.5 seconds
+    // Navigate after 2.5 seconds depending on auth state
     Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) context.go('/onboarding');
+      if (!mounted) return;
+      
+      // We check FirebaseAuth directly because reading a StreamProvider 
+      // for the first time returns AsyncLoading (null value).
+      final user = FirebaseAuth.instance.currentUser;
+      
+      if (user != null) {
+        context.go('/home');
+      } else {
+        context.go('/onboarding');
+      }
     });
   }
 

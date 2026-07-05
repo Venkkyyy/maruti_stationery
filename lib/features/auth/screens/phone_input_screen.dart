@@ -19,7 +19,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+      await ref.read(authProvider.notifier).signInWithGoogle();
       if (!mounted) return;
       context.go('/home');
     } catch (e) {

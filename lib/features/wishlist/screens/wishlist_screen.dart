@@ -12,7 +12,7 @@ class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
 
   void _removeFromWishlist(BuildContext context, WidgetRef ref, String id) {
-    ref.read(wishlistNotifierProvider.notifier).remove(id);
+    ref.read(wishlistProvider.notifier).remove(id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Removed from wishlist'),

@@ -6,283 +6,196 @@ part of 'order_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$orderServiceHash() => r'1f7289b625a710b5f100a6806b245c7ade4fae4e';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [orderService].
 @ProviderFor(orderService)
-final orderServiceProvider = AutoDisposeProvider<OrderService>.internal(
-  orderService,
-  name: r'orderServiceProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$orderServiceHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final orderServiceProvider = OrderServiceProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef OrderServiceRef = AutoDisposeProviderRef<OrderService>;
-String _$watchUserOrdersHash() => r'd6b1fb089b7f7ca4749c4a0c0bef84008dd117e9';
+final class OrderServiceProvider
+    extends $FunctionalProvider<OrderService, OrderService, OrderService>
+    with $Provider<OrderService> {
+  OrderServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'orderServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
-/// Copied from Dart SDK
-class _SystemHash {
-  _SystemHash._();
+  @override
+  String debugGetCreateSourceHash() => _$orderServiceHash();
 
-  static int combine(int hash, int value) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + value);
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
-    return hash ^ (hash >> 6);
+  @$internal
+  @override
+  $ProviderElement<OrderService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  OrderService create(Ref ref) {
+    return orderService(ref);
   }
 
-  static int finish(int hash) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
-    // ignore: parameter_assignments
-    hash = hash ^ (hash >> 11);
-    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(OrderService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<OrderService>(value),
+    );
   }
 }
 
-/// See also [watchUserOrders].
+String _$orderServiceHash() => r'db91a1500c6ce21b07e5458d2b1d26fa20fe5df9';
+
 @ProviderFor(watchUserOrders)
-const watchUserOrdersProvider = WatchUserOrdersFamily();
+final watchUserOrdersProvider = WatchUserOrdersFamily._();
 
-/// See also [watchUserOrders].
-class WatchUserOrdersFamily extends Family<AsyncValue<List<OrderModel>>> {
-  /// See also [watchUserOrders].
-  const WatchUserOrdersFamily();
+final class WatchUserOrdersProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<OrderModel>>,
+          List<OrderModel>,
+          Stream<List<OrderModel>>
+        >
+    with $FutureModifier<List<OrderModel>>, $StreamProvider<List<OrderModel>> {
+  WatchUserOrdersProvider._({
+    required WatchUserOrdersFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchUserOrdersProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
-  /// See also [watchUserOrders].
-  WatchUserOrdersProvider call(String userId) {
-    return WatchUserOrdersProvider(userId);
+  @override
+  String debugGetCreateSourceHash() => _$watchUserOrdersHash();
+
+  @override
+  String toString() {
+    return r'watchUserOrdersProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<List<OrderModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<OrderModel>> create(Ref ref) {
+    final argument = this.argument as String;
+    return watchUserOrders(ref, argument);
   }
 
   @override
-  WatchUserOrdersProvider getProviderOverride(
-    covariant WatchUserOrdersProvider provider,
-  ) {
-    return call(provider.userId);
+  bool operator ==(Object other) {
+    return other is WatchUserOrdersProvider && other.argument == argument;
   }
 
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
   @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'watchUserOrdersProvider';
+  int get hashCode {
+    return argument.hashCode;
+  }
 }
 
-/// See also [watchUserOrders].
-class WatchUserOrdersProvider
-    extends AutoDisposeStreamProvider<List<OrderModel>> {
-  /// See also [watchUserOrders].
-  WatchUserOrdersProvider(String userId)
-    : this._internal(
-        (ref) => watchUserOrders(ref as WatchUserOrdersRef, userId),
-        from: watchUserOrdersProvider,
+String _$watchUserOrdersHash() => r'183bf85a8b6533ca7873166788b49b8129e367ee';
+
+final class WatchUserOrdersFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<List<OrderModel>>, String> {
+  WatchUserOrdersFamily._()
+    : super(
+        retry: null,
         name: r'watchUserOrdersProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$watchUserOrdersHash,
-        dependencies: WatchUserOrdersFamily._dependencies,
-        allTransitiveDependencies:
-            WatchUserOrdersFamily._allTransitiveDependencies,
-        userId: userId,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
       );
 
-  WatchUserOrdersProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.userId,
-  }) : super.internal();
-
-  final String userId;
+  WatchUserOrdersProvider call(String userId) =>
+      WatchUserOrdersProvider._(argument: userId, from: this);
 
   @override
-  Override overrideWith(
-    Stream<List<OrderModel>> Function(WatchUserOrdersRef provider) create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: WatchUserOrdersProvider._internal(
-        (ref) => create(ref as WatchUserOrdersRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        userId: userId,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeStreamProviderElement<List<OrderModel>> createElement() {
-    return _WatchUserOrdersProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is WatchUserOrdersProvider && other.userId == userId;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, userId.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
+  String toString() => r'watchUserOrdersProvider';
 }
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin WatchUserOrdersRef on AutoDisposeStreamProviderRef<List<OrderModel>> {
-  /// The parameter `userId` of this provider.
-  String get userId;
-}
-
-class _WatchUserOrdersProviderElement
-    extends AutoDisposeStreamProviderElement<List<OrderModel>>
-    with WatchUserOrdersRef {
-  _WatchUserOrdersProviderElement(super.provider);
-
-  @override
-  String get userId => (origin as WatchUserOrdersProvider).userId;
-}
-
-String _$watchOrderHash() => r'1d5bbbf0f892dd3784a672d42c4ba4231a03274d';
-
-/// See also [watchOrder].
 @ProviderFor(watchOrder)
-const watchOrderProvider = WatchOrderFamily();
+final watchOrderProvider = WatchOrderFamily._();
 
-/// See also [watchOrder].
-class WatchOrderFamily extends Family<AsyncValue<OrderModel?>> {
-  /// See also [watchOrder].
-  const WatchOrderFamily();
+final class WatchOrderProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<OrderModel?>,
+          OrderModel?,
+          Stream<OrderModel?>
+        >
+    with $FutureModifier<OrderModel?>, $StreamProvider<OrderModel?> {
+  WatchOrderProvider._({
+    required WatchOrderFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchOrderProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
-  /// See also [watchOrder].
-  WatchOrderProvider call(String orderId) {
-    return WatchOrderProvider(orderId);
+  @override
+  String debugGetCreateSourceHash() => _$watchOrderHash();
+
+  @override
+  String toString() {
+    return r'watchOrderProvider'
+        ''
+        '($argument)';
   }
 
+  @$internal
   @override
-  WatchOrderProvider getProviderOverride(
-    covariant WatchOrderProvider provider,
-  ) {
-    return call(provider.orderId);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
+  $StreamProviderElement<OrderModel?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
 
   @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'watchOrderProvider';
-}
-
-/// See also [watchOrder].
-class WatchOrderProvider extends AutoDisposeStreamProvider<OrderModel?> {
-  /// See also [watchOrder].
-  WatchOrderProvider(String orderId)
-    : this._internal(
-        (ref) => watchOrder(ref as WatchOrderRef, orderId),
-        from: watchOrderProvider,
-        name: r'watchOrderProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$watchOrderHash,
-        dependencies: WatchOrderFamily._dependencies,
-        allTransitiveDependencies: WatchOrderFamily._allTransitiveDependencies,
-        orderId: orderId,
-      );
-
-  WatchOrderProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.orderId,
-  }) : super.internal();
-
-  final String orderId;
-
-  @override
-  Override overrideWith(
-    Stream<OrderModel?> Function(WatchOrderRef provider) create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: WatchOrderProvider._internal(
-        (ref) => create(ref as WatchOrderRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        orderId: orderId,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeStreamProviderElement<OrderModel?> createElement() {
-    return _WatchOrderProviderElement(this);
+  Stream<OrderModel?> create(Ref ref) {
+    final argument = this.argument as String;
+    return watchOrder(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is WatchOrderProvider && other.orderId == orderId;
+    return other is WatchOrderProvider && other.argument == argument;
   }
 
   @override
   int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, orderId.hashCode);
-
-    return _SystemHash.finish(hash);
+    return argument.hashCode;
   }
 }
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin WatchOrderRef on AutoDisposeStreamProviderRef<OrderModel?> {
-  /// The parameter `orderId` of this provider.
-  String get orderId;
-}
+String _$watchOrderHash() => r'071180ac3103a3b4870b471c39136c5592e869c3';
 
-class _WatchOrderProviderElement
-    extends AutoDisposeStreamProviderElement<OrderModel?>
-    with WatchOrderRef {
-  _WatchOrderProviderElement(super.provider);
+final class WatchOrderFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<OrderModel?>, String> {
+  WatchOrderFamily._()
+    : super(
+        retry: null,
+        name: r'watchOrderProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  WatchOrderProvider call(String orderId) =>
+      WatchOrderProvider._(argument: orderId, from: this);
 
   @override
-  String get orderId => (origin as WatchOrderProvider).orderId;
+  String toString() => r'watchOrderProvider';
 }
-
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

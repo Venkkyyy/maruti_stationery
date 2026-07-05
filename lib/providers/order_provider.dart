@@ -5,16 +5,16 @@ import '../services/order_service.dart';
 part 'order_provider.g.dart';
 
 @riverpod
-OrderService orderService(OrderServiceRef ref) {
+OrderService orderService(Ref ref) {
   return OrderService();
 }
 
 @riverpod
-Stream<List<OrderModel>> watchUserOrders(WatchUserOrdersRef ref, String userId) {
+Stream<List<OrderModel>> watchUserOrders(Ref ref, String userId) {
   return ref.watch(orderServiceProvider).watchUserOrders(userId);
 }
 
 @riverpod
-Stream<OrderModel?> watchOrder(WatchOrderRef ref, String orderId) {
+Stream<OrderModel?> watchOrder(Ref ref, String orderId) {
   return ref.watch(orderServiceProvider).watchOrder(orderId);
 }

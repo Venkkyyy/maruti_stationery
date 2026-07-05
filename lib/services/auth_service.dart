@@ -8,7 +8,6 @@ import '../core/errors/app_exception.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Current user stream — listen to auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -26,15 +25,13 @@ class AuthService {
 
   Future<UserModel?> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        throw const AppException('Google sign-in cancelled');
-      }
+      await GoogleSignIn.instance.initialize();
+      final googleUser = await GoogleSignIn.instance.authenticate();
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
+        // accessToken removed in google_sign_in v7 — idToken alone is sufficient for Firebase Auth
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
@@ -182,6 +179,6 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
-    await _googleSignIn.signOut();
+    await GoogleSignIn.instance.signOut();
   }
 }

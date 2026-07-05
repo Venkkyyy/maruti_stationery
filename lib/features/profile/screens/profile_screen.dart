@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../providers/user_provider.dart';
+import '../../../providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -10,7 +11,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserModelProvider);
-    final user = userAsync.valueOrNull;
+    final user = userAsync.value;
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -194,7 +195,10 @@ class ProfileScreen extends ConsumerWidget {
 
                   // Logout
                   GestureDetector(
-                    onTap: () => context.go('/onboarding'),
+                    onTap: () async {
+                      await ref.read(authProvider.notifier).signOut();
+                      if (context.mounted) context.go('/splash');
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(

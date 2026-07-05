@@ -7,14 +7,18 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'core/router/app_router.dart';
 
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
   try {
     debugPrint("Firebase init START");
-    await Firebase.initializeApp();
-    debugPrint("Firebase init END");
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("Firebase init END - success");
 
     // Enable Crashlytics even in debug (optional during dev)
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
@@ -51,7 +55,7 @@ class MarutiApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeNotifierProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Maruti Stationery',

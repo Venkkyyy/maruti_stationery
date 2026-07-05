@@ -5,12 +5,12 @@ import '../services/auth_service.dart';
 part 'auth_provider.g.dart';
 
 @riverpod
-AuthService authService(AuthServiceRef ref) {
+AuthService authService(Ref ref) {
   return AuthService();
 }
 
 @riverpod
-Stream<User?> authState(AuthStateRef ref) {
+Stream<User?> authState(Ref ref) {
   return ref.watch(authServiceProvider).authStateChanges;
 }
 
@@ -54,5 +54,9 @@ class AuthNotifier extends _$AuthNotifier {
 
   Future<void> signInWithGoogle() async {
     await ref.read(authServiceProvider).signInWithGoogle();
+  }
+
+  Future<void> signOut() async {
+    await ref.read(authServiceProvider).signOut();
   }
 }

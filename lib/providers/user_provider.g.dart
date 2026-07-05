@@ -6,22 +6,43 @@ part of 'user_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$currentUserModelHash() => r'ffe43f66d943e82e587eb4dc50dafdd630111d3c';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [currentUserModel].
 @ProviderFor(currentUserModel)
-final currentUserModelProvider = AutoDisposeFutureProvider<UserModel?>.internal(
-  currentUserModel,
-  name: r'currentUserModelProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$currentUserModelHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final currentUserModelProvider = CurrentUserModelProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef CurrentUserModelRef = AutoDisposeFutureProviderRef<UserModel?>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class CurrentUserModelProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserModel?>,
+          UserModel?,
+          FutureOr<UserModel?>
+        >
+    with $FutureModifier<UserModel?>, $FutureProvider<UserModel?> {
+  CurrentUserModelProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentUserModelProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserModelHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<UserModel?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserModel?> create(Ref ref) {
+    return currentUserModel(ref);
+  }
+}
+
+String _$currentUserModelHash() => r'8412483e9fb5a1331ebf63c39a3682cb98612786';

@@ -8,7 +8,7 @@ import 'auth_provider.dart';
 part 'cart_provider.g.dart';
 
 @riverpod
-Stream<List<CartItemModel>> cartStream(CartStreamRef ref, String userId) {
+Stream<List<CartItemModel>> cartStream(Ref ref, String userId) {
   return FirebaseFirestore.instance
       .collection('carts')
       .doc(userId)

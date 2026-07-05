@@ -6,12 +6,12 @@ import 'auth_provider.dart';
 part 'wishlist_provider.g.dart';
 
 @riverpod
-WishlistService wishlistService(WishlistServiceRef ref) {
+WishlistService wishlistService(Ref ref) {
   return WishlistService();
 }
 
 @riverpod
-Stream<List<ProductModel>> watchWishlist(WatchWishlistRef ref) {
+Stream<List<ProductModel>> watchWishlist(Ref ref) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) {
     return Stream.value([]);
