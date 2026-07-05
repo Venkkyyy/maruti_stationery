@@ -177,6 +177,17 @@ class AuthService {
     await prefs.setInt(key, current + 1);
   }
 
+  Future<void> updateUserProfile({required String name, required String phone}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw const AppException('User not logged in');
+
+    await _db.collection('users').doc(user.uid).update({
+      'name': name,
+      'phone': phone,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
     await GoogleSignIn.instance.signOut();

@@ -1,18 +1,21 @@
-import 'package:maruti_stationery/core/theme/app_theme.dart';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maruti_stationery/core/theme/app_theme.dart';
+import 'dart:async';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/user_provider.dart';
 
-class OTPScreen extends StatefulWidget {
+class OTPScreen extends ConsumerStatefulWidget {
   final String verificationId;
   const OTPScreen({super.key, required this.verificationId});
 
   @override
-  State<OTPScreen> createState() => _OTPScreenState();
+  ConsumerState<OTPScreen> createState() => _OTPScreenState();
 }
 
-class _OTPScreenState extends State<OTPScreen> {
+class _OTPScreenState extends ConsumerState<OTPScreen> {
   final List<TextEditingController> _controllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
@@ -85,10 +88,25 @@ class _OTPScreenState extends State<OTPScreen> {
       return;
     }
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      context.go('/home');
+    
+    try {
+      // Assuming you have an OTP verification method in auth_provider or auth_service
+      // await ref.read(authProvider.notifier).verifyOTP(...);
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted) return;
+      
+      final userModel = await ref.read(currentUserModelProvider.future);
+      if (!mounted) return;
+      
+      if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
+        context.go('/auth/complete-profile');
+      } else {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) context.go('/home'); // Fallback
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

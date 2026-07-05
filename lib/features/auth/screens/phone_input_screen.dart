@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_stationery/providers/auth_provider.dart';
+import 'package:maruti_stationery/providers/user_provider.dart';
 
 class PhoneInputScreen extends ConsumerStatefulWidget {
   const PhoneInputScreen({super.key});
@@ -21,7 +22,15 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     try {
       await ref.read(authProvider.notifier).signInWithGoogle();
       if (!mounted) return;
-      context.go('/home');
+      
+      final userModel = await ref.read(currentUserModelProvider.future);
+      if (!mounted) return;
+      
+      if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
+        context.go('/auth/complete-profile');
+      } else {
+        context.go('/home');
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

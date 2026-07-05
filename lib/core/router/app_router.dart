@@ -5,6 +5,7 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
 import '../../features/auth/screens/otp_verification_screen.dart';
+import '../../features/auth/screens/complete_profile_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/catalog/screens/product_list_screen.dart';
 import '../../features/catalog/screens/product_detail_screen.dart';
@@ -39,6 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
+      GoRoute(path: '/auth/complete-profile', builder: (context, state) => const CompleteProfileScreen()),
 
       GoRoute(
         path: '/auth/phone',

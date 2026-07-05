@@ -56,6 +56,19 @@ class AuthNotifier extends _$AuthNotifier {
     await ref.read(authServiceProvider).signInWithGoogle();
   }
 
+  Future<void> completeProfile({required String name, required String phone}) async {
+    state = const AsyncLoading();
+    try {
+      await ref.read(authServiceProvider).updateUserProfile(name: name, phone: phone);
+      // We don't change state to AsyncData(null) because authStateProvider watches the stream
+      // But we can reset this notifier's state
+      state = const AsyncData(null);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await ref.read(authServiceProvider).signOut();
   }

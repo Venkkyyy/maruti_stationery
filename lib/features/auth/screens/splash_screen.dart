@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/user_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -53,18 +54,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _textController.forward();
     });
 
-    // Navigate after 2.5 seconds depending on auth state
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (!mounted) return;
-      
-      // We check FirebaseAuth directly because reading a StreamProvider 
-      // for the first time returns AsyncLoading (null value).
+    // Navigate after animation and profile check
+    Future.delayed(const Duration(milliseconds: 2500), () async {
       final user = FirebaseAuth.instance.currentUser;
       
       if (user != null) {
-        context.go('/home');
+        try {
+          final userModel = await ref.read(currentUserModelProvider.future);
+          if (!mounted) return;
+          
+          if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
+            context.go('/auth/complete-profile');
+          } else {
+            context.go('/home');
+          }
+        } catch (e) {
+          // Fallback if offline or firestore fails
+          if (mounted) context.go('/home');
+        }
       } else {
-        context.go('/onboarding');
+        if (mounted) context.go('/onboarding');
       }
     });
   }
