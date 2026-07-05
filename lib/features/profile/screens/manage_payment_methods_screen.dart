@@ -2,14 +2,14 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+class ManagePaymentMethodsScreen extends StatefulWidget {
+  const ManagePaymentMethodsScreen({super.key});
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  State<ManagePaymentMethodsScreen> createState() => _ManagePaymentMethodsScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _ManagePaymentMethodsScreenState extends State<ManagePaymentMethodsScreen> {
   String _selectedPayment = 'gpay';
 
   @override
@@ -49,7 +49,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTotalHeader(),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -124,52 +123,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
           ),
-        ],
-      ),
-      bottomSheet: Container(
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          boxShadow: [BoxShadow(color: Color(0x15000000), blurRadius: 10, offset: Offset(0, -2))],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: SafeArea(
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () {
-                context.go('/checkout/confirmation'); // Assuming it goes here
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Pay Now ?4,299', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTotalHeader() {
-    return Container(
-      color: context.colors.surface,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Total Amount to Pay', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
-              const SizedBox(height: 4),
-              Text('?4,299.00', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.primary)),
-            ],
-          ),
-          Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary)),
         ],
       ),
     );

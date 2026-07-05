@@ -31,6 +31,8 @@ import '../../features/admin/screens/admin_add_product_screen.dart';
 import '../../features/checkout/screens/add_address_screen.dart';
 import '../../features/cart/screens/offers_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
+import '../../features/profile/screens/manage_address_screen.dart';
+import '../../features/profile/screens/manage_payment_methods_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
@@ -121,6 +123,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/profile/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/profile/support', builder: (context, state) => const HelpSupportScreen()),
       GoRoute(path: '/profile/about', builder: (context, state) => const AboutScreen()),
+      GoRoute(path: '/profile/address', builder: (context, state) => const ManageAddressScreen()),
+      GoRoute(path: '/profile/payment', builder: (context, state) => const ManagePaymentMethodsScreen()),
 
       // Wishlist — outside shell
       GoRoute(path: '/wishlist', builder: (context, state) => const WishlistScreen()),

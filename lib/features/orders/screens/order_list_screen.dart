@@ -2,14 +2,18 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class OrderListScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/order_provider.dart';
+import '../../../providers/auth_provider.dart';
+
+class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
 
   @override
-  State<OrderListScreen> createState() => _OrderListScreenState();
+  ConsumerState<OrderListScreen> createState() => _OrderListScreenState();
 }
 
-class _OrderListScreenState extends State<OrderListScreen> {
+class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   int _selectedFilter = 0;
   final List<String> _filters = ['All Orders', 'Processing', 'Shipped', 'Delivered'];
 
@@ -25,7 +29,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
           onPressed: () => context.pop(),
         ),
-        title: Text('Glacier', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
+        title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
         actions: [
           IconButton(icon: Icon(Icons.search_rounded, color: context.colors.textPrimary), onPressed: () {}),
         ],
@@ -78,44 +82,54 @@ class _OrderListScreenState extends State<OrderListScreen> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildOrderCard(
-                  orderId: 'OA-930AA',
-                  date: 'Oct 24, 2023',
-                  status: 'Shipped',
-                  title: 'Premium Leather Notebook',
-                  details: 'Size: A5 | Qty: 1',
-                  price: '₹345',
-                  buttonText: 'Track Order ->',
-                  onTap: () => context.push('/orders/1'),
-                ),
-                const SizedBox(height: 16),
-                _buildOrderCard(
-                  orderId: 'OA-7712B',
-                  date: 'Oct 12, 2023',
-                  status: 'Delivered',
-                  title: 'Executive Fountain Pen',
-                  details: 'Nib: Medium | Qty: 1',
-                  price: '₹129',
-                  buttonText: 'Buy Again',
-                  buttonOutlined: true,
-                  onTap: () {},
-                ),
-                const SizedBox(height: 16),
-                _buildOrderCard(
-                  orderId: 'OA-9001C',
-                  date: 'Oct 28, 2023',
-                  status: 'Processing',
-                  title: 'Classic Artist Sketchbook',
-                  details: 'Size: A4 | Qty: 2',
-                  price: '₹178',
-                  buttonText: 'View Details',
-                  buttonOutlined: true,
-                  onTap: () {},
-                ),
-              ],
+            child: Consumer(
+              builder: (context, ref, child) {
+                final user = ref.watch(authStateProvider).value;
+                if (user == null) {
+                  return const Center(child: Text('Please log in to see orders'));
+                }
+                final ordersAsync = ref.watch(watchUserOrdersProvider(user.uid));
+                
+                return ordersAsync.when(
+                  data: (orders) {
+                    if (orders.isEmpty) {
+                      return const Center(child: Text('No orders found'));
+                    }
+                    // Filter logic if needed
+                    final filteredOrders = _selectedFilter == 0 
+                      ? orders 
+                      : orders.where((o) => o.statusLabel.toLowerCase() == _filters[_selectedFilter].toLowerCase()).toList();
+                    
+                    if (filteredOrders.isEmpty) {
+                      return const Center(child: Text('No orders found for this status'));
+                    }
+                    
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredOrders.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final order = filteredOrders[index];
+                        final firstItem = order.items.isNotEmpty ? order.items.first : null;
+                        
+                        return _buildOrderCard(
+                          orderId: order.id,
+                          date: order.createdAt.toString().split(' ')[0], // simple date formatting
+                          status: order.statusLabel, // e.g. 'Processing'
+                          title: firstItem?.name ?? 'Order Item',
+                          details: 'Qty: ${firstItem?.qty ?? 0}',
+                          price: '₹${order.total}',
+                          buttonText: 'View Details',
+                          buttonOutlined: true,
+                          onTap: () => context.push('/orders/${order.id}'),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, st) => Center(child: Text('Error: $e')),
+                );
+              },
             ),
           ),
         ],

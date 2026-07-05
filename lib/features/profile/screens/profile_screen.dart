@@ -55,14 +55,16 @@ class ProfileScreen extends ConsumerWidget {
                               size: 38, color: Colors.white),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          user?.name ?? 'Guest User',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
+                        userAsync.isLoading
+                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : Text(
+                                user?.name ?? 'Guest User',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
                         const SizedBox(height: 4),
                         Text(
                           user?.phone ?? '+91 -',
@@ -135,19 +137,19 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.location_on_outlined,
                       label: 'My Addresses',
                       subtitle: '2 saved addresses',
-                      onTap: () => context.go('/checkout/address'),
+                      onTap: () => context.push('/profile/address'),
                     ),
                     _ProfileOption(
                       icon: Icons.favorite_border_rounded,
                       label: 'Wishlist',
                       subtitle: '3 items saved',
-                      onTap: () => context.go('/wishlist'),
+                      onTap: () => context.push('/wishlist'),
                     ),
                     _ProfileOption(
                       icon: Icons.credit_card_rounded,
                       label: 'Payment Methods',
                       subtitle: 'UPI, Cards',
-                      onTap: () => context.go('/checkout/payment'),
+                      onTap: () => context.push('/profile/payment'),
                     ),
                   ]),
 

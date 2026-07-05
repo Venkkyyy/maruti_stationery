@@ -192,4 +192,27 @@ class AuthService {
     await _auth.signOut();
     await GoogleSignIn.instance.signOut();
   }
+
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw const AppException('User not logged in');
+
+    try {
+      // Delete user document from Firestore
+      await _db.collection('users').doc(user.uid).delete();
+      
+      // Delete user from Firebase Auth
+      await user.delete();
+      
+      // Sign out from Google if applicable
+      await GoogleSignIn.instance.signOut();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw const AppException('Please log out and log back in to delete your account.');
+      }
+      throw AppException(e.message ?? 'Failed to delete account');
+    } catch (e) {
+      throw AppException('An error occurred while deleting account');
+    }
+  }
 }

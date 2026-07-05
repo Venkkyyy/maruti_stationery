@@ -17,6 +17,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedCategory = 0;
 
   final List<String> _categories = [
+    'All',
     'Pens',
     'Notebooks',
     'Inks',
@@ -26,7 +27,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final newArrivalsAsync = ref.watch(getNewArrivalsProvider(limit: 6));
+    final productsAsync = _selectedCategory == 0 
+        ? ref.watch(getNewArrivalsProvider(limit: 6))
+        : ref.watch(getProductsByCategoryProvider(_categories[_selectedCategory].toLowerCase()));
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -115,7 +118,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       return GestureDetector(
                         onTap: () {
                           setState(() => _selectedCategory = i);
-                          context.go('/catalog');
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -283,7 +285,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       Text('New Arrivals', style: AppTextStyles.sectionTitle),
                       GestureDetector(
-                        onTap: () => context.go('/catalog'),
+                        onTap: () {
+                          setState(() => _selectedCategory = 0);
+                        },
                         child: Row(
                           children: [
                             Text('View all', style: AppTextStyles.sectionLink),
@@ -299,7 +303,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(height: 14),
 
                 // Product grid
-                newArrivalsAsync.when(
+                productsAsync.when(
                   data: (products) {
                     if (products.isEmpty) {
                       return Padding(

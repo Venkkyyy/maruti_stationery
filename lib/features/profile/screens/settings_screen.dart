@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maruti_stationery/providers/theme_provider.dart';
-
+import 'package:maruti_stationery/providers/auth_provider.dart';
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -112,7 +112,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Delete Account',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.colors.error),
             ),
-            onTap: () {},
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: context.colors.surface,
+                  title: Text('Delete Account', style: TextStyle(color: context.colors.textPrimary)),
+                  content: Text('Are you sure you want to delete your account? This action cannot be undone.', style: TextStyle(color: context.colors.textSecondary)),
+                  actions: [
+                    TextButton(
+                      onPressed: () => context.pop(),
+                      child: Text('Cancel', style: TextStyle(color: context.colors.textSecondary)),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: context.colors.error),
+                      onPressed: () async {
+                        try {
+                          await ref.read(authProvider.notifier).deleteAccount();
+                          if (context.mounted) {
+                            context.pop();
+                            context.go('/splash');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            context.pop();
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
+                        }
+                      },
+                      child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
