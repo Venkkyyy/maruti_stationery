@@ -14,7 +14,7 @@ Stream<User?> authState(Ref ref) {
   return ref.watch(authServiceProvider).authStateChanges;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AuthNotifier extends _$AuthNotifier {
   @override
   FutureOr<void> build() {}
