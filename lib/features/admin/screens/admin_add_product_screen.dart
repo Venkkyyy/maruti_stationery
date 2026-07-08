@@ -1,10 +1,11 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-// Note: Requires image_picker package. If not added, run: flutter pub add image_picker
-// We'll mock image selection for the stub if package is not present, but assuming it is:
-// import 'package:image_picker/image_picker.dart'; 
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/constants/app_sizes.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -31,8 +32,8 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
   
   String _selectedCategory = 'pens';
   bool _isLoading = false;
-  // final ImagePicker _picker = ImagePicker();
-  final List<File> _images = []; // Ideally picked from ImagePicker
+  final ImagePicker _picker = ImagePicker();
+  final List<File> _images = [];
 
   final List<String> _categories = ['pens', 'notebooks', 'inks', 'art', 'accessories'];
 
@@ -47,8 +48,47 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      // Compress image
+      final File file = File(pickedFile.path);
+      final dir = await getTemporaryDirectory();
+      final targetPath = '${dir.absolute.path}/${const Uuid().v4()}.jpg';
+      
+      final XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path, 
+        targetPath,
+        quality: 70, // 70% quality is usually ~100kb for mobile photos
+        minWidth: 800,
+        minHeight: 800,
+      );
+
+      if (compressedFile != null) {
+        setState(() {
+          _images.add(File(compressedFile.path));
+        });
+      } else {
+        // Fallback if compression fails
+        setState(() {
+          _images.add(file);
+        });
+      }
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_images.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add at least one product photo')));
+      return;
+    }
     
     setState(() => _isLoading = true);
 
@@ -101,6 +141,66 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSizes.screenHorizontal),
           children: [
+            // Image Picker Section
+            Text('Product Photos', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceGrey,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: context.colors.border, style: BorderStyle.solid),
+                      ),
+                      child: Icon(Icons.add_a_photo_rounded, color: context.colors.primary, size: 32),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ..._images.asMap().entries.map((entry) {
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: FileImage(entry.value),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: -8,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(entry.key),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            
             AppTextField(
               controller: _nameController,
               label: 'Product Name',
@@ -157,6 +257,7 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
               controller: _descController,
               label: 'Description',
               maxLines: 4,
+              validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 32),
             AppButton(
@@ -172,9 +273,3 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
     );
   }
 }
-
-
-
-
-
-
