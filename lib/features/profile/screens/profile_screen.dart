@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/order_provider.dart';
+import '../../../providers/wishlist_provider.dart';
+import '../../../providers/address_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -12,6 +15,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserModelProvider);
     final user = userAsync.value;
+    
+    final ordersAsync = user != null ? ref.watch(watchUserOrdersProvider(user.id)) : const AsyncValue.data([]);
+    final wishlistAsync = ref.watch(watchWishlistProvider);
+    final addressesAsync = ref.watch(addressProvider);
+    
+    final int ordersCount = ordersAsync.value?.length ?? 0;
+    final int wishlistCount = wishlistAsync.value?.length ?? 0;
+    final int addressesCount = addressesAsync.value?.length ?? 0;
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -95,14 +106,14 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: context.colors.border),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _StatBox(value: '12', label: 'Orders'),
-                        _StatDivider(),
-                        _StatBox(value: '3', label: 'Wishlist'),
-                        _StatDivider(),
-                        _StatBox(value: '2', label: 'Addresses'),
+                        _StatBox(value: '$ordersCount', label: 'Orders'),
+                        const _StatDivider(),
+                        _StatBox(value: '$wishlistCount', label: 'Wishlist'),
+                        const _StatDivider(),
+                        _StatBox(value: '$addressesCount', label: 'Addresses'),
                       ],
                     ),
                   ),
@@ -130,19 +141,19 @@ class ProfileScreen extends ConsumerWidget {
                     _ProfileOption(
                       icon: Icons.receipt_long_rounded,
                       label: 'My Orders',
-                      subtitle: '12 orders placed',
+                      subtitle: '$ordersCount orders placed',
                       onTap: () => context.go('/orders'),
                     ),
                     _ProfileOption(
                       icon: Icons.location_on_outlined,
                       label: 'My Addresses',
-                      subtitle: '2 saved addresses',
+                      subtitle: '$addressesCount saved addresses',
                       onTap: () => context.push('/profile/address'),
                     ),
                     _ProfileOption(
                       icon: Icons.favorite_border_rounded,
                       label: 'Wishlist',
-                      subtitle: '3 items saved',
+                      subtitle: '$wishlistCount items saved',
                       onTap: () => context.push('/wishlist'),
                     ),
                     _ProfileOption(

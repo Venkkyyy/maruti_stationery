@@ -10,7 +10,6 @@ class ManagePaymentMethodsScreen extends StatefulWidget {
 }
 
 class _ManagePaymentMethodsScreenState extends State<ManagePaymentMethodsScreen> {
-  String _selectedPayment = 'gpay';
 
   @override
   Widget build(BuildContext context) {

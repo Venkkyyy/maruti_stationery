@@ -4,40 +4,6 @@ import '../models/product_model.dart';
 class ProductService {
   static const int _pageSize = 20;
 
-  // Mock Products
-  final List<ProductModel> _mockProducts = [
-    ProductModel(
-      id: 'mock-1',
-      name: 'Premium Leather Notebook',
-      description: 'A beautiful leather-bound notebook for your daily journaling.',
-      price: 150000,
-      mrp: 180000,
-      categoryId: 'notebooks',
-      brand: 'Maruti',
-      images: ['https://via.placeholder.com/400'],
-      stock: 50,
-      unit: 'piece',
-      tags: ['premium', 'notebook', 'leather'],
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-    ProductModel(
-      id: 'mock-2',
-      name: 'Executive Fountain Pen',
-      description: 'Smooth writing experience with a gold-plated nib.',
-      price: 250000,
-      mrp: 300000,
-      categoryId: 'pens',
-      brand: 'Parker',
-      images: ['https://via.placeholder.com/400'],
-      stock: 30,
-      unit: 'piece',
-      tags: ['premium', 'pen', 'fountain'],
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-  ];
-
   Future<List<ProductModel>> getProductsByCategory({
     required String categoryId,
     DocumentSnapshot? lastDoc,
@@ -45,17 +11,58 @@ class ProductService {
     int? maxPrice,
     int? minPrice,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _mockProducts;
+    Query query = FirebaseFirestore.instance
+        .collection('products')
+        .where('isActive', isEqualTo: true);
+
+    if (categoryId != 'All') {
+      // In this app, categoryId strings are lowercased names or specific IDs
+      // Assuming categories are tags or categoryId.
+      query = query.where('categoryId', isEqualTo: categoryId.toLowerCase());
+    }
+
+    if (sortBy != null) {
+      if (sortBy == 'price_low') {
+        query = query.orderBy('price', descending: false);
+      } else if (sortBy == 'price_high') {
+        query = query.orderBy('price', descending: true);
+      } else if (sortBy == 'newest') {
+        query = query.orderBy('createdAt', descending: true);
+      }
+    } else {
+      query = query.orderBy('createdAt', descending: true);
+    }
+
+    if (lastDoc != null) {
+      query = query.startAfterDocument(lastDoc);
+    }
+
+    query = query.limit(_pageSize);
+    final snapshot = await query.get();
+
+    return snapshot.docs
+        .map((doc) => ProductModel.fromFirestore(doc))
+        .toList();
   }
 
   Future<ProductModel?> getProduct(String productId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _mockProducts.first;
+    final doc = await FirebaseFirestore.instance
+        .collection('products')
+        .doc(productId)
+        .get();
+    
+    if (doc.exists) {
+      return ProductModel.fromFirestore(doc);
+    }
+    return null;
   }
 
   Stream<ProductModel?> watchProduct(String productId) {
-    return Stream.value(_mockProducts.first);
+    return FirebaseFirestore.instance
+        .collection('products')
+        .doc(productId)
+        .snapshots()
+        .map((doc) => doc.exists ? ProductModel.fromFirestore(doc) : null);
   }
 
   Future<List<ProductModel>> getRelatedProducts({
@@ -63,12 +70,32 @@ class ProductService {
     required String excludeProductId,
     int limit = 6,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _mockProducts;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('isActive', isEqualTo: true)
+        .where('categoryId', isEqualTo: categoryId)
+        .limit(limit + 1)
+        .get();
+
+    final products = snapshot.docs
+        .map((doc) => ProductModel.fromFirestore(doc))
+        .where((p) => p.id != excludeProductId)
+        .take(limit)
+        .toList();
+
+    return products;
   }
 
   Future<List<ProductModel>> getNewArrivals({int limit = 10}) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _mockProducts;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => ProductModel.fromFirestore(doc))
+        .toList();
   }
 }

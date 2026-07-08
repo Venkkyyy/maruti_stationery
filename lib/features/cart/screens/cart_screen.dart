@@ -16,8 +16,8 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
-    final cartAsync = ref.watch(cartNotifierProvider);
-    final cartNotifier = ref.read(cartNotifierProvider.notifier);
+    final cartAsync = ref.watch(cartProvider);
+    final cartNotifier = ref.read(cartProvider.notifier);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceGrey,
@@ -87,7 +87,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error loading cart: $err')),
       ),
-      bottomSheet: cartAsync.valueOrNull?.isNotEmpty == true ? _buildBottomBar(context, cartNotifier) : null,
+      bottomSheet: cartAsync.value?.isNotEmpty == true ? _buildBottomBar(context, cartNotifier) : null,
     );
   }
 
@@ -171,7 +171,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(AppFormatters.formatPrice(item.price.toDouble()), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                      Text(AppFormatters.formatPrice(item.price), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                     ],
                   ),
                 ),
@@ -254,7 +254,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildPriceDetails(CartNotifier cartNotifier) {
-    final subtotal = cartNotifier.subtotal.toDouble();
+    final subtotal = cartNotifier.subtotal;
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -313,7 +313,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppFormatters.formatPrice(cartNotifier.subtotal.toDouble()), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                Text(AppFormatters.formatPrice(cartNotifier.subtotal), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                 Text('VIEW DETAILS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.colors.primary)),
               ],
             ),

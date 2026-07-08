@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product_model.dart';
 
 class AlgoliaService {
@@ -10,8 +11,24 @@ class AlgoliaService {
     String? categoryId,
     int page = 0,
   }) async {
-    // In production, instantiate search client and query index 'products'.
-    // Stubbed out to allow clean compilation and testing without real credentials.
-    return [];
+    final queryLower = query.toLowerCase();
+    
+    // For a real production app with thousands of products, Algolia is necessary.
+    // Since it's stubbed out, we will fallback to a local in-memory search 
+    // over active products to ensure the search UI functions for the prototype.
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where('isActive', isEqualTo: true)
+        .get();
+        
+    final products = snapshot.docs.map((doc) => ProductModel.fromFirestore(doc)).toList();
+    
+    return products.where((p) {
+      final nameMatch = p.name.toLowerCase().contains(queryLower);
+      final tagsMatch = p.tags.any((tag) => tag.toLowerCase().contains(queryLower));
+      final catMatch = categoryId == null || p.categoryId == categoryId;
+      
+      return (nameMatch || tagsMatch) && catMatch;
+    }).toList();
   }
 }

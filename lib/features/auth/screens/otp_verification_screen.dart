@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'dart:async';
-import '../../../providers/auth_provider.dart';
+
 import '../../../providers/user_provider.dart';
 
 class OTPScreen extends ConsumerStatefulWidget {

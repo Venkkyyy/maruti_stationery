@@ -1,120 +1,22 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-// ── Mock Data ──────────────────────────────────────────────────────────────
-
-class _MockProduct {
-  final String id;
-  final String name;
-  final String sku;
-  final double sellingPrice;
-  final double? mrp;
-  final int stock;
-  final IconData icon;
-  final Color bgColor;
-
-  const _MockProduct({
-    required this.id,
-    required this.name,
-    required this.sku,
-    required this.sellingPrice,
-    this.mrp,
-    required this.stock,
-    required this.icon,
-    required this.bgColor,
-  });
-
-  bool get isOutOfStock => stock == 0;
-  bool get isLowStock => stock > 0 && stock <= 10;
-  int? get discountPercent {
-    if (mrp == null || mrp! <= sellingPrice) return null;
-    return (((mrp! - sellingPrice) / mrp!) * 100).round();
-  }
-}
-
-const _kProducts = [
-  _MockProduct(
-    id: '1',
-    name: 'Executive Fountain Pen',
-    sku: 'PN-8924',
-    sellingPrice: 45.00,
-    mrp: 63.38,
-    stock: 42,
-    icon: Icons.edit_rounded,
-    bgColor: Color(0xFFF1F3F4),
-  ),
-  _MockProduct(
-    id: '2',
-    name: 'Grid Ruled Notebook A5',
-    sku: 'NB-1055',
-    sellingPrice: 12.50,
-    mrp: 14.70,
-    stock: 128,
-    icon: Icons.auto_stories_rounded,
-    bgColor: Color(0xFFF8F9FA),
-  ),
-  _MockProduct(
-    id: '3',
-    name: 'Modular Desk Caddy',
-    sku: 'DC-002',
-    sellingPrice: 24.00,
-    mrp: null,
-    stock: 4,
-    icon: Icons.desk_rounded,
-    bgColor: Color(0xFFF8F9FA),
-  ),
-  _MockProduct(
-    id: '4',
-    name: 'Binder Clips (Pack of 50)',
-    sku: 'BC-50P',
-    sellingPrice: 4.50,
-    mrp: null,
-    stock: 0,
-    icon: Icons.attach_file_rounded,
-    bgColor: Color(0xFFF1F3F4),
-  ),
-  _MockProduct(
-    id: '5',
-    name: 'Parker Sonnet Rollerball',
-    sku: 'PK-SN-01',
-    sellingPrice: 89.00,
-    mrp: 120.00,
-    stock: 15,
-    icon: Icons.draw_rounded,
-    bgColor: Color(0xFFE8F0FE),
-  ),
-  _MockProduct(
-    id: '6',
-    name: 'Midnight Ink Bottle 50ml',
-    sku: 'INK-MN-50',
-    sellingPrice: 12.00,
-    mrp: null,
-    stock: 8,
-    icon: Icons.water_drop_rounded,
-    bgColor: Color(0xFFE8F0FE),
-  ),
-];
-
-const _kCategories = [
-  'All Categories',
-  'Paper Goods',
-  'Writing Tools',
-  'Inks',
-  'Office',
-  'Art',
-];
+import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../models/product_model.dart';
+import '../../../providers/product_provider.dart';
 
 // ── Screen ─────────────────────────────────────────────────────────────────
 
-class CatalogScreen extends StatefulWidget {
+class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
 
   @override
-  State<CatalogScreen> createState() => _CatalogScreenState();
+  ConsumerState<CatalogScreen> createState() => _CatalogScreenState();
 }
 
-class _CatalogScreenState extends State<CatalogScreen> {
+class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   int _selectedCategory = 0;
   final _searchController = TextEditingController();
 
@@ -126,13 +28,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = AppConstants.categories;
+    final selectedCategoryName = categories[_selectedCategory]['name'] as String;
+    
+    // Watch products based on category
+    final productsAsync = ref.watch(getProductsByCategoryProvider(selectedCategoryName));
+
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: context.colors.surface,
         elevation: 0,
-        // Removed leading menu icon
         title: Text(
           'Product Catalog',
           style: TextStyle(
@@ -141,9 +48,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
             color: context.colors.primary,
           ),
         ),
-        actions: [
-          // Removed cart icon as it is now in the bottom nav
-        ],
       ),
       body: Column(
         children: [
@@ -170,7 +74,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             color: context.colors.textHint, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded,
                             color: context.colors.textHint, size: 20),
-                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         fillColor: Colors.transparent,
                       ),
                     ),
@@ -199,7 +103,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                itemCount: _kCategories.length,
+                itemCount: categories.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   final bool selected = _selectedCategory == i;
@@ -217,7 +121,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         ),
                       ),
                       child: Text(
-                        _kCategories[i],
+                        categories[i]['name'] as String,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -237,27 +141,34 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
           // Product list
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _kProducts.length + 1, // +1 for load more button
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                if (i == _kProducts.length) {
-                  return _LoadMoreButton();
+            child: productsAsync.when(
+              data: (products) {
+                if (products.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 64, color: context.colors.border),
+                        const SizedBox(height: 16),
+                        Text('No products found', style: TextStyle(fontSize: 16, color: context.colors.textSecondary)),
+                      ],
+                    ),
+                  );
                 }
-                return _ProductListCard(product: _kProducts[i]);
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: products.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    return _ProductListCard(product: products[i]);
+                  },
+                );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
           ),
         ],
-      ),
-
-      // FAB — Add new product
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: context.colors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () {},
-        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -266,15 +177,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
 // ── Product List Card ──────────────────────────────────────────────────────
 
 class _ProductListCard extends StatelessWidget {
-  final _MockProduct product;
+  final ProductModel product;
   const _ProductListCard({required this.product});
 
   @override
   Widget build(BuildContext context) {
     final discount = product.discountPercent;
+    final isOutOfStock = product.stock <= 0;
+    final isLowStock = product.stock > 0 && product.stock <= 10;
 
     return GestureDetector(
-      onTap: () => context.go('/catalog/product/${product.id}'),
+      onTap: () => context.push('/catalog/product/${product.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: context.colors.surface,
@@ -297,32 +210,36 @@ class _ProductListCard extends StatelessWidget {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: product.isOutOfStock
+                    color: isOutOfStock
                         ? Colors.grey.shade200
-                        : product.bgColor,
+                        : context.colors.surfaceGrey,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(11),
                       bottomLeft: Radius.circular(11),
                     ),
                   ),
-                  child: product.isOutOfStock
-                      ? ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0, 0, 0, 1, 0,
-                          ]),
-                          child: Icon(product.icon,
-                              size: 38,
-                              color: context.colors.primary.withValues(alpha: 0.4)),
+                  child: product.primaryImage.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(11),
+                            bottomLeft: Radius.circular(11),
+                          ),
+                          child: isOutOfStock 
+                            ? ColorFiltered(
+                                colorFilter: const ColorFilter.matrix([
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0, 0, 0, 1, 0,
+                                ]),
+                                child: Image.network(product.primaryImage, fit: BoxFit.cover),
+                              )
+                            : Image.network(product.primaryImage, fit: BoxFit.cover),
                         )
-                      : Icon(product.icon,
-                          size: 38,
-                          color: context.colors.primary.withValues(alpha: 0.6)),
+                      : Icon(Icons.image_not_supported_rounded, color: context.colors.textHint),
                 ),
                 // Discount badge
-                if (discount != null)
+                if (discount > 0)
                   Positioned(
                     top: 0,
                     left: 0,
@@ -331,7 +248,7 @@ class _ProductListCard extends StatelessWidget {
                           horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: context.colors.primary,
-                        borderRadius: BorderRadius.only(
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(11),
                           bottomRight: Radius.circular(8),
                         ),
@@ -347,7 +264,7 @@ class _ProductListCard extends StatelessWidget {
                     ),
                   ),
                 // Out of stock overlay
-                if (product.isOutOfStock)
+                if (isOutOfStock)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -391,33 +308,22 @@ class _ProductListCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    // SKU + Stock
+                    // Stock status
                     RichText(
                       text: TextSpan(
                         style: const TextStyle(fontSize: 12),
                         children: [
                           TextSpan(
-                            text: 'SKU: ${product.sku}',
+                            text: isOutOfStock
+                                ? 'Stock: 0'
+                                : isLowStock
+                                    ? 'Low Stock: ${product.stock}'
+                                    : 'Stock: ${product.stock}',
                             style: TextStyle(
-                              color: product.isLowStock
+                              color: isLowStock || isOutOfStock
                                   ? context.colors.error
                                   : context.colors.textHint,
-                              fontWeight: product.isLowStock
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                            ),
-                          ),
-                          TextSpan(
-                            text: product.isOutOfStock
-                                ? ' • Stock: 0'
-                                : product.isLowStock
-                                    ? ' • Low Stock: ${product.stock}'
-                                    : ' • Stock: ${product.stock}',
-                            style: TextStyle(
-                              color: product.isLowStock
-                                  ? context.colors.error
-                                  : context.colors.textHint,
-                              fontWeight: product.isLowStock
+                              fontWeight: isLowStock || isOutOfStock
                                   ? FontWeight.w600
                                   : FontWeight.w400,
                             ),
@@ -427,27 +333,27 @@ class _ProductListCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     // Price row
-                    Row(
+                    Wrap(
+                      spacing: 5,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          '\$${product.sellingPrice.toStringAsFixed(2)}',
+                          AppFormatters.formatPrice(product.price),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: context.colors.textPrimary,
                           ),
                         ),
-                        if (product.mrp != null) ...[
-                          const SizedBox(width: 6),
+                        if (product.isOnSale)
                           Text(
-                            '\$${product.mrp!.toStringAsFixed(2)}',
+                            AppFormatters.formatPrice(product.mrp),
                             style: TextStyle(
                               fontSize: 12,
                               color: context.colors.textHint,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ],
@@ -457,7 +363,7 @@ class _ProductListCard extends StatelessWidget {
 
             // Chevron
             Padding(
-              padding: EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 8),
               child: Icon(Icons.chevron_right_rounded,
                   color: context.colors.textHint, size: 20),
             ),
@@ -467,38 +373,3 @@ class _ProductListCard extends StatelessWidget {
     );
   }
 }
-
-// ── Load More Button ───────────────────────────────────────────────────────
-
-class _LoadMoreButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: context.colors.border),
-          foregroundColor: context.colors.textSecondary,
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        onPressed: () {},
-        child: Text(
-          'Load More Products',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: context.colors.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-
-
-

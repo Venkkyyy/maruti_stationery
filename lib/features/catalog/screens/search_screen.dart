@@ -2,7 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_sizes.dart';
 import '../../../features/catalog/widgets/product_card.dart';
 import '../../../models/product_model.dart';

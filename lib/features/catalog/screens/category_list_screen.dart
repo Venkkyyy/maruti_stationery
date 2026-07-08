@@ -1,20 +1,14 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_constants.dart';
 
 class CategoryListScreen extends StatelessWidget {
   const CategoryListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      {'name': 'Pens & Writing', 'icon': Icons.edit_rounded},
-      {'name': 'Notebooks', 'icon': Icons.auto_stories_rounded},
-      {'name': 'Inks & Refills', 'icon': Icons.water_drop_rounded},
-      {'name': 'Art Supplies', 'icon': Icons.brush_rounded},
-      {'name': 'Desk Accessories', 'icon': Icons.desk_rounded},
-      {'name': 'Gift Sets', 'icon': Icons.card_giftcard_rounded},
-    ];
+    final categories = AppConstants.categories;
 
     return Scaffold(
       backgroundColor: context.colors.background,
