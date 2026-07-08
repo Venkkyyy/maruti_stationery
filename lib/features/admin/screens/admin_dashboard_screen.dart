@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
         title: const Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: context.colors.surface,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSizes.screenHorizontal),
@@ -45,72 +39,72 @@ class AdminDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           
           // Total Revenue Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: context.colors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.colors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'TOTAL REVENUE',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.textSecondary,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: context.colors.primaryLight,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.account_balance_wallet_rounded, color: context.colors.primary, size: 20),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('orders').where('status', isEqualTo: 'Delivered').snapshots(),
+            builder: (context, snapshot) {
+              int totalRevenue = 0;
+              if (snapshot.hasData) {
+                for (var doc in snapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  totalRevenue += (data['totalAmount'] as num?)?.toInt() ?? 0;
+                }
+              }
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: context.colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      AppFormatters.formatPrice(4523100), // Fake data for now
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: context.colors.textPrimary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'TOTAL REVENUE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textSecondary,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: context.colors.primaryLight,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.account_balance_wallet_rounded, color: context.colors.primary, size: 20),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        '+12%',
-                        style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          AppFormatters.formatPrice(totalRevenue),
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           
@@ -118,24 +112,36 @@ class AdminDashboardScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: _buildMetricCard(
-                  context,
-                  title: 'Orders',
-                  value: '128',
-                  icon: Icons.local_shipping_rounded,
-                  iconColor: context.colors.primary,
-                  iconBg: context.colors.primaryLight,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('orders').where('status', isNotEqualTo: 'Cancelled').snapshots(),
+                  builder: (context, snapshot) {
+                    final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                    return _buildMetricCard(
+                      context,
+                      title: 'Orders',
+                      value: count.toString(),
+                      icon: Icons.local_shipping_rounded,
+                      iconColor: context.colors.primary,
+                      iconBg: context.colors.primaryLight,
+                    );
+                  }
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildMetricCard(
-                  context,
-                  title: 'Low Stock',
-                  value: '14',
-                  icon: Icons.inventory_2_rounded,
-                  iconColor: context.colors.error,
-                  iconBg: context.colors.errorLight,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('products').where('stock', isLessThan: 10).snapshots(),
+                  builder: (context, snapshot) {
+                    final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                    return _buildMetricCard(
+                      context,
+                      title: 'Low Stock',
+                      value: count.toString(),
+                      icon: Icons.inventory_2_rounded,
+                      iconColor: context.colors.error,
+                      iconBg: context.colors.errorLight,
+                    );
+                  }
                 ),
               ),
             ],
@@ -167,9 +173,16 @@ class AdminDashboardScreen extends ConsumerWidget {
                   context,
                   title: 'Coupons',
                   icon: Icons.local_offer_rounded,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon')));
-                  },
+                  onTap: () => context.push('/admin/coupons'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Categories',
+                  icon: Icons.category_rounded,
+                  onTap: () => context.push('/admin/categories'),
                 ),
               ),
             ],
@@ -195,23 +208,51 @@ class AdminDashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           
-          // Mock Recent Orders list
-          _buildRecentOrderTile(
-            context,
-            orderId: '#ORD-9021',
-            customer: 'Rahul Sharma',
-            amount: 125000,
-            items: '2x Parker Pens, 1x Notebook',
-            status: 'Processing',
-          ),
-          const SizedBox(height: 12),
-          _buildRecentOrderTile(
-            context,
-            orderId: '#ORD-9020',
-            customer: 'Priya Patel',
-            amount: 45000,
-            items: '1x Set of Markers',
-            status: 'Delivered',
+          // Live Recent Orders list
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('orders').orderBy('createdAt', descending: true).limit(3).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('No recent orders.'),
+                ));
+              }
+
+              return Column(
+                children: snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  
+                  // Construct items string
+                  String itemsString = '';
+                  if (data['items'] != null) {
+                    final itemsList = data['items'] as List<dynamic>;
+                    if (itemsList.isNotEmpty) {
+                      itemsString = '${itemsList[0]['quantity']}x ${itemsList[0]['productName']}';
+                      if (itemsList.length > 1) {
+                        itemsString += ' + ${itemsList.length - 1} more';
+                      }
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRecentOrderTile(
+                      context,
+                      orderId: doc.id.substring(0, 8).toUpperCase(),
+                      customer: data['address']?['name'] ?? 'Unknown Customer',
+                      amount: (data['totalAmount'] as num?)?.toInt() ?? 0,
+                      items: itemsString,
+                      status: data['status'] ?? 'Processing',
+                      fullId: doc.id,
+                    ),
+                  );
+                }).toList(),
+              );
+            }
           ),
           const SizedBox(height: 24),
         ],
@@ -306,8 +347,8 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentOrderTile(BuildContext context, {required String orderId, required String customer, required int amount, required String items, required String status}) {
-    final bool isProcessing = status == 'Processing';
+  Widget _buildRecentOrderTile(BuildContext context, {required String orderId, required String customer, required int amount, required String items, required String status, required String fullId}) {
+    final bool isProcessing = status == 'Processing' || status == 'Pending';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -321,7 +362,7 @@ class AdminDashboardScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                orderId,
+                '#$orderId',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -335,7 +376,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  status,
+                  status.toUpperCase(),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -372,21 +413,26 @@ class AdminDashboardScreen extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceGrey,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Update Status',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colors.textPrimary),
-                  ],
+              GestureDetector(
+                onTap: () {
+                  context.go('/admin/orders');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.colors.surfaceGrey,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'View Order',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 12, color: context.colors.textPrimary),
+                    ],
+                  ),
                 ),
               ),
             ],

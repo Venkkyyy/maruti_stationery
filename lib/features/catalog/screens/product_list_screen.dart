@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
+import '../../../models/category_model.dart';
 import '../../../providers/product_provider.dart';
+import '../../../providers/categories_provider.dart';
 
 // ── Screen ─────────────────────────────────────────────────────────────────
 
@@ -28,11 +30,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = AppConstants.categories;
-    final selectedCategoryName = categories[_selectedCategory]['name'] as String;
-    
-    // Watch products based on category
-    final productsAsync = ref.watch(getProductsByCategoryProvider(selectedCategoryName));
+    final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -49,7 +47,25 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           ),
         ),
       ),
-      body: Column(
+      body: categoriesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (baseCategories) {
+          final categories = [
+            CategoryModel(id: 'all', name: 'All', image: '', order: -1, isActive: true),
+            ...baseCategories,
+          ];
+          
+          if (categories.isEmpty) {
+            return const Center(child: Text('No categories found'));
+          }
+
+          final selectedCategoryId = categories[_selectedCategory].id;
+          final productsAsync = _selectedCategory == 0 
+              ? ref.watch(getNewArrivalsProvider(limit: 50))
+              : ref.watch(getProductsByCategoryProvider(selectedCategoryId));
+
+          return Column(
         children: [
           // Search + Filter Bar
           Container(
@@ -121,7 +137,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         ),
                       ),
                       child: Text(
-                        categories[i]['name'] as String,
+                        categories[i].name,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -169,7 +185,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
             ),
           ),
         ],
-      ),
+      );
+    },
+    ),
     );
   }
 }

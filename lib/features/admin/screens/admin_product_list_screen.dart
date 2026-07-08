@@ -94,6 +94,7 @@ class _AdminProductTile extends StatelessWidget {
         border: Border.all(color: context.colors.border),
       ),
       child: ListTile(
+        onTap: () => context.push('/admin/products/edit/${product.id}'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),

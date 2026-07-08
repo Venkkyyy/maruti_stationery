@@ -246,17 +246,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             itemCount: results.length,
             itemBuilder: (context, i) => ProductCard(
               product: results[i],
-              onAddToCart: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Added to bag!'),
-                    backgroundColor: context.colors.primary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                );
-              },
             ),
           ),
         ),

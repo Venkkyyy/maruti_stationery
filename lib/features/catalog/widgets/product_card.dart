@@ -1,23 +1,23 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
+import '../../../providers/cart_provider.dart';
 
 /// Reusable product card for both home grid and catalog grid.
-class ProductCard extends StatelessWidget {
+class ProductCard extends ConsumerWidget {
   final ProductModel product;
-  final VoidCallback? onAddToCart;
 
   const ProductCard({
     super.key,
     required this.product,
-    this.onAddToCart,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () => context.go('/catalog/product/${product.id}'),
       child: Container(
@@ -111,6 +111,38 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Add to Cart icon
+                if (product.isInStock)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: GestureDetector(
+                      onTap: () async {
+                        try {
+                          await ref.read(cartProvider.notifier).addItem(product, 1);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Added to bag!', style: TextStyle(color: Colors.white)), backgroundColor: context.colors.primary, duration: const Duration(seconds: 1)),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
+                          shape: BoxShape.circle,
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                        ),
+                        child: Icon(Icons.add_rounded, size: 18, color: context.colors.primary),
+                      ),
+                    ),
+                  ),
               ],
             ),
 
@@ -168,26 +200,35 @@ class ProductCard extends StatelessWidget {
                 width: double.infinity,
                 height: 32,
                 child: product.isInStock
-                    ? OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          side: BorderSide(color: context.colors.primary),
+                    ? ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.colors.primary,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                           ),
+                          padding: EdgeInsets.zero,
                         ),
-                        icon: Icon(Icons.shopping_bag_outlined,
-                            size: 13, color: context.colors.primary),
-                        label: Text(
-                          'Add to Bag',
+                        icon: const Icon(Icons.flash_on_rounded, size: 13, color: Colors.white),
+                        label: const Text(
+                          'Buy Now',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: context.colors.primary,
+                            color: Colors.white,
                           ),
                         ),
-                        onPressed: onAddToCart,
+                        onPressed: () async {
+                          try {
+                            await ref.read(cartProvider.notifier).addItem(product, 1);
+                            if (context.mounted) context.push('/checkout/address');
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                              );
+                            }
+                          }
+                        },
                       )
                     : Container(
                         alignment: Alignment.center,

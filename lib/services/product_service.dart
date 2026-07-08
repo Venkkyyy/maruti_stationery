@@ -11,14 +11,10 @@ class ProductService {
     int? maxPrice,
     int? minPrice,
   }) async {
-    Query query = FirebaseFirestore.instance
-        .collection('products')
-        .where('isActive', isEqualTo: true);
+    Query query = FirebaseFirestore.instance.collection('products');
 
-    if (categoryId != 'All') {
-      // In this app, categoryId strings are lowercased names or specific IDs
-      // Assuming categories are tags or categoryId.
-      query = query.where('categoryId', isEqualTo: categoryId.toLowerCase());
+    if (categoryId != 'All' && categoryId != 'all') {
+      query = query.where('categoryId', isEqualTo: categoryId);
     }
 
     if (sortBy != null) {
@@ -29,8 +25,6 @@ class ProductService {
       } else if (sortBy == 'newest') {
         query = query.orderBy('createdAt', descending: true);
       }
-    } else {
-      query = query.orderBy('createdAt', descending: true);
     }
 
     if (lastDoc != null) {
@@ -42,6 +36,7 @@ class ProductService {
 
     return snapshot.docs
         .map((doc) => ProductModel.fromFirestore(doc))
+        .where((p) => p.isActive)
         .toList();
   }
 
@@ -72,14 +67,13 @@ class ProductService {
   }) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('products')
-        .where('isActive', isEqualTo: true)
         .where('categoryId', isEqualTo: categoryId)
-        .limit(limit + 1)
+        .limit(limit * 2) // fetch a bit more to account for inactive ones
         .get();
 
     final products = snapshot.docs
         .map((doc) => ProductModel.fromFirestore(doc))
-        .where((p) => p.id != excludeProductId)
+        .where((p) => p.isActive && p.id != excludeProductId)
         .take(limit)
         .toList();
 
@@ -90,7 +84,6 @@ class ProductService {
     final snapshot = await FirebaseFirestore.instance
         .collection('products')
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .limit(limit)
         .get();
 

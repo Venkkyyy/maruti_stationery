@@ -1,13 +1,18 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/review_provider.dart';
+import '../../../models/review_model.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
-class ReviewsScreen extends StatelessWidget {
+class ReviewsScreen extends ConsumerWidget {
   final String productId;
   const ReviewsScreen({super.key, required this.productId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(productReviewsProvider(productId));
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
@@ -30,82 +35,123 @@ class ReviewsScreen extends StatelessWidget {
         child: Column(
           children: [
             // Ratings Overview
-            Container(
-              padding: const EdgeInsets.all(24),
-              color: context.colors.surface,
-              child: Row(
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        '4.8',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          color: context.colors.primary,
-                        ),
+            reviewsAsync.when(
+              data: (reviews) {
+                if (reviews.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Center(
+                      child: Text(
+                        'No reviews yet. Be the first to review!',
+                        style: TextStyle(color: context.colors.textSecondary),
                       ),
-                      Row(
-                        children: List.generate(
-                          5,
-                          (i) => Icon(
-                            i < 4 ? Icons.star_rounded : Icons.star_half_rounded,
-                            color: Colors.amber,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Based on 124 reviews',
-                        style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 32),
-                  // Progress bars
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _RatingBarRow(star: 5, percent: 0.75),
-                        _RatingBarRow(star: 4, percent: 0.15),
-                        _RatingBarRow(star: 3, percent: 0.05),
-                        _RatingBarRow(star: 2, percent: 0.03),
-                        _RatingBarRow(star: 1, percent: 0.02),
-                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
+                  );
+                }
 
-            // Filters
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: context.colors.surface,
-              child: Row(
-                children: [
-                  _FilterButton(label: 'Most Recent', isSelected: true),
-                  const SizedBox(width: 8),
-                  _FilterButton(label: 'Highest Rated', isSelected: false),
-                  const Spacer(),
-                  Icon(Icons.tune_rounded, color: context.colors.primary, size: 20),
-                ],
-              ),
-            ),
+                // Calculate average rating
+                double avgRating = 0;
+                final counts = [0, 0, 0, 0, 0];
+                for (var r in reviews) {
+                  avgRating += r.rating;
+                  if (r.rating >= 1 && r.rating <= 5) {
+                    counts[r.rating - 1]++;
+                  }
+                }
+                avgRating /= reviews.length;
 
-            // Review List
-            Container(
-              color: context.colors.surface,
-              child: ListView.separated(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: 4,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  return const _ReviewCard();
-                },
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      color: context.colors.surface,
+                      child: Row(
+                        children: [
+                          Column(
+                            children: [
+                              Text(
+                                avgRating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.w800,
+                                  color: context.colors.primary,
+                                ),
+                              ),
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (i) => Icon(
+                                    i < avgRating.floor() 
+                                      ? Icons.star_rounded 
+                                      : (i < avgRating ? Icons.star_half_rounded : Icons.star_border_rounded),
+                                    color: Colors.amber,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Based on ${reviews.length} reviews',
+                                style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 32),
+                          // Progress bars
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _RatingBarRow(star: 5, percent: counts[4] / reviews.length),
+                                _RatingBarRow(star: 4, percent: counts[3] / reviews.length),
+                                _RatingBarRow(star: 3, percent: counts[2] / reviews.length),
+                                _RatingBarRow(star: 2, percent: counts[1] / reviews.length),
+                                _RatingBarRow(star: 1, percent: counts[0] / reviews.length),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Filters
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: context.colors.surface,
+                      child: Row(
+                        children: [
+                          _FilterButton(label: 'Most Recent', isSelected: true),
+                          const SizedBox(width: 8),
+                          _FilterButton(label: 'Highest Rated', isSelected: false),
+                          const Spacer(),
+                          Icon(Icons.tune_rounded, color: context.colors.primary, size: 20),
+                        ],
+                      ),
+                    ),
+
+                    // Review List
+                    Container(
+                      color: context.colors.surface,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: reviews.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          return _ReviewCard(review: reviews[index]);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, _) => Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(child: Text('Error loading reviews: $err')),
               ),
             ),
           ],
@@ -195,7 +241,8 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _ReviewCard extends StatelessWidget {
-  const _ReviewCard();
+  final ReviewModel review;
+  const _ReviewCard({required this.review});
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +256,8 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: context.colors.primaryLight,
-                child: Text('S',
+                child: Text(
+                    review.userName.isNotEmpty ? review.userName[0].toUpperCase() : 'U',
                     style: TextStyle(
                         color: context.colors.primary,
                         fontWeight: FontWeight.w700)),
@@ -220,7 +268,7 @@ class _ReviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Sarah J.',
+                      review.userName,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -232,12 +280,15 @@ class _ReviewCard extends StatelessWidget {
                         Row(
                           children: List.generate(
                             5,
-                            (i) => const Icon(Icons.star_rounded,
-                                color: Colors.amber, size: 12),
+                            (i) => Icon(
+                              i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                              color: Colors.amber, 
+                              size: 12
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text('1 week ago',
+                        Text(timeago.format(review.createdAt),
                             style: TextStyle(
                                 fontSize: 11, color: context.colors.textHint)),
                       ],
@@ -249,7 +300,7 @@ class _ReviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'The nib is incredibly smooth. Best purchase for my journal! The ink flow is consistent and it doesn\'t bleed through standard paper.',
+            review.text,
             style: TextStyle(fontSize: 13, color: context.colors.textSecondary, height: 1.5),
           ),
           const SizedBox(height: 12),

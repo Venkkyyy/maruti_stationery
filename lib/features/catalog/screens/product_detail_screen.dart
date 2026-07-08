@@ -4,6 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../providers/cart_provider.dart';
+import '../../../providers/product_provider.dart';
+import '../../../providers/wishlist_provider.dart';
+import '../../../providers/review_provider.dart';
+import '../../../core/utils/formatters.dart';
+
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
   static const String shopPhone = '+919876543210';
@@ -18,7 +24,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     with TickerProviderStateMixin {
   int _selectedImage = 0;
   bool _isAddingToBag = false;
-  bool _isWishlisted = false;
   late AnimationController _stampController;
   late Animation<double> _stampScale;
 
@@ -40,36 +45,69 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     super.dispose();
   }
 
-  void _addToBag() async {
+  void _addToBag(product) async {
     setState(() => _isAddingToBag = true);
     _stampController.forward().then((_) => _stampController.reverse());
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) {
-      setState(() => _isAddingToBag = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Added to Shopping Bag!'),
-            ],
+    try {
+      await ref.read(cartProvider.notifier).addItem(product, 1);
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) {
+        setState(() => _isAddingToBag = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('Added to Shopping Bag!'),
+              ],
+            ),
+            backgroundColor: context.colors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          backgroundColor: context.colors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isAddingToBag = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+        );
+      }
+    }
+  }
+
+  void _buyNow(product) async {
+    try {
+      await ref.read(cartProvider.notifier).addItem(product, 1);
+      if (mounted) context.push('/cart');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isInStock = widget.productId != '4';
+    final productAsync = ref.watch(watchProductProvider(widget.productId));
 
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      body: CustomScrollView(
+    return productAsync.when(
+      loading: () => Scaffold(backgroundColor: context.colors.background, body: const Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(backgroundColor: context.colors.background, body: Center(child: Text('Error: $e'))),
+      data: (product) {
+        if (product == null) return Scaffold(backgroundColor: context.colors.background, body: const Center(child: Text('Product not found.')));
+        final bool isInStock = product.isInStock;
+        
+        final wishlistAsync = ref.watch(watchWishlistProvider);
+        final isWishlisted = wishlistAsync.value?.any((p) => p.id == product.id) ?? false;
+        
+        return Scaffold(
+          backgroundColor: context.colors.background,
+          body: CustomScrollView(
         slivers: [
           // Collapsing image header
           SliverAppBar(
@@ -128,34 +166,39 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                 ),
                 child: IconButton(
                   icon: Icon(
-                    _isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                     color: context.colors.error,
                   ),
-                  onPressed: () {
-                    setState(() => _isWishlisted = !_isWishlisted);
-                    if (_isWishlisted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Row(
-                            children: [
-                              Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('Added to Wishlist!'),
-                            ],
+                  onPressed: () async {
+                    if (isWishlisted) {
+                      await ref.read(wishlistProvider.notifier).remove(product.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Removed from Wishlist'),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: context.colors.primary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                        );
+                      }
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Removed from Wishlist'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                      await ref.read(wishlistProvider.notifier).add(product);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Row(
+                              children: [
+                                Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 8),
+                                Text('Added to Wishlist!'),
+                              ],
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: context.colors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -167,19 +210,24 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   // Image area
                   Container(
                     color: const Color(0xFFF1F3F4),
-                    child: const Center(
-                      child: Icon(Icons.edit_rounded,
-                          size: 100, color: Color(0xFFBEC3C8)),
-                    ),
+                    width: double.infinity,
+                    height: double.infinity,
+                    child: product.images.isNotEmpty
+                      ? Image.network(product.images[_selectedImage], fit: BoxFit.contain)
+                      : const Center(
+                          child: Icon(Icons.image_not_supported_rounded,
+                              size: 100, color: Color(0xFFBEC3C8)),
+                        ),
                   ),
                   // Image pagination dots
-                  Positioned(
-                    bottom: 12,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (i) {
+                  if (product.images.length > 1)
+                    Positioned(
+                      bottom: 12,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(product.images.length, (i) {
                         return GestureDetector(
                           onTap: () => setState(() => _selectedImage = i),
                           child: AnimatedContainer(
@@ -251,29 +299,30 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       ),
                       const Spacer(),
                       // Discount badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: context.colors.primaryLight,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '29% OFF',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.primary,
+                      if (product.isOnSale)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: context.colors.primaryLight,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            AppFormatters.formatDiscount(product.mrp, product.price),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: context.colors.primary,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
                   // Product name
                   Text(
-                    'Parker Sonnet Special Edition\nFountain Pen',
+                    product.name,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -284,31 +333,60 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   const SizedBox(height: 8),
 
                   // Rating Summary (Clickable to Reviews Screen)
-                  GestureDetector(
-                    onTap: () => context.push('/catalog/product/${widget.productId}/reviews'),
-                    child: Row(
-                      children: [
-                        Row(
-                          children: List.generate(
-                            5,
-                            (i) => Icon(
-                              i < 4 ? Icons.star_rounded : Icons.star_half_rounded,
-                              color: Colors.amber,
-                              size: 16,
+                  ref.watch(productReviewsProvider(widget.productId)).when(
+                    data: (reviews) {
+                      if (reviews.isEmpty) {
+                        return GestureDetector(
+                          onTap: () => context.push('/catalog/product/${widget.productId}/reviews'),
+                          child: Row(
+                            children: [
+                              Row(
+                                children: List.generate(
+                                  5,
+                                  (i) => Icon(Icons.star_border_rounded, color: Colors.amber, size: 16),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'No reviews yet',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      double avgRating = 0;
+                      for (var r in reviews) avgRating += r.rating;
+                      avgRating /= reviews.length;
+                      
+                      return GestureDetector(
+                        onTap: () => context.push('/catalog/product/${widget.productId}/reviews'),
+                        child: Row(
+                          children: [
+                            Row(
+                              children: List.generate(
+                                5,
+                                (i) => Icon(
+                                  i < avgRating.floor() 
+                                    ? Icons.star_rounded 
+                                    : (i < avgRating ? Icons.star_half_rounded : Icons.star_border_rounded),
+                                  color: Colors.amber,
+                                  size: 16,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${avgRating.toStringAsFixed(1)}  •  ${reviews.length} reviews',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '4.8  •  124 reviews',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
+                    loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 16),
                   
@@ -343,22 +421,24 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   Row(
                     children: [
                       Text(
-                        '₹4,500',
+                        AppFormatters.formatPrice(product.price),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                           color: context.colors.primary,
                         ),
                       ),
-                      SizedBox(width: 10),
-                      Text(
-                        '₹6,300',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: context.colors.textHint,
-                          decoration: TextDecoration.lineThrough,
+                      if (product.isOnSale) ...[
+                        SizedBox(width: 10),
+                        Text(
+                          AppFormatters.formatPrice(product.mrp),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: context.colors.textHint,
+                            decoration: TextDecoration.lineThrough,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -377,7 +457,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'A classic expression of refined style, Sonnet is Parker\'s symbol of elegance. Outstanding performance meets timeless design. Features a 18K gold nib, lacquered barrel, and palladium-plated trim. Perfect for executives and collectors alike.\n\nIncludes converter for ink bottle use or standard cartridges.',
+                    product.description,
                     style: TextStyle(
                       fontSize: 14,
                       color: context.colors.textSecondary,
@@ -396,11 +476,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                     ),
                   ),
                   SizedBox(height: 10),
-                  _SpecRow('Nib Material', '18K Gold'),
-                  _SpecRow('Barrel', 'Lacquered Metal'),
-                  _SpecRow('Filling System', 'Converter / Cartridge'),
-                  _SpecRow('Weight', '28g'),
-                  _SpecRow('SKU', 'PK-SN-SE-01'),
+                  _SpecRow('Brand', product.brand.isNotEmpty ? product.brand : 'Generic'),
+                  _SpecRow('Category', product.categoryId),
+                  _SpecRow('Status', product.isInStock ? 'In Stock' : 'Out of Stock'),
+                  _SpecRow('SKU', product.id.substring(0, 8).toUpperCase()),
 
                   const SizedBox(height: 120), // space for bottom bar
                 ],
@@ -427,21 +506,42 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
         child: isInStock
             ? ScaleTransition(
                 scale: _stampScale,
-                child: SizedBox(
-                  height: 54,
-                  child: ElevatedButton.icon(
-                    icon: _isAddingToBag
-                        ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.shopping_bag_outlined, size: 20),
-                    label: Text(_isAddingToBag ? 'Adding...' : 'Add to Bag'),
-                    onPressed: _isAddingToBag ? null : _addToBag,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          icon: _isAddingToBag
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.shopping_bag_outlined, size: 20),
+                          label: Text(_isAddingToBag ? 'Adding...' : 'Add to Bag'),
+                          onPressed: _isAddingToBag ? null : () => _addToBag(product),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.flash_on_rounded, size: 20),
+                          label: const Text('Buy Now'),
+                          onPressed: () => _buyNow(product),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: context.colors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               )
             : Column(
@@ -489,7 +589,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   ),
                 ],
               ),
-      ),
+              ),
+        );
+      },
     );
   }
 }

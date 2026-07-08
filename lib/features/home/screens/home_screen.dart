@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../providers/product_provider.dart';
 import '../../../models/product_model.dart';
+import '../../../models/category_model.dart';
 import '../../catalog/widgets/product_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -17,20 +19,41 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedCategory = 0;
 
-  final List<String> _categories = [
-    'All',
-    'Pens',
-    'Notebooks',
-    'Inks',
-    'Art Supplies',
-    'Accessories',
-  ];
+  List<CategoryModel> _categories = [];
+  bool _isLoadingCategories = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('categories').orderBy('order').get();
+      final cats = snap.docs.map((d) => CategoryModel.fromFirestore(d)).toList();
+      
+      // Prepend "All"
+      cats.insert(0, CategoryModel(id: 'all', name: 'All', image: '', order: -1, isActive: true));
+      
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _isLoadingCategories = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingCategories = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = _selectedCategory == 0 
+    final productsAsync = _selectedCategory == 0 || _categories.isEmpty
         ? ref.watch(getNewArrivalsProvider(limit: 6))
-        : ref.watch(getProductsByCategoryProvider(_categories[_selectedCategory].toLowerCase()));
+        : ref.watch(getProductsByCategoryProvider(_categories[_selectedCategory].id));
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -107,49 +130,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(height: 16),
 
                 // ── Category Chips ─────────────────────────────
-                SizedBox(
-                  height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      final bool selected = _selectedCategory == i;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedCategory = i);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? context.colors.primary
-                                : context.colors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
+                if (_isLoadingCategories)
+                  const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
+                else
+                  SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _categories.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final bool selected = _selectedCategory == i;
+                        final cat = _categories[i];
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedCategory = i);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 8),
+                            decoration: BoxDecoration(
                               color: selected
                                   ? context.colors.primary
-                                  : context.colors.border,
+                                  : context.colors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected
+                                    ? context.colors.primary
+                                    : context.colors.border,
+                              ),
+                            ),
+                            child: Text(
+                              cat.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : context.colors.textSecondary,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            _categories[i],
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: selected
-                                  ? Colors.white
-                                  : context.colors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
 
                 // ── Hero Banner ────────────────────────────────

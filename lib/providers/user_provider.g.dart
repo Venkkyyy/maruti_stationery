@@ -45,4 +45,4 @@ final class CurrentUserModelProvider
   }
 }
 
-String _$currentUserModelHash() => r'8412483e9fb5a1331ebf63c39a3682cb98612786';
+String _$currentUserModelHash() => r'6da095e21cf87348ae82bc26d3a706f0358ffb05';

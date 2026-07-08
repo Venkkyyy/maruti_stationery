@@ -1,11 +1,62 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../core/errors/app_exception.dart';
 import 'auth_provider.dart';
 
+import '../models/coupon_model.dart';
 part 'cart_provider.g.dart';
+
+@riverpod
+Future<List<CouponModel>> activeCoupons(Ref ref) async {
+  final snap = await FirebaseFirestore.instance
+      .collection('coupons')
+      .where('isActive', isEqualTo: true)
+      .get();
+  final now = DateTime.now();
+  return snap.docs
+      .map((d) => CouponModel.fromFirestore(d))
+      .where((c) => c.expiryDate.isAfter(now))
+      .toList();
+}
+
+@riverpod
+class AppliedCoupon extends _$AppliedCoupon {
+  @override
+  CouponModel? build() {
+    return null;
+  }
+
+  Future<void> applyCoupon(String code, int subtotal) async {
+    final query = await FirebaseFirestore.instance
+        .collection('coupons')
+        .where('code', isEqualTo: code)
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    if (query.docs.isEmpty) {
+      throw AppException('Invalid or inactive coupon');
+    }
+
+    final coupon = CouponModel.fromFirestore(query.docs.first);
+
+    if (coupon.expiryDate.isBefore(DateTime.now())) {
+      throw AppException('Coupon has expired');
+    }
+
+    if (subtotal < coupon.minOrderAmount) {
+      throw AppException('Minimum order amount not met');
+    }
+
+    state = coupon;
+  }
+
+  void removeCoupon() {
+    state = null;
+  }
+}
 
 @riverpod
 Stream<List<CartItemModel>> cartStream(Ref ref, String userId) {
@@ -23,7 +74,7 @@ Stream<List<CartItemModel>> cartStream(Ref ref, String userId) {
 class CartNotifier extends _$CartNotifier {
   @override
   Future<List<CartItemModel>> build() async {
-    final userId = ref.watch(authStateProvider).value?.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return [];
     
     // Watch real-time cart changes
@@ -35,7 +86,7 @@ class CartNotifier extends _$CartNotifier {
   }
 
   Future<void> addItem(ProductModel product, int qty) async {
-    final userId = ref.read(authStateProvider).value?.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw const AppException('Please login to add to cart');
     
     // Check stock before adding
@@ -70,7 +121,7 @@ class CartNotifier extends _$CartNotifier {
   }
 
   Future<void> updateQty(String productId, int newQty) async {
-    final userId = ref.read(authStateProvider).value?.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
     
     if (newQty <= 0) {
@@ -85,7 +136,7 @@ class CartNotifier extends _$CartNotifier {
   }
 
   Future<void> removeItem(String productId) async {
-    final userId = ref.read(authStateProvider).value?.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
     
     await FirebaseFirestore.instance
@@ -95,7 +146,7 @@ class CartNotifier extends _$CartNotifier {
   }
 
   Future<void> clearCart() async {
-    final userId = ref.read(authStateProvider).value?.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
     
     final items = await FirebaseFirestore.instance

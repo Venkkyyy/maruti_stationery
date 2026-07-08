@@ -1,17 +1,29 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/product_provider.dart';
+import '../../../providers/review_provider.dart';
+import '../../../core/utils/formatters.dart';
 
-class RateOrderScreen extends StatefulWidget {
+class RateOrderScreen extends ConsumerStatefulWidget {
   final String productId;
   const RateOrderScreen({super.key, required this.productId});
 
   @override
-  State<RateOrderScreen> createState() => _RateOrderScreenState();
+  ConsumerState<RateOrderScreen> createState() => _RateOrderScreenState();
 }
 
-class _RateOrderScreenState extends State<RateOrderScreen> {
+class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
   int _mainRating = 0;
+  final TextEditingController _reviewController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +75,18 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
             Text('PRODUCT FEEDBACK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 16),
             
-            _buildProductFeedbackCard('Parker Vector Rollerball Pen', '₹450.00'),
-            const SizedBox(height: 16),
-            _buildProductFeedbackCard('Moleskine Classic Notebook', '₹1,250.00'),
+            ref.watch(watchProductProvider(widget.productId)).when(
+              data: (product) {
+                if (product == null) return const SizedBox.shrink();
+                return _buildProductFeedbackCard(
+                  product.name, 
+                  AppFormatters.formatPrice(product.price),
+                  product.primaryImage,
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
 
             const SizedBox(height: 32),
             Text('Write your review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
@@ -78,10 +99,11 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
+                controller: _reviewController,
                 maxLines: 5,
                 maxLength: 300,
                 decoration: InputDecoration(
-                  hintText: 'What did you like or dislike about the products?',
+                  hintText: 'What did you like or dislike about the product?',
                   hintStyle: TextStyle(fontSize: 14, color: context.colors.textHint),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -106,15 +128,48 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () {
-                context.pop();
+              onPressed: _isSubmitting ? null : () async {
+                if (_mainRating == 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please select a rating'), backgroundColor: context.colors.error),
+                  );
+                  return;
+                }
+                
+                setState(() => _isSubmitting = true);
+                try {
+                  await ref.read(reviewProvider.notifier).addReview(
+                    widget.productId,
+                    _mainRating,
+                    _reviewController.text.trim(),
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Review submitted successfully!'), backgroundColor: context.colors.primary),
+                    );
+                    context.pop();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isSubmitting = false);
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.colors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Submit Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 24, height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Submit Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
@@ -122,7 +177,7 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
     );
   }
 
-  Widget _buildProductFeedbackCard(String title, String price) {
+  Widget _buildProductFeedbackCard(String title, String price, String imageUrl) {
     return Column(
       children: [
         Row(
@@ -136,7 +191,12 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: context.colors.border),
               ),
-              child: Icon(Icons.edit, color: context.colors.primary, size: 24),
+              child: imageUrl.isNotEmpty 
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(imageUrl, fit: BoxFit.cover)
+                  )
+                : Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -150,10 +210,13 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
                   Row(
                     children: [
                       Row(
-                        children: List.generate(5, (index) => Icon(Icons.star_border_rounded, size: 16, color: context.colors.border)),
+                        children: List.generate(5, (index) => Icon(
+                          index < _mainRating ? Icons.star_rounded : Icons.star_border_rounded, 
+                          size: 16, 
+                          color: index < _mainRating ? context.colors.primary : context.colors.border,
+                        )),
                       ),
                       const Spacer(),
-                      Text('Add Photo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.primary)),
                     ],
                   ),
                 ],

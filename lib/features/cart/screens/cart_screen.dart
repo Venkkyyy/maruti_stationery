@@ -14,6 +14,14 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
+  final _couponController = TextEditingController();
+  bool _isApplyingCoupon = false;
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
@@ -73,10 +81,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         itemBuilder: (context, i) => _buildCartItem(items[i], cartNotifier),
                       ),
                       const SizedBox(height: 8),
-                      _buildCouponsSection(),
+                      _buildCouponsSection(cartNotifier.subtotal),
                       const SizedBox(height: 8),
                       _buildPriceDetails(cartNotifier),
-                      const SizedBox(height: 100), 
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
@@ -209,7 +217,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Widget _buildCouponsSection() {
+  Widget _buildCouponsSection(int subtotal) {
+    final appliedCoupon = ref.watch(appliedCouponProvider);
+    final activeCouponsAsync = ref.watch(activeCouponsProvider);
+
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -224,30 +235,205 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: context.colors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: context.colors.border),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text('Enter coupon code', style: TextStyle(color: context.colors.textHint, fontSize: 14)),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.colors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+          if (appliedCoupon != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.colors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.colors.success),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: context.colors.success, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${appliedCoupon.code} applied', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.success)),
+                        Text('You saved ${AppFormatters.formatPrice(appliedCoupon.discountAmount)}', style: TextStyle(fontSize: 12, color: context.colors.success)),
+                      ],
+                    ),
                   ),
-                  child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                  TextButton(
+                    onPressed: () {
+                      ref.read(appliedCouponProvider.notifier).removeCoupon();
+                      _couponController.clear();
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.colors.error,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFE8EAF6)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _couponController,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Enter coupon code',
+                            hintStyle: TextStyle(color: context.colors.primary.withValues(alpha: 0.5), fontSize: 13),
+                          ),
+                        ),
+                      ),
+                      _isApplyingCoupon
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                            )
+                          : TextButton(
+                              onPressed: () async {
+                                final code = _couponController.text.trim();
+                                if (code.isEmpty) return;
+                                
+                                setState(() => _isApplyingCoupon = true);
+                                try {
+                                  await ref.read(appliedCouponProvider.notifier).applyCoupon(code, subtotal);
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) setState(() => _isApplyingCoupon = false);
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: const Color(0xFFE8EAF6),
+                                foregroundColor: Colors.black87,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                    topRight: Radius.circular(3),
+                                    bottomRight: Radius.circular(3),
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                activeCouponsAsync.when(
+                  data: (coupons) {
+                    if (coupons.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.local_offer_rounded, color: Color(0xFF2E7D32), size: 14),
+                            const SizedBox(width: 4),
+                            const Text('Available offers for you', style: TextStyle(color: Color(0xFF2E7D32), fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...coupons.map((coupon) {
+                          final canApply = subtotal >= coupon.minOrderAmount;
+                          final difference = coupon.minOrderAmount - subtotal;
+                          
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: canApply ? context.colors.primary.withValues(alpha: 0.05) : context.colors.surfaceGrey.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: canApply ? context.colors.primary.withValues(alpha: 0.3) : context.colors.border,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        coupon.code,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: canApply ? context.colors.primary : context.colors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Save ${AppFormatters.formatPrice(coupon.discountAmount)} on orders above ${AppFormatters.formatPrice(coupon.minOrderAmount)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: context.colors.textSecondary,
+                                        ),
+                                      ),
+                                      if (!canApply) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Add ${AppFormatters.formatPrice(difference)} more to apply',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: context.colors.error,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (canApply)
+                                  TextButton(
+                                    onPressed: () async {
+                                      _couponController.text = coupon.code;
+                                      setState(() => _isApplyingCoupon = true);
+                                      try {
+                                        await ref.read(appliedCouponProvider.notifier).applyCoupon(coupon.code, subtotal);
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _isApplyingCoupon = false);
+                                      }
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: context.colors.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                    child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2))),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
               ],
             ),
-          ),
         ],
       ),
     );
@@ -255,6 +441,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _buildPriceDetails(CartNotifier cartNotifier) {
     final subtotal = cartNotifier.subtotal;
+    final appliedCoupon = ref.watch(appliedCouponProvider);
+    final discount = appliedCoupon?.discountAmount ?? 0;
+    final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
+
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -264,6 +454,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text('PRICE DETAILS (${cartNotifier.totalItems} ITEMS)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colors.textSecondary)),
           const SizedBox(height: 16),
           _priceRow('Total MRP', AppFormatters.formatPrice(subtotal)),
+          if (discount > 0) ...[
+            const SizedBox(height: 12),
+            _priceRow('Coupon Discount', '-${AppFormatters.formatPrice(discount)}', isGreen: true),
+          ],
           const SizedBox(height: 12),
           _priceRow('Shipping Fee', 'Free', isGreen: true),
           const SizedBox(height: 16),
@@ -273,7 +467,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
-              Text(AppFormatters.formatPrice(subtotal), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
+              Text(AppFormatters.formatPrice(total), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
             ],
           ),
         ],
@@ -299,10 +493,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context, CartNotifier cartNotifier) {
+    final subtotal = cartNotifier.subtotal;
+    final appliedCoupon = ref.watch(appliedCouponProvider);
+    final discount = appliedCoupon?.discountAmount ?? 0;
+    final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
+
     return Container(
       decoration: BoxDecoration(
         color: context.colors.surface,
-        boxShadow: [BoxShadow(color: Color(0x15000000), blurRadius: 10, offset: Offset(0, -2))],
+        boxShadow: const [BoxShadow(color: Color(0x15000000), blurRadius: 10, offset: Offset(0, -2))],
       ),
       padding: const EdgeInsets.all(16),
       child: SafeArea(
@@ -313,7 +512,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppFormatters.formatPrice(cartNotifier.subtotal), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                Text(AppFormatters.formatPrice(total), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                 Text('VIEW DETAILS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.colors.primary)),
               ],
             ),

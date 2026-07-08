@@ -11,7 +11,9 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../models/product_model.dart';
+import '../../../models/category_model.dart';
 import '../../../services/admin_product_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 class AdminAddProductScreen extends StatefulWidget {
@@ -30,12 +32,32 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
   final _stockController = TextEditingController();
   final _brandController = TextEditingController();
   
-  String _selectedCategory = 'pens';
+  String? _selectedCategory;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
   final List<File> _images = [];
 
-  final List<String> _categories = ['pens', 'notebooks', 'inks', 'art', 'accessories'];
+  List<CategoryModel> _categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('categories').orderBy('order').get();
+      setState(() {
+        _categories = snap.docs.map((d) => CategoryModel.fromFirestore(d)).toList();
+        if (_categories.isNotEmpty) {
+          _selectedCategory = _categories.first.id;
+        }
+      });
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -97,9 +119,9 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
         id: const Uuid().v4(),
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
-        price: int.parse(_priceController.text.trim()),
-        mrp: _mrpController.text.isNotEmpty ? int.parse(_mrpController.text.trim()) : 0,
-        categoryId: _selectedCategory,
+        price: (double.parse(_priceController.text.trim()) * 100).toInt(),
+        mrp: _mrpController.text.isNotEmpty ? (double.parse(_mrpController.text.trim()) * 100).toInt() : 0,
+        categoryId: _selectedCategory ?? 'uncategorized',
         brand: _brandController.text.trim(),
         images: const [], // Images will be uploaded and updated in service
         stock: int.parse(_stockController.text.trim()),
@@ -213,25 +235,28 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
               validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedCategory,
-              decoration: InputDecoration(
-                labelText: 'Category',
-                filled: true,
-                fillColor: context.colors.surfaceGrey,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            if (_categories.isNotEmpty)
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  filled: true,
+                  fillColor: context.colors.surfaceGrey,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: _categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
               ),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c.toUpperCase()))).toList(),
-              onChanged: (v) => setState(() => _selectedCategory = v!),
-            ),
+            if (_categories.isEmpty)
+              const Text('Please add categories first.', style: TextStyle(color: Colors.red)),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: AppTextField(
                     controller: _priceController,
-                    label: 'Selling Price (paise)',
-                    keyboardType: TextInputType.number,
+                    label: 'Selling Price (₹)',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -239,8 +264,8 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
                 Expanded(
                   child: AppTextField(
                     controller: _mrpController,
-                    label: 'MRP (paise)',
-                    keyboardType: TextInputType.number,
+                    label: 'MRP (₹)',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
               ],

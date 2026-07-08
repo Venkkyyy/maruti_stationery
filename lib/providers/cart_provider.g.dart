@@ -9,6 +9,99 @@ part of 'cart_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(activeCoupons)
+final activeCouponsProvider = ActiveCouponsProvider._();
+
+final class ActiveCouponsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<CouponModel>>,
+          List<CouponModel>,
+          FutureOr<List<CouponModel>>
+        >
+    with
+        $FutureModifier<List<CouponModel>>,
+        $FutureProvider<List<CouponModel>> {
+  ActiveCouponsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'activeCouponsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeCouponsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<CouponModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<CouponModel>> create(Ref ref) {
+    return activeCoupons(ref);
+  }
+}
+
+String _$activeCouponsHash() => r'83e5ea6d52b7b71c98c692d0b8010d1f72ebd911';
+
+@ProviderFor(AppliedCoupon)
+final appliedCouponProvider = AppliedCouponProvider._();
+
+final class AppliedCouponProvider
+    extends $NotifierProvider<AppliedCoupon, CouponModel?> {
+  AppliedCouponProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appliedCouponProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appliedCouponHash();
+
+  @$internal
+  @override
+  AppliedCoupon create() => AppliedCoupon();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CouponModel? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CouponModel?>(value),
+    );
+  }
+}
+
+String _$appliedCouponHash() => r'91f327ae866d5a3ae3ed8e134c9f45d1c0b01085';
+
+abstract class _$AppliedCoupon extends $Notifier<CouponModel?> {
+  CouponModel? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<CouponModel?, CouponModel?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CouponModel?, CouponModel?>,
+              CouponModel?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(cartStream)
 final cartStreamProvider = CartStreamFamily._();
 
@@ -110,7 +203,7 @@ final class CartNotifierProvider
   CartNotifier create() => CartNotifier();
 }
 
-String _$cartNotifierHash() => r'b4e4273486dcd5320c1a28d65f539283386a1df7';
+String _$cartNotifierHash() => r'733638ff9e56149a94fd5c71a25e8e630fc4683b';
 
 abstract class _$CartNotifier extends $AsyncNotifier<List<CartItemModel>> {
   FutureOr<List<CartItemModel>> build();

@@ -1,17 +1,21 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/product_model.dart';
 
 class AdminProductService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  // IMPORTANT: You must replace these with your actual Cloudinary keys!
+  static const String _cloudinaryCloudName = 'eizhyg2w';
+  static const String _cloudinaryUploadPreset = 'maruti_preset';
 
   // 1. ADD Product
   Future<void> addProduct(ProductModel product, List<File> imageFiles) async {
-    // First, upload images to Storage
-    List<String> imageUrls = await _uploadImages(product.id, imageFiles);
+    // First, upload images to Cloudinary
+    List<String> imageUrls = await _uploadImages(imageFiles);
     
     // Create new product with image URLs
     final newProduct = product.copyWith(images: imageUrls);
@@ -27,28 +31,34 @@ class AdminProductService {
 
   // 3. DELETE Product
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {
-    // Delete images from Storage first to save space
-    for (String url in imageUrls) {
-      try {
-        await _storage.refFromURL(url).delete();
-      } catch (e) {
-        // Log error but continue deleting document
-        debugPrint('Failed to delete image: $e'); 
-      }
-    }
+    // With unsigned uploads, you cannot securely delete images directly from the app.
+    // They will remain on Cloudinary (you have 25,000 GBs of free storage, so it is negligible).
+    // If you ever need to bulk delete orphaned photos, you can do it from the Cloudinary dashboard.
     
     // Delete from Firestore
     await _db.collection('products').doc(productId).delete();
   }
 
-  // Helper to upload images
-  Future<List<String>> _uploadImages(String productId, List<File> files) async {
+  // Helper to upload images to Cloudinary using their REST API
+  Future<List<String>> _uploadImages(List<File> files) async {
+
+
     List<String> urls = [];
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
+
     for (int i = 0; i < files.length; i++) {
-      final ref = _storage.ref().child('products/$productId/image_$i.jpg');
-      final uploadTask = await ref.putFile(files[i]);
-      final url = await uploadTask.ref.getDownloadURL();
-      urls.add(url);
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = _cloudinaryUploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', files[i].path));
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final json = jsonDecode(responseData);
+        urls.add(json['secure_url']); // Cloudinary returns the CDN URL!
+      } else {
+        throw Exception('Failed to upload image to Cloudinary: ${response.statusCode}');
+      }
     }
     return urls;
   }

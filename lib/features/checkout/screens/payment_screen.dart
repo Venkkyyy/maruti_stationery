@@ -1,19 +1,25 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../providers/cart_provider.dart';
+import '../../../core/utils/formatters.dart';
 
-class PaymentScreen extends StatefulWidget {
+class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  ConsumerState<PaymentScreen> createState() => _PaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   String _selectedPayment = 'gpay';
 
   @override
   Widget build(BuildContext context) {
+    final cartNotifier = ref.watch(cartProvider.notifier);
+    final totalAmount = cartNotifier.subtotal;
+
     return Scaffold(
       backgroundColor: context.colors.surfaceGrey,
       appBar: AppBar(
@@ -30,7 +36,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             }
           },
         ),
-        title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
+        title: const Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A73E8), fontSize: 18)),
         actions: [
           Row(
             children: [
@@ -49,7 +55,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTotalHeader(),
+                  _buildTotalHeader(totalAmount),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -141,11 +147,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 context.go('/checkout/confirmation'); // Assuming it goes here
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.primary,
+                backgroundColor: const Color(0xFF1A73E8),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Pay Now ?4,299', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('Pay Now ${AppFormatters.formatPrice(totalAmount)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
@@ -153,7 +159,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildTotalHeader() {
+  Widget _buildTotalHeader(int totalAmount) {
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -166,10 +172,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             children: [
               Text('Total Amount to Pay', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
               const SizedBox(height: 4),
-              Text('?4,299.00', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.primary)),
+              Text(AppFormatters.formatPrice(totalAmount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A73E8))),
             ],
           ),
-          Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary)),
+          const Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A73E8))),
         ],
       ),
     );
