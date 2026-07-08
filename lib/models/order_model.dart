@@ -84,7 +84,7 @@ class OrderModel {
       razorpayOrderId: data['razorpayOrderId'],
       razorpayPaymentId: data['razorpayPaymentId'],
       idempotencyKey: data['idempotencyKey'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

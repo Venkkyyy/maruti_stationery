@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../providers/product_provider.dart';
+import '../../../models/product_model.dart';
 import '../../catalog/widgets/product_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -70,7 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GestureDetector(
-                    onTap: () => context.go('/catalog'),
+                    onTap: () => context.go('/search'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 14),
@@ -277,32 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // ── New Arrivals Section ───────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('New Arrivals', style: AppTextStyles.sectionTitle),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedCategory = 0);
-                        },
-                        child: Row(
-                          children: [
-                            Text('View all', style: AppTextStyles.sectionLink),
-                            const SizedBox(width: 2),
-                            Icon(Icons.chevron_right_rounded,
-                                color: context.colors.primary, size: 18),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Product grid
+                // Product sections
                 productsAsync.when(
                   data: (products) {
                     if (products.isEmpty) {
@@ -311,18 +287,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Center(child: Text('No products available', style: TextStyle(color: context.colors.textHint))),
                       );
                     }
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.65,
-                      ),
-                      itemCount: products.length,
-                      itemBuilder: (context, i) => ProductCard(product: products[i]),
+                    
+                    // Mock variations for UI sections
+                    final trendingProducts = products.reversed.toList();
+                    final topRatedProducts = products.toList();
+                    final buyAgainProducts = products.length > 2 ? (products.toList()..insert(0, products.last)).sublist(0, products.length) : products.toList();
+
+                    return Column(
+                      children: [
+                        _buildHorizontalProductSection('New Arrivals', products, showViewMore: true),
+                        _buildHorizontalProductSection('Trending', trendingProducts),
+                        _buildHorizontalProductSection('Top Rating', topRatedProducts),
+                        _buildHorizontalProductSection('Buy Again', buyAgainProducts),
+                      ],
                     );
                   },
                   loading: () => const Padding(
@@ -340,6 +317,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHorizontalProductSection(String title, List<ProductModel> products, {bool showViewMore = false}) {
+    if (products.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: AppTextStyles.sectionTitle),
+              if (showViewMore)
+                GestureDetector(
+                  onTap: () => context.go('/catalog'),
+                  child: Row(
+                    children: [
+                      Text('View more', style: AppTextStyles.sectionLink),
+                      const SizedBox(width: 2),
+                      Icon(Icons.chevron_right_rounded, color: context.colors.primary, size: 18),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 280,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: products.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              return SizedBox(
+                width: 160,
+                child: ProductCard(product: products[i]),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 32),
+      ],
     );
   }
 }

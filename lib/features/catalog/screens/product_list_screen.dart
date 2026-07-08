@@ -129,6 +129,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: context.colors.surface,
         elevation: 0,
         // Removed leading menu icon

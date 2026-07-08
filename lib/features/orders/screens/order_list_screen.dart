@@ -25,10 +25,6 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
         backgroundColor: context.colors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
         title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
         actions: [
           IconButton(icon: Icon(Icons.search_rounded, color: context.colors.textPrimary), onPressed: () {}),

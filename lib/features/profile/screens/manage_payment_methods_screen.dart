@@ -30,124 +30,68 @@ class _ManagePaymentMethodsScreenState extends State<ManagePaymentMethodsScreen>
             }
           },
         ),
-        title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
-        actions: [
-          Row(
-            children: [
-              Icon(Icons.lock_rounded, size: 14, color: context.colors.success),
-              const SizedBox(width: 4),
-              Text('Secure', style: TextStyle(color: context.colors.success, fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(width: 16),
-            ],
-          )
-        ],
+        title: Text('Payment Methods', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Select Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                        const SizedBox(height: 16),
-                        
-                        Text('UPI', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _selectedPayment.contains('pay') ? context.colors.primary : context.colors.border),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildPaymentOption('gpay', 'Google Pay', Icons.payment),
-                              Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('phonepe', 'PhonePe', Icons.account_balance_wallet),
-                              Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('paytm', 'Paytm', Icons.qr_code),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        Text('CARDS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _selectedPayment == 'card' ? context.colors.primary : context.colors.border),
-                          ),
-                          child: _buildPaymentOption('card', 'Credit / Debit Card', Icons.credit_card, subtitle: 'Visa, Mastercard, RuPay & more'),
-                        ),
-
-                        const SizedBox(height: 24),
-                        Text('OTHER OPTIONS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: ['netbanking', 'cod'].contains(_selectedPayment) ? context.colors.primary : context.colors.border),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildPaymentOption('netbanking', 'Netbanking', Icons.account_balance),
-                              Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('cod', 'Cash on Delivery', Icons.money, subtitle: 'Pay at your doorstep'),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.security, size: 16, color: context.colors.success),
-                            const SizedBox(width: 4),
-                            Text('100% Secure Checkout   |   Powered by Razorpay', style: TextStyle(fontSize: 11, color: context.colors.textSecondary)),
-                          ],
-                        ),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-                ],
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Saved Cards', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: context.colors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.colors.border),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.credit_card, color: context.colors.primary),
+                title: const Text('•••• •••• •••• 4242', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Expires 12/26'),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete_outline, color: context.colors.error),
+                  onPressed: () {},
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text('Saved UPI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: context.colors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.colors.border),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.payment, color: context.colors.primary),
+                title: const Text('user@upi', style: TextStyle(fontWeight: FontWeight.w600)),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete_outline, color: context.colors.error),
+                  onPressed: () {},
+                ),
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add),
+                label: const Text('Add New Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.primary,
+                  side: BorderSide(color: context.colors.primary),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildPaymentOption(String id, String title, IconData icon, {String? subtitle}) {
-    return ListTile(
-      leading: Icon(icon, color: _selectedPayment == id ? context.colors.primary : context.colors.textSecondary),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
-      trailing: Radio<String>(
-        value: id,
-        groupValue: _selectedPayment,
-        activeColor: context.colors.primary,
-        onChanged: (val) {
-          setState(() {
-            _selectedPayment = val!;
-          });
-        },
-      ),
-      onTap: () {
-        setState(() {
-          _selectedPayment = id;
-        });
-      },
     );
   }
 }

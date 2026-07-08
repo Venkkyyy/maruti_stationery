@@ -100,10 +100,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       appBar: AppBar(
         backgroundColor: context.colors.surface,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
         titleSpacing: 0,
         title: TextField(
           controller: _controller,

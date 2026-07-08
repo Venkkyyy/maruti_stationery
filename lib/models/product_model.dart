@@ -85,7 +85,7 @@ class ProductModel {
       unit: data['unit'] ?? 'piece',
       tags: List<String>.from(data['tags'] ?? []),
       isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

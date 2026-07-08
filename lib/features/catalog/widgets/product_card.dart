@@ -132,7 +132,9 @@ class ProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 5,
                     children: [
                       Text(
                         AppFormatters.formatPrice(product.price),
@@ -142,8 +144,7 @@ class ProductCard extends StatelessWidget {
                           color: context.colors.textPrimary,
                         ),
                       ),
-                      if (product.isOnSale) ...[
-                        const SizedBox(width: 5),
+                      if (product.isOnSale)
                         Text(
                           AppFormatters.formatPrice(product.mrp),
                           style: TextStyle(
@@ -152,7 +153,6 @@ class ProductCard extends StatelessWidget {
                             decoration: TextDecoration.lineThrough,
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ],

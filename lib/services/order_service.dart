@@ -9,9 +9,12 @@ class OrderService {
   Stream<List<OrderModel>> watchUserOrders(String userId) {
     return _db.collection('orders')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+        .map((snap) {
+          final orders = snap.docs.map((doc) => OrderModel.fromFirestore(doc)).toList();
+          orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return orders;
+        });
   }
 
   // Stream single order — for order detail / tracking screen
