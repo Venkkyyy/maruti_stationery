@@ -19,6 +19,7 @@ import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/wishlist/screens/wishlist_screen.dart';
 import '../../features/checkout/screens/address_screen.dart';
+import '../../features/home/screens/notification_screen.dart';
 import '../../features/checkout/screens/payment_screen.dart';
 import '../../features/checkout/screens/order_confirmation_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
@@ -67,7 +68,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => MainScaffold(child: child),
         routes: [
-          GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+          GoRoute(
+            path: '/home', 
+            builder: (context, state) => const HomeScreen(),
+            routes: [
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) => const NotificationScreen(),
+              ),
+            ],
+          ),
           GoRoute(
             path: '/catalog',
             builder: (context, state) => const CatalogScreen(),

@@ -24,6 +24,11 @@ class OrderService {
     );
   }
 
+  // Create new order
+  Future<void> createOrder(OrderModel order) async {
+    await _db.collection('orders').doc(order.id).set(order.toFirestore());
+  }
+
   // Cancel order — only allowed in 'placed' or 'confirmed' status
   Future<void> cancelOrder(String orderId, String userId) async {
     await _db.runTransaction((transaction) async {

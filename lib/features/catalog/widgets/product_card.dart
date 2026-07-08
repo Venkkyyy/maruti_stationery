@@ -220,7 +220,7 @@ class ProductCard extends ConsumerWidget {
                         onPressed: () async {
                           try {
                             await ref.read(cartProvider.notifier).addItem(product, 1);
-                            if (context.mounted) context.push('/checkout/address');
+                            if (context.mounted) context.push('/cart');
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -40,13 +40,13 @@ class AdminDashboardScreen extends StatelessWidget {
           
           // Total Revenue Card
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('orders').where('status', isEqualTo: 'Delivered').snapshots(),
+            stream: FirebaseFirestore.instance.collection('orders').where('status', isEqualTo: 'delivered').snapshots(),
             builder: (context, snapshot) {
               int totalRevenue = 0;
               if (snapshot.hasData) {
                 for (var doc in snapshot.data!.docs) {
                   final data = doc.data() as Map<String, dynamic>;
-                  totalRevenue += (data['totalAmount'] as num?)?.toInt() ?? 0;
+                  totalRevenue += (data['total'] as num?)?.toInt() ?? 0;
                 }
               }
               return Container(

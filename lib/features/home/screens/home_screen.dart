@@ -68,7 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             shadowColor: context.colors.border,
             leading: IconButton(
               icon: Icon(Icons.notifications_none_rounded, color: context.colors.textPrimary),
-              onPressed: () => context.push('/notifications'),
+              onPressed: () => context.push('/home/notifications'),
             ),
             title: Text(
               'Maruti Stationery',

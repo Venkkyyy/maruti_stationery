@@ -56,6 +56,16 @@ class _AdminOrderTile extends StatelessWidget {
           .collection('orders')
           .doc(order.id)
           .update({'status': newStatus.name, 'updatedAt': FieldValue.serverTimestamp()});
+          
+      // Write to notifications collection
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'title': 'Order ${newStatus.name.toUpperCase()}',
+        'body': 'Your order #${order.id.substring(0, 8).toUpperCase()} has been ${newStatus.name}.',
+        'type': 'order',
+        'userId': order.userId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -111,15 +121,17 @@ class _AdminOrderTile extends StatelessWidget {
     if (isCancelled) statusColor = context.colors.error;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.colors.border),
       ),
-      child: Column(
-        children: [
-          Row(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.all(16),
+          title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -147,56 +159,88 @@ class _AdminOrderTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                order.address.name,
-                style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    order.address.name,
+                    style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+                  ),
+                  Text(
+                    ' • ${AppFormatters.formatPrice(order.total)}',
+                    style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+                  ),
+                ],
               ),
+              const SizedBox(height: 4),
               Text(
-                ' • ${AppFormatters.formatPrice(order.total)}',
-                style: TextStyle(fontSize: 14, color: context.colors.textSecondary),
+                '${order.items.length} item(s)',
+                style: TextStyle(fontSize: 13, color: context.colors.textSecondary),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '${order.items.length} item(s)',
-                  style: TextStyle(fontSize: 13, color: context.colors.textSecondary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _showStatusDialog(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceGrey,
-                    borderRadius: BorderRadius.circular(8),
+          children: [
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Delivery Address', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${order.address.name}\n${order.address.street}\n${order.address.city}, ${order.address.state} ${order.address.pincode}\nPhone: ${order.address.phone}',
+                    style: TextStyle(color: context.colors.textSecondary, fontSize: 14),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Update Status',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.colors.textPrimary),
-                    ],
+                  const SizedBox(height: 16),
+                  Text('Items', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                  const SizedBox(height: 8),
+                  ...order.items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(item.image, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c,e,s) => Container(width:40,height:40,color:Colors.grey.shade200)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text('${item.qty} x ${AppFormatters.formatPrice(item.price)}', style: TextStyle(color: context.colors.textSecondary, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        Text(AppFormatters.formatPrice(item.total), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 16),
+                  Text('Payment Summary', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                  const SizedBox(height: 4),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Subtotal:'), Text(AppFormatters.formatPrice(order.subtotal))]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Delivery:'), Text(AppFormatters.formatPrice(order.deliveryCharge))]),
+                  if (order.discount > 0) Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Discount:'), Text('-${AppFormatters.formatPrice(order.discount)}', style: const TextStyle(color: Colors.green))]),
+                  const Divider(),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold)), Text(AppFormatters.formatPrice(order.total), style: const TextStyle(fontWeight: FontWeight.bold))]),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showStatusDialog(context),
+                      child: const Text('Update Status'),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

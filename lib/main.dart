@@ -8,6 +8,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'core/router/app_router.dart';
 
 import 'firebase_options.dart';
+import 'services/local_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +39,12 @@ void main() async {
     };
   } catch (e) {
     debugPrint("Firebase initialization bypassed or failed: $e");
+  }
+
+  try {
+    await LocalNotificationService.initialize();
+  } catch (e) {
+    debugPrint("Local notifications initialization failed: $e");
   }
 
   debugPrint("runApp START");

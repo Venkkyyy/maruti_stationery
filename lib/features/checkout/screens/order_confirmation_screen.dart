@@ -1,6 +1,7 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderConfirmationScreen extends StatefulWidget {
   final String orderId;
@@ -218,6 +219,31 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                       child: OutlinedButton(
                         onPressed: () => context.go('/home'),
                         child: const Text('Continue Shopping'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.share_rounded, size: 20),
+                        label: const Text('Share Receipt via Email'),
+                        onPressed: () async {
+                          final Uri emailLaunchUri = Uri(
+                            scheme: 'mailto',
+                            path: '', // Let user type email
+                            query: 'subject=Order Receipt - Maruti Stationery&body=Here is the receipt for my order! Order ID: ${widget.orderId}',
+                          );
+                          if (await canLaunchUrl(emailLaunchUri)) {
+                            await launchUrl(emailLaunchUri);
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Could not launch email app.')),
+                              );
+                            }
+                          }
+                        },
                       ),
                     ),
                   ],

@@ -22,7 +22,19 @@ class AdminCouponService {
       createdAt: DateTime.now(),
     );
 
-    await _db.collection('coupons').doc(id).set(coupon.toFirestore());
+    // Create notification for users
+    final notifRef = _db.collection('notifications').doc();
+    
+    await _db.runTransaction((tx) async {
+      tx.set(_db.collection('coupons').doc(id), coupon.toFirestore());
+      tx.set(notifRef, {
+        'title': 'New Special Offer! 🎁',
+        'body': 'Use code ${code.toUpperCase()} to get ₹${(discountAmount / 100).toStringAsFixed(2)} off on your orders!',
+        'type': 'coupon',
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+    });
   }
 
   Future<void> toggleCouponStatus(String couponId, bool currentStatus) async {
