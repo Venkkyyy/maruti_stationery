@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
-import '../../features/auth/screens/otp_verification_screen.dart';
 import '../../features/auth/screens/complete_profile_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/catalog/screens/product_list_screen.dart';
@@ -50,14 +49,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/phone',
         builder: (context, state) => const PhoneInputScreen(),
-        routes: [
-          GoRoute(
-            path: 'otp',
-            builder: (context, state) => OTPScreen(
-              verificationId: state.extra as String? ?? 'mock-id',
-            ),
-          ),
-        ],
       ),
 
       // Main app — ShellRoute for bottom navigation (Home, Catalog, Orders, Profile)

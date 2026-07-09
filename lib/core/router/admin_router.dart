@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
-import '../../features/auth/screens/otp_verification_screen.dart';
 import '../../features/auth/screens/complete_profile_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/admin/screens/admin_product_list_screen.dart';
@@ -34,16 +33,6 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/phone',
         builder: (context, state) => const PhoneInputScreen(),
-      ),
-      GoRoute(
-        path: '/auth/otp',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
-          return OtpVerificationScreen(
-            verificationId: extra['verificationId'] as String? ?? '',
-            phoneNumber: extra['phoneNumber'] as String? ?? '',
-          );
-        },
       ),
 
       // Admin Panel ShellRoute
