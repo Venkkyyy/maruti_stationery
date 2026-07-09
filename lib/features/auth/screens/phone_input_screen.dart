@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maruti_stationery/providers/auth_provider.dart';
 import 'package:maruti_stationery/providers/user_provider.dart';
+import 'package:maruti_stationery/providers/app_mode_provider.dart';
 
 class PhoneInputScreen extends ConsumerStatefulWidget {
   const PhoneInputScreen({super.key});
@@ -29,7 +30,12 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
       if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
         context.go('/auth/complete-profile');
       } else {
-        context.go('/home');
+        final mode = ref.read(appModeProvider);
+        if (mode == AppMode.admin) {
+          context.go('/admin');
+        } else {
+          context.go('/home');
+        }
       }
     } catch (e) {
       if (!mounted) return;

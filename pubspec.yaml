@@ -75,6 +75,7 @@ dependencies:
   flutter_local_notifications: ^22.0.1
 
 dev_dependencies:
+  flutter_flavorizr: ^2.2.3
   build_runner: ^2.4.9
   riverpod_generator: ^4.0.4
   flutter_test:
@@ -128,3 +129,20 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flavorizr:
+  flavors:
+    customer:
+      app:
+        name: "Maruti Stationery"
+      android:
+        applicationId: "com.example.maruti_stationery"
+      ios:
+        bundleId: "com.maruti.stationery.marutiStationery"
+    admin:
+      app:
+        name: "Maruti Admin"
+      android:
+        applicationId: "com.example.maruti_stationery.admin"
+      ios:
+        bundleId: "com.maruti.stationery.marutiStationery.admin"

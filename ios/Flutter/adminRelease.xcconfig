@@ -1,0 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+#include "Generated.xcconfig"
+
+ASSET_PREFIX=admin
+BUNDLE_NAME=Maruti Admin
+BUNDLE_DISPLAY_NAME=Maruti Admin
