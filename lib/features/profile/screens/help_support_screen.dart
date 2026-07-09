@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 
-class HelpSupportScreen extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/settings_provider.dart';
+
+class HelpSupportScreen extends ConsumerWidget {
   const HelpSupportScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
@@ -35,26 +38,28 @@ class HelpSupportScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildContactCard(
-            icon: Icons.chat_rounded,
-            title: 'Live Chat',
-            subtitle: 'Start a conversation now',
-          ),
-          const SizedBox(height: 12),
-          _buildContactCard(
-            icon: Icons.email_rounded,
-            title: 'Email Support',
-            subtitle: 'support@marutistationery.com',
-          ),
-          const SizedBox(height: 12),
-          _buildContactCard(
-            icon: Icons.phone_rounded,
-            title: 'Call Us',
-            subtitle: '+91 98765 43210',
-          ),
+      body: ref.watch(watchSupportDetailsProvider).when(
+        data: (details) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildContactCard(
+                icon: Icons.chat_rounded,
+                title: 'Live Chat',
+                subtitle: 'Start a conversation now',
+              ),
+              const SizedBox(height: 12),
+              _buildContactCard(
+                icon: Icons.email_rounded,
+                title: 'Email Support',
+                subtitle: details.email,
+              ),
+              const SizedBox(height: 12),
+              _buildContactCard(
+                icon: Icons.phone_rounded,
+                title: 'Call Us',
+                subtitle: details.phone,
+              ),
           const SizedBox(height: 32),
           Text(
             'FREQUENTLY ASKED QUESTIONS',
@@ -69,7 +74,11 @@ class HelpSupportScreen extends StatelessWidget {
           _buildFaqItem('How do I track my order?', 'You can track your order status in the "My Orders" section of your Profile.'),
           _buildFaqItem('What is your return policy?', 'We accept returns within 7 days of delivery for unused items in their original packaging.'),
           _buildFaqItem('Do you offer international shipping?', 'Currently, we only ship within India.'),
-        ],
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }

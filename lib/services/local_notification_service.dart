@@ -1,4 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:convert' as dart_convert;
+import 'package:go_router/go_router.dart' as go_router;
+import '../core/router/app_router.dart' as maruti_router;
 
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -16,7 +19,9 @@ class LocalNotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle tap
+        if (details.payload != null) {
+          handleNotificationTap(details.payload!);
+        }
       },
     );
 
@@ -30,6 +35,7 @@ class LocalNotificationService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
     const NotificationDetails notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -45,7 +51,28 @@ class LocalNotificationService {
       id: id,
       title: title,
       body: body,
+      payload: payload,
       notificationDetails: notificationDetails,
     );
+  }
+  static void handleNotificationTap(String payload) {
+    try {
+      final data = dart_convert.jsonDecode(payload);
+      final type = data['type'];
+      
+      final context = maruti_router.rootNavigatorKey.currentContext;
+      if (context == null) return;
+      
+      if (type == 'offer' || type == 'coupon') {
+        go_router.GoRouter.of(context).go('/catalog');
+      } else if (type == 'order' || type == 'order_update') {
+        final orderId = data['orderId'] ?? data['id'];
+        if (orderId != null) {
+          go_router.GoRouter.of(context).go('/orders/$orderId');
+        }
+      }
+    } catch (e) {
+      // Failed to parse payload or navigate
+    }
   }
 }

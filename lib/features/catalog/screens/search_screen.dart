@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../core/constants/app_sizes.dart';
 import '../../../features/catalog/widgets/product_card.dart';
 import '../../../models/product_model.dart';
 import '../../../services/algolia_service.dart';
+import '../../../providers/product_provider.dart';
 
 /// Full-text search screen with live results.
 class SearchScreen extends ConsumerStatefulWidget {
@@ -26,23 +29,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _isLoading = false;
   List<ProductModel> _results = [];
 
-  // Mock recent searches
-  final List<String> _recentSearches = [
-    'Parker fountain pen',
-    'Moleskine notebook',
-    'Pilot G2',
-    'Ink bottle blue',
-  ];
+  List<String> _recentSearches = [];
 
-  // Mock popular searches
-  final List<String> _popular = [
-    'Fountain Pens',
-    'Notebooks A5',
-    'Gel Pens',
-    'Markers',
-    'Desk Accessories',
-    'Diaries 2026',
-  ];
+  void _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _recentSearches = prefs.getStringList('recent_searches') ?? [];
+    });
+  }
+
+  void _saveRecentSearch(String query) async {
+    if (query.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final searches = prefs.getStringList('recent_searches') ?? [];
+    searches.remove(query);
+    searches.insert(0, query);
+    if (searches.length > 10) searches.removeLast();
+    await prefs.setStringList('recent_searches', searches);
+    setState(() {
+      _recentSearches = searches;
+    });
+  }
+
+  void _clearRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('recent_searches');
+    setState(() {
+      _recentSearches = [];
+    });
+  }
 
   void _onSearchChanged(String query) {
     setState(() => _query = query);
@@ -81,6 +96,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    _loadRecentSearches();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -105,6 +121,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           controller: _controller,
           focusNode: _focusNode,
           onChanged: _onSearchChanged,
+          onSubmitted: (value) => _saveRecentSearch(value),
+          textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Search products, brands, SKUs...',
             hintStyle: TextStyle(color: context.colors.textHint, fontSize: 14),
@@ -132,6 +150,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildDiscovery() {
+    final suggestedProductsAsync = ref.watch(getNewArrivalsProvider(limit: 10));
+
     return ListView(
       padding: const EdgeInsets.all(AppSizes.screenHorizontal),
       children: [
@@ -139,7 +159,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         if (_recentSearches.isNotEmpty) ...[
           _SectionHeader(
             title: 'Recent Searches',
-            onClear: () => setState(() => _recentSearches.clear()),
+            onClear: _clearRecentSearches,
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -150,29 +170,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   icon: Icons.history_rounded,
                   onTap: () {
                     _controller.text = s;
+                    _saveRecentSearch(s);
                     _onSearchChanged(s);
                   },
                 )).toList(),
           ),
           const SizedBox(height: 24),
         ],
-
-        // Popular searches
-        _SectionHeader(title: 'Popular Searches'),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _popular.map((s) => _SearchChip(
-                label: s,
-                icon: Icons.trending_up_rounded,
-                color: context.colors.primaryLight,
-                textColor: context.colors.primary,
-                onTap: () {
-                  _controller.text = s;
-                  _onSearchChanged(s);
-                },
-              )).toList(),
+        const _SectionHeader(
+          title: 'Suggested Products',
+          onClear: null,
+        ),
+        const SizedBox(height: 16),
+        suggestedProductsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => const Text('Error loading suggestions'),
+          data: (products) {
+            if (products.isEmpty) return const SizedBox.shrink();
+            
+            // Randomly shuffle or just take the first 4-5
+            final displayProducts = (products.toList()..shuffle()).take(4).toList();
+            
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.72,
+              ),
+              itemCount: displayProducts.length,
+              itemBuilder: (context, i) => ProductCard(
+                product: displayProducts[i],
+              ),
+            );
+          },
         ),
       ],
     );

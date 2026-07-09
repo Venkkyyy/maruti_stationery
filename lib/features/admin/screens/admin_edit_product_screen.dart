@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_sizes.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -33,6 +35,9 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
   ProductModel? _product;
 
   List<CategoryModel> _categories = [];
+  
+  List<String> _existingImages = [];
+  final List<File> _newImages = [];
 
   @override
   void initState() {
@@ -54,6 +59,7 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
         _mrpController.text = (_product!.mrp / 100).toStringAsFixed(2).replaceAll(RegExp(r'\.00$'), '');
         _stockController.text = _product!.stock.toString();
         _brandController.text = _product!.brand;
+        _existingImages = List<String>.from(_product!.images);
         
         if (_categories.any((c) => c.id == _product!.categoryId)) {
           _selectedCategory = _product!.categoryId;
@@ -79,6 +85,16 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final pickedFiles = await picker.pickMultiImage();
+    if (pickedFiles.isNotEmpty) {
+      setState(() {
+        _newImages.addAll(pickedFiles.map((f) => File(f.path)));
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
@@ -99,6 +115,14 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
         'brand': _brandController.text.trim(),
         'stock': int.parse(_stockController.text.trim()),
       };
+
+      if (_newImages.isNotEmpty || _existingImages.length != _product!.images.length) {
+        List<String> newUrls = [];
+        if (_newImages.isNotEmpty) {
+          newUrls = await AdminProductService().uploadImages(_newImages);
+        }
+        updates['images'] = [..._existingImages, ...newUrls];
+      }
 
       await AdminProductService().updateProduct(widget.productId, updates);
 
@@ -134,27 +158,79 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSizes.screenHorizontal),
           children: [
-            if (_product != null && _product!.images.isNotEmpty) ...[
-              Text('Current Photos (Cannot edit here yet)', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Product Photos', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                TextButton.icon(
+                  onPressed: _pickImages,
+                  icon: const Icon(Icons.add_photo_alternate_rounded),
+                  label: const Text('Add Photos'),
+                ),
+              ],
+            ),
+            if (_existingImages.isNotEmpty || _newImages.isNotEmpty) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: 100,
-                child: ListView.builder(
+                child: ListView(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _product!.images.length,
-                  itemBuilder: (context, index) {
-                    return Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      width: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: NetworkImage(_product!.images[index]),
-                          fit: BoxFit.cover,
+                  children: [
+                    for (int i = 0; i < _existingImages.length; i++)
+                      Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        width: 100,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(_existingImages[i], fit: BoxFit.cover),
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _existingImages.removeAt(i)),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
+                    for (int i = 0; i < _newImages.length; i++)
+                      Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        width: 100,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(_newImages[i], fit: BoxFit.cover),
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _newImages.removeAt(i)),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),

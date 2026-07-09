@@ -2,32 +2,19 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class ManageAddressScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../models/address_model.dart';
+import '../../../providers/address_provider.dart';
+
+class ManageAddressScreen extends ConsumerStatefulWidget {
   const ManageAddressScreen({super.key});
 
   @override
-  State<ManageAddressScreen> createState() => _ManageAddressScreenState();
+  ConsumerState<ManageAddressScreen> createState() => _ManageAddressScreenState();
 }
 
-class _ManageAddressScreenState extends State<ManageAddressScreen> {
-  int _selectedAddress = 0;
-
-  final List<_Address> _addresses = [
-    _Address(
-      id: 0,
-      label: 'Home',
-      name: 'Vinikesh Hiranandani',
-      address: 'Flat 402, Royal Residency,\nKoregaon Park, Pune - 411001',
-      phone: '+91 98765 43210',
-    ),
-    _Address(
-      id: 1,
-      label: 'Office',
-      name: 'Vinikesh Hiranandani',
-      address: '12th Floor, Cyber Towers,\nHinjewadi Phase 2, Pune - 411057',
-      phone: '+91 98765 43210',
-    ),
-  ];
+class _ManageAddressScreenState extends ConsumerState<ManageAddressScreen> {
+  String? _selectedAddressId;
 
   @override
   Widget build(BuildContext context) {
@@ -66,14 +53,36 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ..._addresses.asMap().entries.map((e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _AddressCard(
-                        address: e.value,
-                        isSelected: _selectedAddress == e.key,
-                        onTap: () => setState(() => _selectedAddress = e.key),
-                      ),
-                    )),
+                ref.watch(addressProvider).when(
+                  data: (addresses) {
+                    if (addresses.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Text(
+                          'No saved addresses. Please add one.',
+                          style: TextStyle(color: context.colors.textSecondary),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: addresses.map((address) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _AddressCard(
+                            address: address,
+                            isSelected: _selectedAddressId == address.id,
+                            onTap: () => setState(() => _selectedAddressId = address.id),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (e, st) => Text('Error: $e'),
+                ),
 
                 // Add new address
                 GestureDetector(
@@ -114,24 +123,8 @@ class _ManageAddressScreenState extends State<ManageAddressScreen> {
   }
 }
 
-class _Address {
-  final int id;
-  final String label;
-  final String name;
-  final String address;
-  final String phone;
-
-  const _Address({
-    required this.id,
-    required this.label,
-    required this.name,
-    required this.address,
-    required this.phone,
-  });
-}
-
 class _AddressCard extends StatelessWidget {
-  final _Address address;
+  final AddressModel address;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -197,7 +190,7 @@ class _AddressCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          address.label.toUpperCase(),
+                          address.type.toUpperCase(),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -219,16 +212,16 @@ class _AddressCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
-                    address.address,
+                    '${address.street}, ${address.city}, ${address.state} - ${address.pincode}',
                     style: TextStyle(
                       fontSize: 13,
                       color: context.colors.textSecondary,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     address.phone,
                     style: TextStyle(

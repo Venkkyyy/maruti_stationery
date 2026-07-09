@@ -1,9 +1,11 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
+import '../../../core/constants/app_sizes.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/wishlist_provider.dart';
@@ -24,6 +26,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     with TickerProviderStateMixin {
   int _selectedImage = 0;
   bool _isAddingToBag = false;
+  final CarouselSliderController _carouselController = CarouselSliderController();
   late AnimationController _stampController;
   late Animation<double> _stampScale;
 
@@ -213,7 +216,22 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                     width: double.infinity,
                     height: double.infinity,
                     child: product.images.isNotEmpty
-                      ? Image.network(product.images[_selectedImage], fit: BoxFit.contain)
+                      ? CarouselSlider(
+                          carouselController: _carouselController,
+                          options: CarouselOptions(
+                            height: double.infinity,
+                            viewportFraction: 1.0,
+                            enableInfiniteScroll: false,
+                            onPageChanged: (index, reason) {
+                              setState(() {
+                                _selectedImage = index;
+                              });
+                            },
+                          ),
+                          items: product.images.map((img) {
+                            return Image.network(img, fit: BoxFit.contain);
+                          }).toList(),
+                        )
                       : const Center(
                           child: Icon(Icons.image_not_supported_rounded,
                               size: 100, color: Color(0xFFBEC3C8)),
@@ -229,7 +247,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(product.images.length, (i) {
                         return GestureDetector(
-                          onTap: () => setState(() => _selectedImage = i),
+                          onTap: () {
+                            _carouselController.animateToPage(i);
+                            setState(() => _selectedImage = i);
+                          },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             margin: const EdgeInsets.symmetric(horizontal: 3),

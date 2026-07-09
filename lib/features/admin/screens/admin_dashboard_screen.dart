@@ -231,7 +231,7 @@ class AdminDashboardScreen extends StatelessWidget {
                   if (data['items'] != null) {
                     final itemsList = data['items'] as List<dynamic>;
                     if (itemsList.isNotEmpty) {
-                      itemsString = '${itemsList[0]['quantity']}x ${itemsList[0]['productName']}';
+                      itemsString = '${itemsList[0]['qty']}x ${itemsList[0]['name']}';
                       if (itemsList.length > 1) {
                         itemsString += ' + ${itemsList.length - 1} more';
                       }
@@ -244,7 +244,7 @@ class AdminDashboardScreen extends StatelessWidget {
                       context,
                       orderId: doc.id.substring(0, 8).toUpperCase(),
                       customer: data['address']?['name'] ?? 'Unknown Customer',
-                      amount: (data['totalAmount'] as num?)?.toInt() ?? 0,
+                      amount: (data['total'] as num?)?.toInt() ?? 0,
                       items: itemsString,
                       status: data['status'] ?? 'Processing',
                       fullId: doc.id,

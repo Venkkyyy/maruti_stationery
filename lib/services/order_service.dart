@@ -24,9 +24,23 @@ class OrderService {
     );
   }
 
-  // Create new order
+  // Create new order and update stock
   Future<void> createOrder(OrderModel order) async {
-    await _db.collection('orders').doc(order.id).set(order.toFirestore());
+    final batch = _db.batch();
+    
+    // Add order
+    final orderRef = _db.collection('orders').doc(order.id);
+    batch.set(orderRef, order.toFirestore());
+    
+    // Decrement stock for each item
+    for (final item in order.items) {
+      final productRef = _db.collection('products').doc(item.productId);
+      batch.update(productRef, {
+        'stock': FieldValue.increment(-item.qty),
+      });
+    }
+    
+    await batch.commit();
   }
 
   // Cancel order — only allowed in 'placed' or 'confirmed' status

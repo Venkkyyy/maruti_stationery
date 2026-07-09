@@ -6,13 +6,20 @@ import '../../../providers/review_provider.dart';
 import '../../../models/review_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-class ReviewsScreen extends ConsumerWidget {
+class ReviewsScreen extends ConsumerStatefulWidget {
   final String productId;
   const ReviewsScreen({super.key, required this.productId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final reviewsAsync = ref.watch(productReviewsProvider(productId));
+  ConsumerState<ReviewsScreen> createState() => _ReviewsScreenState();
+}
+
+class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
+  String _sortBy = 'recent'; // 'recent', 'highest_rated', 'helpful'
+
+  @override
+  Widget build(BuildContext context) {
+    final reviewsAsync = ref.watch(productReviewsProvider(widget.productId));
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
@@ -59,6 +66,17 @@ class ReviewsScreen extends ConsumerWidget {
                   }
                 }
                 avgRating /= reviews.length;
+
+                var filteredReviews = List<ReviewModel>.from(reviews);
+                if (_sortBy == 'highest_rated') {
+                  filteredReviews.sort((a, b) => b.rating.compareTo(a.rating));
+                } else if (_sortBy == 'helpful') {
+                  // If we had a helpful count, we would sort by it here
+                  // Since we don't, just fallback to recent
+                  filteredReviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                } else { // 'recent'
+                  filteredReviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                }
 
                 return Column(
                   children: [
@@ -120,11 +138,20 @@ class ReviewsScreen extends ConsumerWidget {
                       color: context.colors.surface,
                       child: Row(
                         children: [
-                          _FilterButton(label: 'Most Recent', isSelected: true),
+                          GestureDetector(
+                            onTap: () => setState(() => _sortBy = 'recent'),
+                            child: _FilterButton(label: 'Most Recent', isSelected: _sortBy == 'recent'),
+                          ),
                           const SizedBox(width: 8),
-                          _FilterButton(label: 'Highest Rated', isSelected: false),
-                          const Spacer(),
-                          Icon(Icons.tune_rounded, color: context.colors.primary, size: 20),
+                          GestureDetector(
+                            onTap: () => setState(() => _sortBy = 'highest_rated'),
+                            child: _FilterButton(label: 'Highest Rated', isSelected: _sortBy == 'highest_rated'),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => setState(() => _sortBy = 'helpful'),
+                            child: _FilterButton(label: 'Helpful', isSelected: _sortBy == 'helpful'),
+                          ),
                         ],
                       ),
                     ),
@@ -135,10 +162,10 @@ class ReviewsScreen extends ConsumerWidget {
                       child: ListView.separated(
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
-                        itemCount: reviews.length,
+                        itemCount: filteredReviews.length,
                         separatorBuilder: (context, index) => const Divider(height: 1),
                         itemBuilder: (context, index) {
-                          return _ReviewCard(review: reviews[index]);
+                          return _ReviewCard(review: filteredReviews[index]);
                         },
                       ),
                     ),
@@ -159,7 +186,7 @@ class ReviewsScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: context.colors.primary,
-        onPressed: () => context.push('/catalog/product/$productId/rate'),
+        onPressed: () => context.push('/catalog/product/${widget.productId}/rate'),
         icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
         label: const Text(
           'Write a Review',

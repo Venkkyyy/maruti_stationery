@@ -15,6 +15,9 @@ class ProductModel {
   final List<String> tags;
   final bool isActive;
   final DateTime createdAt;
+  final int salesCount;
+  final double averageRating;
+  final int reviewCount;
 
   const ProductModel({
     required this.id,
@@ -31,6 +34,9 @@ class ProductModel {
     required this.tags,
     required this.isActive,
     required this.createdAt,
+    this.salesCount = 0,
+    this.averageRating = 0.0,
+    this.reviewCount = 0,
   });
 
   // Price helpers — convert paise to rupees for display only
@@ -66,6 +72,9 @@ class ProductModel {
       tags: tags,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
+      salesCount: salesCount,
+      averageRating: averageRating,
+      reviewCount: reviewCount,
     );
   }
 
@@ -86,6 +95,9 @@ class ProductModel {
       tags: List<String>.from(data['tags'] ?? []),
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      salesCount: (data['salesCount'] as num?)?.toInt() ?? 0,
+      averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -103,6 +115,9 @@ class ProductModel {
     'tags': tags,
     'isActive': isActive,
     'createdAt': Timestamp.fromDate(createdAt),
+    'salesCount': salesCount,
+    'averageRating': averageRating,
+    'reviewCount': reviewCount,
     'updatedAt': FieldValue.serverTimestamp(),
   };
 }

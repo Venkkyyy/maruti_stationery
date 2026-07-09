@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'local_notification_service.dart';
 
 class FCMService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -47,13 +49,17 @@ class FCMService {
 
   void _showLocalNotification(RemoteMessage message) {
     debugPrint("Received foreground message: ${message.notification?.title}");
+    if (message.notification != null) {
+      LocalNotificationService.showNotification(
+        id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+        title: message.notification!.title ?? '',
+        body: message.notification!.body ?? '',
+        payload: jsonEncode(message.data),
+      );
+    }
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    final data = message.data;
-    if (data['type'] == 'order_update') {
-      // In production, trigger GoRouter navigation (e.g. context.go('/orders/${data['orderId']}'))
-      debugPrint("Notification tapped with order update: ${data['orderId']}");
-    }
+    LocalNotificationService.handleNotificationTap(jsonEncode(message.data));
   }
 }

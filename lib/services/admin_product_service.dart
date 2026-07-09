@@ -15,7 +15,7 @@ class AdminProductService {
   // 1. ADD Product
   Future<void> addProduct(ProductModel product, List<File> imageFiles) async {
     // First, upload images to Cloudinary
-    List<String> imageUrls = await _uploadImages(imageFiles);
+    List<String> imageUrls = await uploadImages(imageFiles);
     
     // Create new product with image URLs
     final newProduct = product.copyWith(images: imageUrls);
@@ -40,7 +40,7 @@ class AdminProductService {
   }
 
   // Helper to upload images to Cloudinary using their REST API
-  Future<List<String>> _uploadImages(List<File> files) async {
+  Future<List<String>> uploadImages(List<File> files) async {
 
 
     List<String> urls = [];

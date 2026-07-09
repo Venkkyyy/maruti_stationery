@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/order_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../core/utils/formatters.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -114,7 +115,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                           status: order.statusLabel, // e.g. 'Processing'
                           title: firstItem?.name ?? 'Order Item',
                           details: 'Qty: ${firstItem?.qty ?? 0}',
-                          price: '₹${order.total}',
+                          price: AppFormatters.formatPrice(order.total),
                           buttonText: 'View Details',
                           buttonOutlined: true,
                           onTap: () => context.push('/orders/${order.id}'),

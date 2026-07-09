@@ -12,14 +12,16 @@ import '../../../providers/categories_provider.dart';
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 class CatalogScreen extends ConsumerStatefulWidget {
-  const CatalogScreen({super.key});
+  final String? initialCategoryId;
+  const CatalogScreen({super.key, this.initialCategoryId});
 
   @override
   ConsumerState<CatalogScreen> createState() => _CatalogScreenState();
 }
 
 class _CatalogScreenState extends ConsumerState<CatalogScreen> {
-  int _selectedCategory = 0;
+  int _selectedCategory = -1;
+  String _sortBy = 'none'; // 'none', 'price_low', 'price_high'
   final _searchController = TextEditingController();
 
   @override
@@ -60,6 +62,15 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
             return const Center(child: Text('No categories found'));
           }
 
+          if (_selectedCategory == -1) {
+            if (widget.initialCategoryId != null) {
+              _selectedCategory = categories.indexWhere((c) => c.id == widget.initialCategoryId);
+              if (_selectedCategory == -1) _selectedCategory = 0;
+            } else {
+              _selectedCategory = 0;
+            }
+          }
+
           final selectedCategoryId = categories[_selectedCategory].id;
           final productsAsync = _selectedCategory == 0 
               ? ref.watch(getNewArrivalsProvider(limit: 50))
@@ -97,15 +108,57 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: context.colors.primaryLight,
-                    borderRadius: BorderRadius.circular(10),
+                GestureDetector(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (ctx) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('Sort By', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            ),
+                            ListTile(
+                              title: const Text('Default'),
+                              onTap: () {
+                                setState(() => _sortBy = 'none');
+                                Navigator.pop(ctx);
+                              },
+                              trailing: _sortBy == 'none' ? Icon(Icons.check, color: context.colors.primary) : null,
+                            ),
+                            ListTile(
+                              title: const Text('Price: Low to High'),
+                              onTap: () {
+                                setState(() => _sortBy = 'price_low');
+                                Navigator.pop(ctx);
+                              },
+                              trailing: _sortBy == 'price_low' ? Icon(Icons.check, color: context.colors.primary) : null,
+                            ),
+                            ListTile(
+                              title: const Text('Price: High to Low'),
+                              onTap: () {
+                                setState(() => _sortBy = 'price_high');
+                                Navigator.pop(ctx);
+                              },
+                              trailing: _sortBy == 'price_high' ? Icon(Icons.check, color: context.colors.primary) : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: context.colors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.tune_rounded,
+                        color: context.colors.primary, size: 20),
                   ),
-                  child: Icon(Icons.tune_rounded,
-                      color: context.colors.primary, size: 20),
                 ),
               ],
             ),
@@ -159,7 +212,21 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           Expanded(
             child: productsAsync.when(
               data: (products) {
-                if (products.isEmpty) {
+                // Sort and Search
+                var filteredProducts = List<ProductModel>.from(products);
+                
+                final query = _searchController.text.toLowerCase();
+                if (query.isNotEmpty) {
+                  filteredProducts = filteredProducts.where((p) => p.name.toLowerCase().contains(query)).toList();
+                }
+
+                if (_sortBy == 'price_low') {
+                  filteredProducts.sort((a, b) => a.price.compareTo(b.price));
+                } else if (_sortBy == 'price_high') {
+                  filteredProducts.sort((a, b) => b.price.compareTo(a.price));
+                }
+
+                if (filteredProducts.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -173,10 +240,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: products.length,
+                  itemCount: filteredProducts.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
-                    return _ProductListCard(product: products[i]);
+                    return _ProductListCard(product: filteredProducts[i]);
                   },
                 );
               },

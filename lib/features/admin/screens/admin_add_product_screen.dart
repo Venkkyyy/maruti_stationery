@@ -71,30 +71,32 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      // Compress image
-      final File file = File(pickedFile.path);
-      final dir = await getTemporaryDirectory();
-      final targetPath = '${dir.absolute.path}/${const Uuid().v4()}.jpg';
-      
-      final XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
-        file.absolute.path, 
-        targetPath,
-        quality: 70, // 70% quality is usually ~100kb for mobile photos
-        minWidth: 800,
-        minHeight: 800,
-      );
+    final List<XFile> pickedFiles = await _picker.pickMultiImage();
+    if (pickedFiles.isNotEmpty) {
+      for (var pickedFile in pickedFiles) {
+        // Compress image
+        final File file = File(pickedFile.path);
+        final dir = await getTemporaryDirectory();
+        final targetPath = '${dir.absolute.path}/${const Uuid().v4()}.jpg';
+        
+        final XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
+          file.absolute.path, 
+          targetPath,
+          quality: 70, // 70% quality is usually ~100kb for mobile photos
+          minWidth: 800,
+          minHeight: 800,
+        );
 
-      if (compressedFile != null) {
-        setState(() {
-          _images.add(File(compressedFile.path));
-        });
-      } else {
-        // Fallback if compression fails
-        setState(() {
-          _images.add(file);
-        });
+        if (compressedFile != null) {
+          setState(() {
+            _images.add(File(compressedFile.path));
+          });
+        } else {
+          // Fallback if compression fails
+          setState(() {
+            _images.add(file);
+          });
+        }
       }
     }
   }

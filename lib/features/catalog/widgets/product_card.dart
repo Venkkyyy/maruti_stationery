@@ -19,7 +19,7 @@ class ProductCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: () => context.go('/catalog/product/${product.id}'),
+      onTap: () => context.push('/catalog/product/${product.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: context.colors.surface,
@@ -200,7 +200,7 @@ class ProductCard extends ConsumerWidget {
                 width: double.infinity,
                 height: 32,
                 child: product.isInStock
-                    ? ElevatedButton.icon(
+                    ? ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: context.colors.primary,
                           shape: RoundedRectangleBorder(
@@ -208,19 +208,15 @@ class ProductCard extends ConsumerWidget {
                           ),
                           padding: EdgeInsets.zero,
                         ),
-                        icon: const Icon(Icons.flash_on_rounded, size: 13, color: Colors.white),
-                        label: const Text(
-                          'Buy Now',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
                         onPressed: () async {
                           try {
                             await ref.read(cartProvider.notifier).addItem(product, 1);
-                            if (context.mounted) context.push('/cart');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: const Text('Added to bag!', style: TextStyle(color: Colors.white)), backgroundColor: context.colors.primary, duration: const Duration(seconds: 1)),
+                              );
+                              // context.push('/cart'); // Optional, removed as per earlier fixes if they prefer stay
+                            }
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -229,6 +225,21 @@ class ProductCard extends ConsumerWidget {
                             }
                           }
                         },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Text(
+                              'Add to Cart',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.shopping_bag_outlined, size: 14, color: Colors.white),
+                          ],
+                        ),
                       )
                     : Container(
                         alignment: Alignment.center,
@@ -264,7 +275,7 @@ class ProductListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/catalog/product/${product.id}'),
+      onTap: () => context.push('/catalog/product/${product.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: context.colors.surface,

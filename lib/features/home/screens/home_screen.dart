@@ -8,6 +8,12 @@ import '../../../models/product_model.dart';
 import '../../../models/category_model.dart';
 import '../../catalog/widgets/product_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../shared/widgets/coupon_ticker.dart';
+import '../../../shared/widgets/coupon_popup.dart';
+import '../../../providers/coupon_provider.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/order_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -51,6 +57,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for active coupons to show one-time popup
+    ref.listen(watchActiveCouponsProvider, (previous, next) async {
+      if (next.hasValue && next.value != null && next.value!.isNotEmpty) {
+        final latestCoupon = next.value!.first;
+        final prefs = await SharedPreferences.getInstance();
+        final lastSeenId = prefs.getString('last_seen_coupon_id');
+        
+        if (lastSeenId != latestCoupon.id) {
+          await prefs.setString('last_seen_coupon_id', latestCoupon.id);
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              barrierColor: Colors.black.withOpacity(0.8),
+              builder: (context) => CouponPopup(coupon: latestCoupon),
+            );
+          }
+        }
+      }
+    });
+
     final productsAsync = _selectedCategory == 0 || _categories.isEmpty
         ? ref.watch(getNewArrivalsProvider(limit: 6))
         : ref.watch(getProductsByCategoryProvider(_categories[_selectedCategory].id));
@@ -82,6 +108,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // Removed cart and search icons as they are now in the bottom nav
               const SizedBox(width: 4),
             ],
+          ),
+
+          // Coupon Ticker
+          const SliverToBoxAdapter(
+            child: CouponTicker(),
           ),
 
           SliverToBoxAdapter(
@@ -315,19 +346,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       );
                     }
                     
-                    // Mock variations for UI sections
-                    final trendingProducts = products.reversed.toList();
-                    final topRatedProducts = products.toList();
-                    final buyAgainProducts = products.length > 2 ? (products.toList()..insert(0, products.last)).sublist(0, products.length) : products.toList();
+                    
+                    // Sort for Trending (sales count)
+                    final trendingProducts = products.toList()
+                      ..sort((a, b) => b.salesCount.compareTo(a.salesCount));
 
-                    return Column(
-                      children: [
-                        _buildHorizontalProductSection('New Arrivals', products, showViewMore: true),
-                        _buildHorizontalProductSection('Trending', trendingProducts),
-                        _buildHorizontalProductSection('Top Rating', topRatedProducts),
-                        _buildHorizontalProductSection('Buy Again', buyAgainProducts),
-                      ],
-                    );
+                    // Sort for Top Rated (average rating)
+                    final topRatedProducts = products.toList()
+                      ..sort((a, b) => b.averageRating.compareTo(a.averageRating));
+
+                    // Buy Again: fetch user orders and extract product IDs
+                    final authState = ref.watch(authStateProvider);
+                    final user = authState.value;
+                    
+                    return user == null 
+                        ? _buildProductSections(products, trendingProducts, topRatedProducts, [])
+                        : ref.watch(watchUserOrdersProvider(user.uid)).when(
+                            data: (orders) {
+                              final pastProductIds = <String>{};
+                              for (final order in orders) {
+                                for (final item in order.items) {
+                                  pastProductIds.add(item.productId);
+                                }
+                              }
+                              final buyAgainProducts = products.where((p) => pastProductIds.contains(p.id)).toList();
+                              return _buildProductSections(products, trendingProducts, topRatedProducts, buyAgainProducts);
+                            },
+                            loading: () => _buildProductSections(products, trendingProducts, topRatedProducts, []),
+                            error: (_, __) => _buildProductSections(products, trendingProducts, topRatedProducts, []),
+                          );
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.all(32),
@@ -344,6 +391,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProductSections(
+    List<ProductModel> products,
+    List<ProductModel> trendingProducts,
+    List<ProductModel> topRatedProducts,
+    List<ProductModel> buyAgainProducts,
+  ) {
+    return Column(
+      children: [
+        _buildHorizontalProductSection('New Arrivals', products, showViewMore: true),
+        _buildHorizontalProductSection('Trending', trendingProducts),
+        _buildHorizontalProductSection('Top Rated', topRatedProducts),
+        _buildHorizontalProductSection('Buy Again', buyAgainProducts),
+      ],
     );
   }
 
@@ -374,7 +437,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 14),
         SizedBox(
-          height: 280,
+          height: 255,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,

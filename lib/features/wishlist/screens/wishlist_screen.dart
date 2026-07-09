@@ -116,7 +116,7 @@ class _WishlistCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/catalog/product/${product.id}'),
+      onTap: () => context.push('/catalog/product/${product.id}'),
       child: Container(
         decoration: BoxDecoration(
           color: context.colors.surface,
@@ -134,14 +134,16 @@ class _WishlistCard extends StatelessWidget {
                 Container(
                   height: AppSizes.productCardImageHeight,
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F0FE),
+                  child: ClipRRect(
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(AppSizes.cardRadius - 1),
                       topRight: Radius.circular(AppSizes.cardRadius - 1),
                     ),
+                    child: product.primaryImage.isNotEmpty
+                        ? Image.network(product.primaryImage, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(Icons.edit_rounded, size: 48, color: context.colors.border))
+                        : Icon(Icons.edit_rounded, size: 48, color: context.colors.border),
                   ),
-                  child: Icon(Icons.edit_rounded, size: 48, color: context.colors.border),
                 ),
                 Positioned(
                   top: 8, right: 8,

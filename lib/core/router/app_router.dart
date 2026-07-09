@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -43,8 +44,11 @@ import '../../features/admin/screens/admin_edit_product_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
@@ -80,7 +84,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/catalog',
-            builder: (context, state) => const CatalogScreen(),
+            builder: (context, state) {
+              final categoryId = state.uri.queryParameters['categoryId'];
+              return CatalogScreen(initialCategoryId: categoryId);
+            },
             routes: [
               GoRoute(
                 path: 'product/:id',
