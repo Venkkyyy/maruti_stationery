@@ -23,23 +23,32 @@ class AuthService {
     return null;
   }
 
+  static bool _isGoogleInit = false;
+
   Future<UserModel?> signInWithGoogle() async {
     try {
-      await GoogleSignIn.instance.initialize(
-        serverClientId: '731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com',
-      );
+      if (!_isGoogleInit) {
+        await GoogleSignIn.instance.initialize(
+          serverClientId: '731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com',
+        );
+        _isGoogleInit = true;
+      }
+      
       final googleUser = await GoogleSignIn.instance.authenticate();
-      if (googleUser == null) throw const AppException('Sign in canceled by user');
-
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
+      
       final credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
-        // accessToken removed in google_sign_in v7 — idToken alone is sufficient for Firebase Auth
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
       await _createOrUpdateUser(userCredential.user!);
       return await getUser(userCredential.user!.uid);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled.name || e.code == 'canceled') {
+        throw const AppException('Sign in canceled by user');
+      }
+      throw AppException(e.message ?? 'Google sign in failed');
     } on FirebaseAuthException catch (e) {
       throw AppException(_mapAuthError(e.code));
     } catch (e) {
