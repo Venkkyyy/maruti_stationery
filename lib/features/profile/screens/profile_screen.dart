@@ -119,20 +119,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Admin Account section
-                  if (user?.isAdmin == true) ...[
-                    _SectionHeader('Admin Settings'),
-                    const SizedBox(height: 8),
-                    _ProfileSection([
-                      _ProfileOption(
-                        icon: Icons.admin_panel_settings_rounded,
-                        label: 'Admin Dashboard',
-                        subtitle: 'Manage products and orders',
-                        onTap: () => context.go('/admin'),
-                      ),
-                    ]),
-                    const SizedBox(height: 16),
-                  ],
+
 
                   // My Account section
                   _SectionHeader('My Account'),

@@ -74,7 +74,9 @@ class _CouponTickerState extends ConsumerState<CouponTicker> with SingleTickerPr
                       const Icon(Icons.local_offer, size: 14, color: Colors.white),
                       const SizedBox(width: 8),
                       Text(
-                        'SAVE ₹${(coupon.discountAmount / 100).toStringAsFixed(0)} WITH CODE: ',
+                        coupon.discountType == 'percentage'
+                            ? 'SAVE ${coupon.discountAmount}% WITH CODE: '
+                            : 'SAVE ₹${(coupon.discountAmount / 100).toStringAsFixed(0)} WITH CODE: ',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,

@@ -261,7 +261,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('${appliedCoupon.code} applied', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.success)),
-                        Text('You saved ${AppFormatters.formatPrice(appliedCoupon.discountAmount)}', style: TextStyle(fontSize: 12, color: context.colors.success)),
+                        Text('You saved ${AppFormatters.formatPrice(appliedCoupon.calculateDiscount(subtotal))}', style: TextStyle(fontSize: 12, color: context.colors.success)),
                       ],
                     ),
                   ),
@@ -388,7 +388,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Save ${AppFormatters.formatPrice(coupon.discountAmount)} on orders above ${AppFormatters.formatPrice(coupon.minOrderAmount)}',
+                                        coupon.discountType == 'percentage'
+                                            ? 'Save ${coupon.discountAmount}% on orders above ${AppFormatters.formatPrice(coupon.minOrderAmount)}'
+                                            : 'Save ${AppFormatters.formatPrice(coupon.discountAmount)} on orders above ${AppFormatters.formatPrice(coupon.minOrderAmount)}',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: context.colors.textSecondary,
@@ -451,7 +453,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildPriceDetails(CartNotifier cartNotifier) {
     final subtotal = cartNotifier.subtotal;
     final appliedCoupon = ref.watch(appliedCouponProvider);
-    final discount = appliedCoupon?.discountAmount ?? 0;
+    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
     final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
 
     return Container(
@@ -504,7 +506,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildBottomBar(BuildContext context, CartNotifier cartNotifier) {
     final subtotal = cartNotifier.subtotal;
     final appliedCoupon = ref.watch(appliedCouponProvider);
-    final discount = appliedCoupon?.discountAmount ?? 0;
+    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
     final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
 
     return Container(
@@ -517,13 +519,40 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(AppFormatters.formatPrice(total), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                Text('VIEW DETAILS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.colors.primary)),
-              ],
+            GestureDetector(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(color: context.colors.border, borderRadius: BorderRadius.circular(2)),
+                        ),
+                        _buildPriceDetails(cartNotifier),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppFormatters.formatPrice(total), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                  Text('VIEW DETAILS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: context.colors.primary)),
+                ],
+              ),
             ),
             SizedBox(
               width: 160,

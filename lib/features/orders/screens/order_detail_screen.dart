@@ -186,6 +186,41 @@ class OrderDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            Container(
+              color: context.colors.surface,
+              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('PAYMENT DETAILS', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: context.colors.textSecondary)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Method', style: TextStyle(fontSize: 14)),
+                      Text(order.paymentMethod.name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Status', style: TextStyle(fontSize: 14)),
+                      Text(
+                        order.paymentStatus.name.toUpperCase(), 
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 14,
+                          color: order.paymentStatus == PaymentStatus.paid ? context.colors.success : Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );

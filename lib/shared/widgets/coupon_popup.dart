@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:maruti_stationery/models/coupon_model.dart';
 import 'dart:math' as math;
@@ -84,42 +85,65 @@ class _CouponPopupState extends State<CouponPopup> with SingleTickerProviderStat
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Save ₹${(widget.coupon.discountAmount / 100).toStringAsFixed(0)} on your next order!',
+                  widget.coupon.discountType == 'percentage'
+                      ? 'Save ${widget.coupon.discountAmount}% on your next order!'
+                      : 'Save ₹${(widget.coupon.discountAmount / 100).toStringAsFixed(0)} on your next order!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
                     color: context.colors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceGrey,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.colors.primary.withOpacity(0.3), width: 2),
+                if (widget.coupon.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.coupon.description,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: context.colors.textSecondary.withValues(alpha: 0.8),
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'CODE: ',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: context.colors.textSecondary,
+                ],
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: widget.coupon.code));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Coupon code ${widget.coupon.code} copied!')),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceGrey,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: context.colors.primary.withValues(alpha: 0.3), width: 2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'CODE: ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        widget.coupon.code,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: context.colors.primary,
-                          letterSpacing: 2,
+                        Text(
+                          widget.coupon.code,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: context.colors.primary,
+                            letterSpacing: 2,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Icon(Icons.copy, size: 16, color: context.colors.primary),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

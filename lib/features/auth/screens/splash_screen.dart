@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../providers/user_provider.dart';
+import '../../../providers/app_mode_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -66,11 +67,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
             context.go('/auth/complete-profile');
           } else {
-            context.go('/home');
+            final appMode = ref.read(appModeProvider);
+            if (appMode == AppMode.admin) {
+              if (userModel.isAdmin) {
+                context.go('/admin');
+              } else {
+                // Not an admin, maybe show a snackbar or log out
+                FirebaseAuth.instance.signOut();
+                context.go('/onboarding');
+              }
+            } else {
+              context.go('/home');
+            }
           }
         } catch (e) {
           // Fallback if offline or firestore fails
-          if (mounted) context.go('/home');
+          if (mounted) {
+            final appMode = ref.read(appModeProvider);
+            if (appMode == AppMode.admin) {
+              context.go('/admin');
+            } else {
+              context.go('/home');
+            }
+          }
         }
       } else {
         if (mounted) context.go('/onboarding');

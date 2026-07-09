@@ -27,7 +27,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final cartItems = ref.watch(cartProvider).value ?? [];
     final appliedCoupon = ref.watch(appliedCouponProvider);
     final subtotal = cartNotifier.subtotal;
-    final discount = appliedCoupon?.discountAmount ?? 0;
+    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
     final deliveryCharge = 0; // Or whatever your delivery logic is
     final totalAmount = subtotal + deliveryCharge - discount;
     final addresses = ref.watch(addressProvider).value ?? [];
@@ -255,6 +255,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Widget _buildTotalHeader(int totalAmount, List<dynamic> cartItems, dynamic appliedCoupon) {
+    final subtotal = cartItems.fold<int>(0, (sum, item) => sum + (item.price * item.qty) as int);
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -306,7 +307,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('Coupon Discount', style: TextStyle(color: context.colors.textSecondary)),
-                              Text('-${AppFormatters.formatPrice(appliedCoupon.discountAmount)}', style: TextStyle(color: context.colors.success)),
+                              Text('-${AppFormatters.formatPrice(appliedCoupon.calculateDiscount(subtotal))}', style: TextStyle(color: context.colors.success)),
                             ],
                           ),
                         ],

@@ -74,4 +74,16 @@ class CouponModel {
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
+
+  int calculateDiscount(int subtotal) {
+    if (discountType == 'percentage') {
+      int calculated = (subtotal * discountAmount) ~/ 100;
+      if (maxDiscountAmount > 0 && calculated > maxDiscountAmount) {
+        return maxDiscountAmount;
+      }
+      return calculated;
+    } else {
+      return discountAmount;
+    }
+  }
 }

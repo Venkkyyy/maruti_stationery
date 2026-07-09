@@ -23,25 +23,15 @@ import '../../features/checkout/screens/address_screen.dart';
 import '../../features/home/screens/notification_screen.dart';
 import '../../features/checkout/screens/payment_screen.dart';
 import '../../features/checkout/screens/order_confirmation_screen.dart';
-import '../../features/admin/screens/admin_dashboard_screen.dart';
-import '../../features/admin/screens/admin_product_list_screen.dart';
 import '../../features/catalog/screens/category_list_screen.dart';
 import '../../features/home/screens/notifications_screen.dart';
 import '../../features/profile/screens/help_support_screen.dart';
 import '../../features/profile/screens/about_screen.dart';
-import '../../features/admin/screens/admin_add_product_screen.dart';
-import '../../features/admin/screens/admin_coupons_screen.dart';
 import '../../features/checkout/screens/add_address_screen.dart';
 import '../../features/cart/screens/offers_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
 import '../../features/profile/screens/manage_address_screen.dart';
 import '../../features/profile/screens/manage_payment_methods_screen.dart';
-import '../../features/admin/widgets/admin_scaffold.dart';
-import '../../features/admin/screens/admin_order_list_screen.dart';
-import '../../features/admin/screens/admin_settings_screen.dart';
-import '../../features/admin/screens/admin_categories_screen.dart';
-import '../../features/admin/screens/admin_edit_product_screen.dart';
-import '../../features/admin/screens/admin_coupon_form_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../models/coupon_model.dart';
@@ -165,49 +155,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // Admin Panel ShellRoute
-      ShellRoute(
-        builder: (context, state, child) => AdminScaffold(child: child),
-        routes: [
-          GoRoute(path: '/admin', redirect: (context, state) => '/admin/dashboard'),
-          GoRoute(path: '/admin/dashboard', builder: (context, state) => const AdminDashboardScreen()),
-          GoRoute(
-            path: '/admin/products',
-            builder: (context, state) => const AdminProductListScreen(),
-            routes: [
-              GoRoute(
-                path: 'add',
-                builder: (context, state) => const AdminAddProductScreen(),
-              ),
-              GoRoute(
-                path: 'edit/:id',
-                builder: (context, state) => AdminEditProductScreen(
-                  productId: state.pathParameters['id']!,
-                ),
-              ),
-            ],
-          ),
-          GoRoute(path: '/admin/orders', builder: (context, state) => const AdminOrderListScreen()),
-          GoRoute(
-            path: '/admin/coupons',
-            builder: (context, state) => const AdminCouponsScreen(),
-            routes: [
-              GoRoute(
-                path: 'add',
-                builder: (context, state) => const AdminCouponFormScreen(),
-              ),
-              GoRoute(
-                path: 'edit/:id',
-                builder: (context, state) => AdminCouponFormScreen(
-                  existingCoupon: state.extra as CouponModel?,
-                ),
-              ),
-            ],
-          ),
-          GoRoute(path: '/admin/categories', builder: (context, state) => const AdminCategoriesScreen()),
-          GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
-        ],
-      ),
+
     ],
     errorBuilder: (context, state) => const NotFoundScreen(),
   );

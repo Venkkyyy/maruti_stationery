@@ -52,11 +52,28 @@ class _AdminOrderTile extends StatelessWidget {
 
   Future<void> _updateStatus(BuildContext context, OrderStatus newStatus) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(order.id)
-          .update({'status': newStatus.name, 'updatedAt': FieldValue.serverTimestamp()});
-          
+      final batch = FirebaseFirestore.instance.batch();
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc(order.id);
+      
+      batch.update(orderRef, {'status': newStatus.name, 'updatedAt': FieldValue.serverTimestamp()});
+
+      // Handle stock adjustments
+      if (newStatus == OrderStatus.cancelled && order.status != OrderStatus.cancelled) {
+        // Increment stock
+        for (final item in order.items) {
+          final productRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+          batch.update(productRef, {'stock': FieldValue.increment(item.qty)});
+        }
+      } else if (order.status == OrderStatus.cancelled && newStatus != OrderStatus.cancelled) {
+        // Decrement stock
+        for (final item in order.items) {
+          final productRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+          batch.update(productRef, {'stock': FieldValue.increment(-item.qty)});
+        }
+      }
+
+      await batch.commit();
+
       // Write to notifications collection
       await FirebaseFirestore.instance.collection('notifications').add({
         'title': 'Order ${newStatus.name.toUpperCase()}',
@@ -228,6 +245,9 @@ class _AdminOrderTile extends StatelessWidget {
                   if (order.discount > 0) Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Discount:'), Text('-${AppFormatters.formatPrice(order.discount)}', style: const TextStyle(color: Colors.green))]),
                   const Divider(),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold)), Text(AppFormatters.formatPrice(order.total), style: const TextStyle(fontWeight: FontWeight.bold))]),
+                  const SizedBox(height: 12),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Payment Method:', style: TextStyle(fontSize: 13)), Text(order.paymentMethod.name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Payment Status:', style: TextStyle(fontSize: 13)), Text(order.paymentStatus.name.toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: order.paymentStatus == PaymentStatus.paid ? context.colors.success : Colors.orange))]),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
