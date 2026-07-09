@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/product_model.dart';
 import '../services/wishlist_service.dart';
 import 'auth_provider.dart';
+import 'product_provider.dart';
 
 part 'wishlist_provider.g.dart';
 
@@ -31,6 +32,22 @@ class WishlistNotifier extends _$WishlistNotifier {
     state = const AsyncLoading();
     try {
       await ref.read(wishlistServiceProvider).addToWishlist(user.uid, product);
+      state = const AsyncData(null);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
+  }
+
+  Future<void> addByProductId(String productId) async {
+    final user = ref.read(authStateProvider).value;
+    if (user == null) return;
+    
+    state = const AsyncLoading();
+    try {
+      final product = await ref.read(productServiceProvider).getProduct(productId);
+      if (product != null) {
+        await ref.read(wishlistServiceProvider).addToWishlist(user.uid, product);
+      }
       state = const AsyncData(null);
     } catch (e) {
       state = AsyncError(e, StackTrace.current);

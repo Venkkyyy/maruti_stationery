@@ -11,7 +11,8 @@ class AdminScaffold extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/admin/products')) return 1;
     if (location.startsWith('/admin/orders')) return 2;
-    if (location.startsWith('/admin/settings')) return 3;
+    if (location.startsWith('/admin/coupons')) return 3;
+    if (location.startsWith('/admin/settings')) return 4;
     return 0; // Dashboard
   }
 
@@ -27,6 +28,9 @@ class AdminScaffold extends StatelessWidget {
         context.go('/admin/orders');
         break;
       case 3:
+        context.go('/admin/coupons');
+        break;
+      case 4:
         context.go('/admin/settings');
         break;
     }
@@ -62,6 +66,11 @@ class AdminScaffold extends StatelessWidget {
               icon: Icon(Icons.receipt_long_outlined),
               selectedIcon: Icon(Icons.receipt_long_rounded),
               label: 'Orders',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.local_offer_outlined),
+              selectedIcon: Icon(Icons.local_offer_rounded),
+              label: 'Coupons',
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

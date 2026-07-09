@@ -5,20 +5,23 @@ import 'package:uuid/uuid.dart';
 class AdminCouponService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Future<void> addCoupon({
-    required String code,
-    required int discountAmount,
-    required int minOrderAmount,
-    required DateTime expiryDate,
-  }) async {
+  Future<void> addCoupon(CouponModel coupon) async {
     final id = const Uuid().v4();
-    final coupon = CouponModel(
+    final newCoupon = CouponModel(
       id: id,
-      code: code.toUpperCase(),
-      discountAmount: discountAmount,
-      minOrderAmount: minOrderAmount,
+      code: coupon.code.toUpperCase(),
+      name: coupon.name,
+      description: coupon.description,
+      discountType: coupon.discountType,
+      discountAmount: coupon.discountAmount,
+      maxDiscountAmount: coupon.maxDiscountAmount,
+      minOrderAmount: coupon.minOrderAmount,
       isActive: true,
-      expiryDate: expiryDate,
+      startDate: coupon.startDate,
+      expiryDate: coupon.expiryDate,
+      usageLimit: coupon.usageLimit,
+      usageLimitPerUser: coupon.usageLimitPerUser,
+      customerEligibility: coupon.customerEligibility,
       createdAt: DateTime.now(),
     );
 
@@ -26,15 +29,32 @@ class AdminCouponService {
     final notifRef = _db.collection('notifications').doc();
     
     await _db.runTransaction((tx) async {
-      tx.set(_db.collection('coupons').doc(id), coupon.toFirestore());
-      tx.set(notifRef, {
-        'title': 'New Special Offer! 🎁',
-        'body': 'Use code ${code.toUpperCase()} to get ₹${(discountAmount / 100).toStringAsFixed(2)} off on your orders!',
-        'type': 'coupon',
-        'createdAt': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
+      tx.set(_db.collection('coupons').doc(id), newCoupon.toFirestore());
+      
+      // Create notification only if it's currently active and start date is past/now
+      if (newCoupon.startDate.isBefore(DateTime.now().add(const Duration(hours: 1)))) {
+        String msg = '';
+        if (newCoupon.discountType == 'flat') {
+          msg = 'Get ₹${(newCoupon.discountAmount / 100).toStringAsFixed(0)} off on your orders!';
+        } else if (newCoupon.discountType == 'percentage') {
+          msg = 'Get ${newCoupon.discountAmount}% off on your orders!';
+        } else {
+          msg = 'Use code to get special offers on your orders!';
+        }
+
+        tx.set(notifRef, {
+          'title': 'New Special Offer! 🎁',
+          'body': 'Use code ${newCoupon.code.toUpperCase()} to $msg',
+          'type': 'coupon',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
     });
+  }
+
+  Future<void> editCoupon(String id, CouponModel updatedCoupon) async {
+    await _db.collection('coupons').doc(id).update(updatedCoupon.toFirestore());
   }
 
   Future<void> toggleCouponStatus(String couponId, bool currentStatus) async {

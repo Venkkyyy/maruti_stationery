@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../providers/cart_provider.dart';
+import '../../../providers/wishlist_provider.dart';
 import '../../../models/cart_item_model.dart';
 import '../../../core/utils/formatters.dart';
 
@@ -71,7 +72,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildDeliveryBanner(),
+                      // _buildDeliveryBanner(),
                       const SizedBox(height: 8),
                       ListView.separated(
                         shrinkWrap: true,
@@ -205,7 +206,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               Container(width: 1, height: 24, color: context.colors.divider),
               Expanded(
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    await ref.read(wishlistProvider.notifier).addByProductId(item.productId);
+                    cartNotifier.removeItem(item.productId);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Moved to Wishlist')),
+                      );
+                    }
+                  },
                   icon: Icon(Icons.favorite_border, size: 18, color: context.colors.textSecondary),
                   label: Text('MOVE TO WISHLIST', style: TextStyle(color: context.colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 13)),
                 ),

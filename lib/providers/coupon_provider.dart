@@ -13,3 +13,12 @@ Stream<List<CouponModel>> watchActiveCoupons(Ref ref) {
       .map((snapshot) => snapshot.docs.map((doc) => CouponModel.fromFirestore(doc)).toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
 }
+
+@riverpod
+Stream<List<CouponModel>> watchAllCoupons(Ref ref) {
+  return FirebaseFirestore.instance
+      .collection('coupons')
+      .snapshots()
+      .map((snapshot) => snapshot.docs.map((doc) => CouponModel.fromFirestore(doc)).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+}

@@ -297,7 +297,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Delivery Charges', style: TextStyle(color: context.colors.textSecondary)),
-                            Text(totalAmount > 49900 ? 'FREE' : AppFormatters.formatPrice(4000), style: TextStyle(color: totalAmount > 49900 ? context.colors.success : context.colors.textPrimary)),
+                            Text('FREE', style: TextStyle(color: context.colors.success)),
                           ],
                         ),
                         if (appliedCoupon != null) ...[

@@ -10,11 +10,13 @@ import '../../../providers/cart_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/wishlist_provider.dart';
 import '../../../providers/review_provider.dart';
+import '../../../providers/coupon_provider.dart';
+import '../../../providers/settings_provider.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/quantity_selector_sheet.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
-  static const String shopPhone = '+919876543210';
 
   const ProductDetailScreen({super.key, required this.productId});
 
@@ -48,11 +50,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     super.dispose();
   }
 
-  void _addToBag(product) async {
+  void _addToBag(product, int qty) async {
     setState(() => _isAddingToBag = true);
     _stampController.forward().then((_) => _stampController.reverse());
     try {
-      await ref.read(cartProvider.notifier).addItem(product, 1);
+      await ref.read(cartProvider.notifier).addItem(product, qty);
       await Future.delayed(const Duration(milliseconds: 400));
       if (mounted) {
         setState(() => _isAddingToBag = false);
@@ -81,9 +83,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     }
   }
 
-  void _buyNow(product) async {
+  void _buyNow(product, int qty) async {
     try {
-      await ref.read(cartProvider.notifier).addItem(product, 1);
+      await ref.read(cartProvider.notifier).addItem(product, qty);
       if (mounted) context.push('/cart');
     } catch (e) {
       if (mounted) {
@@ -96,6 +98,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final supportDetails = ref.watch(watchSupportDetailsProvider).value;
     final productAsync = ref.watch(watchProductProvider(widget.productId));
 
     return productAsync.when(
@@ -462,7 +465,33 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       ],
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  
+                  if (isInStock && product.stock <= 3) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: context.colors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: context.colors.warning.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.timer_outlined, size: 16, color: context.colors.warning),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Only ${product.stock} items left in stock',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   const Divider(),
                   const SizedBox(height: 16),
@@ -543,7 +572,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                                 )
                               : const Icon(Icons.shopping_bag_outlined, size: 20),
                           label: Text(_isAddingToBag ? 'Adding...' : 'Add to Bag'),
-                          onPressed: _isAddingToBag ? null : () => _addToBag(product),
+                          onPressed: _isAddingToBag ? null : () {
+                            QuantitySelectorSheet.show(
+                              context,
+                              product: product,
+                              confirmText: 'Add to Bag',
+                              onConfirm: (qty) => _addToBag(product, qty),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -554,7 +590,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.flash_on_rounded, size: 20),
                           label: const Text('Buy Now'),
-                          onPressed: () => _buyNow(product),
+                          onPressed: () {
+                            QuantitySelectorSheet.show(
+                              context,
+                              product: product,
+                              confirmText: 'Buy Now',
+                              onConfirm: (qty) => _buyNow(product, qty),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: context.colors.primary,
                             foregroundColor: Colors.white,
@@ -601,9 +644,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       ),
                       icon: Icon(Icons.phone_rounded,
                           size: 18, color: context.colors.primary),
-                      label: Text('+91 98765 43210'),
+                      label: Text(supportDetails?.phone ?? '+91 98765 43210'),
                       onPressed: () async {
-                        final uri = Uri(scheme: 'tel', path: ProductDetailScreen.shopPhone);
+                        final phone = supportDetails?.phone ?? '+91 98765 43210';
+                        final uri = Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'[^0-9+]'), ''));
                         if (await canLaunchUrl(uri)) await launchUrl(uri);
                       },
                     ),

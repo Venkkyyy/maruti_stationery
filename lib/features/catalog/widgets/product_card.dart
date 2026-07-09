@@ -6,6 +6,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
 import '../../../providers/cart_provider.dart';
+import '../../../shared/widgets/quantity_selector_sheet.dart';
 
 /// Reusable product card for both home grid and catalog grid.
 class ProductCard extends ConsumerWidget {
@@ -116,21 +117,28 @@ class ProductCard extends ConsumerWidget {
                   Positioned(
                     top: 8, right: 8,
                     child: GestureDetector(
-                      onTap: () async {
-                        try {
-                          await ref.read(cartProvider.notifier).addItem(product, 1);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Added to bag!', style: TextStyle(color: Colors.white)), backgroundColor: context.colors.primary, duration: const Duration(seconds: 1)),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
-                            );
-                          }
-                        }
+                      onTap: () {
+                        QuantitySelectorSheet.show(
+                          context,
+                          product: product,
+                          confirmText: 'Add to Cart',
+                          onConfirm: (qty) async {
+                            try {
+                              await ref.read(cartProvider.notifier).addItem(product, qty);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Added to cart!', style: TextStyle(color: Colors.white)), backgroundColor: context.colors.primary, duration: const Duration(seconds: 1)),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                                );
+                              }
+                            }
+                          },
+                        );
                       },
                       child: Container(
                         padding: const EdgeInsets.all(4),
@@ -208,28 +216,32 @@ class ProductCard extends ConsumerWidget {
                           ),
                           padding: EdgeInsets.zero,
                         ),
-                        onPressed: () async {
-                          try {
-                            await ref.read(cartProvider.notifier).addItem(product, 1);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: const Text('Added to bag!', style: TextStyle(color: Colors.white)), backgroundColor: context.colors.primary, duration: const Duration(seconds: 1)),
-                              );
-                              // context.push('/cart'); // Optional, removed as per earlier fixes if they prefer stay
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
-                              );
-                            }
-                          }
+                        onPressed: () {
+                          QuantitySelectorSheet.show(
+                            context,
+                            product: product,
+                            confirmText: 'Buy Now',
+                            onConfirm: (qty) async {
+                              try {
+                                await ref.read(cartProvider.notifier).addItem(product, qty);
+                                if (context.mounted) {
+                                  context.push('/cart');
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                                  );
+                                }
+                              }
+                            },
+                          );
                         },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
                             Text(
-                              'Add to Cart',
+                              'Buy Now',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -237,7 +249,7 @@ class ProductCard extends ConsumerWidget {
                               ),
                             ),
                             SizedBox(width: 6),
-                            Icon(Icons.shopping_bag_outlined, size: 14, color: Colors.white),
+                            Icon(Icons.flash_on_rounded, size: 14, color: Colors.white),
                           ],
                         ),
                       )

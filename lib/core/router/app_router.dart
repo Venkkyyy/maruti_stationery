@@ -41,8 +41,10 @@ import '../../features/admin/screens/admin_order_list_screen.dart';
 import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/admin/screens/admin_categories_screen.dart';
 import '../../features/admin/screens/admin_edit_product_screen.dart';
+import '../../features/admin/screens/admin_coupon_form_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
+import '../../models/coupon_model.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -186,7 +188,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(path: '/admin/orders', builder: (context, state) => const AdminOrderListScreen()),
-          GoRoute(path: '/admin/coupons', builder: (context, state) => const AdminCouponsScreen()),
+          GoRoute(
+            path: '/admin/coupons',
+            builder: (context, state) => const AdminCouponsScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                builder: (context, state) => const AdminCouponFormScreen(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                builder: (context, state) => AdminCouponFormScreen(
+                  existingCoupon: state.extra as CouponModel?,
+                ),
+              ),
+            ],
+          ),
           GoRoute(path: '/admin/categories', builder: (context, state) => const AdminCategoriesScreen()),
           GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
         ],
