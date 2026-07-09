@@ -10,16 +10,16 @@ import '../../../providers/order_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/address_provider.dart';
 import '../../../services/local_notification_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 class PaymentScreen extends ConsumerStatefulWidget {
-  const PaymentScreen({super.key});
+  final String? selectedAddressId;
+  const PaymentScreen({super.key, this.selectedAddressId});
 
   @override
   ConsumerState<PaymentScreen> createState() => _PaymentScreenState();
 }
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
-  String _selectedPayment = 'gpay';
+  String _selectedPayment = 'cod';
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +29,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final subtotal = cartNotifier.subtotal;
     final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
     final deliveryCharge = 0; // Or whatever your delivery logic is
-    final totalAmount = subtotal + deliveryCharge - discount;
+    final totalAmount = (subtotal + deliveryCharge - discount).clamp(0, double.maxFinite).toInt();
     final addresses = ref.watch(addressProvider).value ?? [];
-    final selectedAddress = addresses.isNotEmpty ? addresses.first : null;
+    // Use the address selected in the address screen; fall back to first
+    final selectedAddress = widget.selectedAddressId != null 
+        ? addresses.where((a) => a.id == widget.selectedAddressId).firstOrNull
+        : addresses.firstOrNull;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceGrey,
@@ -166,12 +169,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 
                 final user = ref.read(authStateProvider).value;
                 final userId = user?.uid;
-                final userEmail = user?.email;
                 if (userId == null) return;
                 
                 if (selectedAddress == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please add an address first!')),
+                    const SnackBar(content: Text('Please add an address first!')),
                   );
                   return;
                 }
@@ -195,10 +197,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   discount: discount,
                   total: totalAmount,
                   paymentMethod: PaymentMethod.values.firstWhere(
-                    (e) => e.name == _selectedPayment, 
-                    orElse: () => PaymentMethod.upi,
+                    (e) => e.name == _selectedPayment,
+                    orElse: () => PaymentMethod.cod,
                   ),
-                  paymentStatus: _selectedPayment == 'cod' ? PaymentStatus.pending : PaymentStatus.paid,
+                  // All methods pending until Razorpay is integrated
+                  paymentStatus: PaymentStatus.pending,
                   idempotencyKey: const Uuid().v4(),
                   createdAt: DateTime.now(),
                 );
@@ -255,7 +258,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Widget _buildTotalHeader(int totalAmount, List<dynamic> cartItems, dynamic appliedCoupon) {
-    final subtotal = cartItems.fold<int>(0, (sum, item) => sum + (item.price * item.qty) as int);
+    final subtotal = cartItems.fold<int>(0, (acc, item) => acc + (item.price * item.qty) as int);
     return Container(
       color: context.colors.surface,
       padding: const EdgeInsets.all(16),
@@ -290,7 +293,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Price (${cartItems.length} items)', style: TextStyle(color: context.colors.textSecondary)),
-                            Text(AppFormatters.formatPrice(cartItems.fold<int>(0, (sum, item) => sum + (item.price * item.qty) as int))),
+                            Text(AppFormatters.formatPrice(cartItems.fold<int>(0, (acc, item) => acc + (item.price * item.qty) as int))),
                           ],
                         ),
                         const SizedBox(height: 8),

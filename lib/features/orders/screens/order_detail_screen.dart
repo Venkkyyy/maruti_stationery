@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maruti_stationery/core/constants/app_colors.dart';
 import '../../../providers/order_provider.dart';
 import '../../../models/order_model.dart';
+import '../../../services/order_service.dart';
 import 'package:intl/intl.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
@@ -183,6 +184,56 @@ class OrderDetailScreen extends ConsumerWidget {
                       label: Text('Help Center', style: TextStyle(color: context.colors.textSecondary)),
                     ),
                   ),
+                  if (order.isCancellable) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: context.colors.surface,
+                              title: Text('Cancel Order', style: TextStyle(color: context.colors.textPrimary)),
+                              content: Text('Are you sure you want to cancel this order?', style: TextStyle(color: context.colors.textSecondary)),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => context.pop(false),
+                                  child: Text('No', style: TextStyle(color: context.colors.textSecondary)),
+                                ),
+                                TextButton(
+                                  onPressed: () => context.pop(true),
+                                  child: Text('Yes, Cancel', style: TextStyle(color: context.colors.error)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            try {
+                              await OrderService().cancelOrder(order.id, order.userId);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Order cancelled successfully'), backgroundColor: context.colors.success),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to cancel order: $e'), backgroundColor: context.colors.error),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.colors.error,
+                          side: BorderSide(color: context.colors.error),
+                        ),
+                        child: const Text('Cancel Order'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

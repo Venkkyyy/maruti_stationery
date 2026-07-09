@@ -198,8 +198,32 @@ class AuthService {
     if (user == null) throw const AppException('User not logged in');
 
     try {
-      // Delete user document from Firestore
-      await _db.collection('users').doc(user.uid).delete();
+      final batch = _db.batch();
+
+      // Delete cart items
+      final cartItems = await _db.collection('carts').doc(user.uid).collection('items').get();
+      for (var doc in cartItems.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_db.collection('carts').doc(user.uid));
+      
+      // Delete wishlist items
+      final wishlistItems = await _db.collection('wishlists').doc(user.uid).collection('items').get();
+      for (var doc in wishlistItems.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_db.collection('wishlists').doc(user.uid));
+
+      // Delete user addresses
+      final addresses = await _db.collection('users').doc(user.uid).collection('addresses').get();
+      for (var doc in addresses.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete user document
+      batch.delete(_db.collection('users').doc(user.uid));
+
+      await batch.commit();
       
       // Delete user from Firebase Auth
       await user.delete();

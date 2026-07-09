@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/order_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/utils/formatters.dart';
+import 'package:intl/intl.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -28,7 +29,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
         scrolledUnderElevation: 0,
         title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
         actions: [
-          IconButton(icon: Icon(Icons.search_rounded, color: context.colors.textPrimary), onPressed: () {}),
+          IconButton(icon: Icon(Icons.search_rounded, color: context.colors.textPrimary), onPressed: () => context.push('/search')),
         ],
       ),
       body: Column(
@@ -95,7 +96,14 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                     // Filter logic if needed
                     final filteredOrders = _selectedFilter == 0 
                       ? orders 
-                      : orders.where((o) => o.statusLabel.toLowerCase() == _filters[_selectedFilter].toLowerCase()).toList();
+                      : orders.where((o) {
+                          final label = o.statusLabel.toLowerCase();
+                          final filter = _filters[_selectedFilter].toLowerCase();
+                          if (filter == 'processing') {
+                            return label == 'order placed' || label == 'confirmed' || label == 'packed';
+                          }
+                          return label == filter;
+                        }).toList();
                     
                     if (filteredOrders.isEmpty) {
                       return const Center(child: Text('No orders found for this status'));
@@ -111,10 +119,11 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                         
                         return _buildOrderCard(
                           orderId: order.id,
-                          date: order.createdAt.toString().split(' ')[0], // simple date formatting
+                          date: DateFormat('MMM dd, yyyy').format(order.createdAt),
                           status: order.statusLabel, // e.g. 'Processing'
                           title: firstItem?.name ?? 'Order Item',
                           details: 'Qty: ${firstItem?.qty ?? 0}',
+                          itemCount: order.items.length,
                           price: AppFormatters.formatPrice(order.total),
                           buttonText: 'View Details',
                           buttonOutlined: true,
@@ -140,6 +149,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
     required String status,
     required String title,
     required String details,
+    required int itemCount,
     required String price,
     required String buttonText,
     bool buttonOutlined = false,
@@ -206,8 +216,10 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                     Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.colors.textPrimary)),
                     const SizedBox(height: 4),
                     Text(details, style: TextStyle(fontSize: 12, color: context.colors.textSecondary)),
-                    const SizedBox(height: 8),
-                    Text('+ 1 more item', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.primary.withValues(alpha: 0.7))),
+                    if (itemCount > 1) ...[
+                      const SizedBox(height: 8),
+                      Text('+ ${itemCount - 1} more item${itemCount > 2 ? 's' : ''}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: context.colors.primary.withValues(alpha: 0.7))),
+                    ],
                   ],
                 ),
               ),

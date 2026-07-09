@@ -13,6 +13,7 @@ import '../../features/admin/screens/admin_coupons_screen.dart';
 import '../../features/admin/widgets/admin_scaffold.dart';
 import '../../features/admin/screens/admin_order_list_screen.dart';
 import '../../features/admin/screens/admin_settings_screen.dart';
+import '../../features/admin/screens/admin_broadcast_screen.dart';
 import '../../features/admin/screens/admin_categories_screen.dart';
 import '../../features/admin/screens/admin_edit_product_screen.dart';
 import '../../features/admin/screens/admin_coupon_form_screen.dart';
@@ -75,7 +76,16 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(path: '/admin/categories', builder: (context, state) => const AdminCategoriesScreen()),
-          GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
+          GoRoute(
+            path: '/admin/settings',
+            builder: (context, state) => const AdminSettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'broadcast',
+                builder: (context, state) => const AdminBroadcastScreen(),
+              ),
+            ],
+          ),
         ],
       ),
     ],

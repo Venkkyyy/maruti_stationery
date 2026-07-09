@@ -1,14 +1,22 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/cart_provider.dart';
+import '../../core/utils/formatters.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final String location = GoRouterState.of(context).matchedLocation;
+    
+    final cartState = ref.watch(cartProvider);
+    final bool showCartBar = (cartState.value?.isNotEmpty ?? false) && 
+                            !location.startsWith('/cart') && 
+                            !location.startsWith('/checkout');
 
     int selectedIndex = 0;
     if (location.startsWith('/home')) {
@@ -44,7 +52,21 @@ class MainScaffold extends StatelessWidget {
     }
 
     return Scaffold(
-      body: child,
+      body: Stack(
+        children: [
+          child,
+          if (showCartBar)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _FloatingCartBar(
+                itemCount: cartState.value?.fold<int>(0, (sum, i) => sum + i.qty) ?? 0,
+                totalPrice: cartState.value?.fold<int>(0, (sum, i) => sum + (i.price * i.qty)) ?? 0,
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: _BottomNav(
         selectedIndex: selectedIndex,
         onTap: onTap,
@@ -178,6 +200,95 @@ class _NavItem extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingCartBar extends StatelessWidget {
+  final int itemCount;
+  final int totalPrice;
+
+  const _FloatingCartBar({
+    required this.itemCount,
+    required this.totalPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/cart'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            decoration: BoxDecoration(
+              color: context.colors.primary, 
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Left thumbnail
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.shopping_bag_rounded, color: context.colors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                
+                // Center text
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'View cart',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '$itemCount Item${itemCount > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // Right arrow
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 24),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:maruti_stationery/providers/theme_provider.dart';
 import 'package:maruti_stationery/providers/auth_provider.dart';
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -15,6 +16,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _promosEnabled = false;
   bool _locationEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+        _promosEnabled = prefs.getBool('promos_enabled') ?? false;
+        _locationEnabled = prefs.getBool('location_enabled') ?? true;
+      });
+    }
+  }
+
+  Future<void> _saveSetting(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,14 +71,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: 'Order updates and delivery status',
             icon: Icons.notifications_active_outlined,
             value: _notificationsEnabled,
-            onChanged: (val) => setState(() => _notificationsEnabled = val),
+            onChanged: (val) {
+              setState(() => _notificationsEnabled = val);
+              _saveSetting('notifications_enabled', val);
+            },
           ),
           _buildSwitchTile(
             title: 'Promotional Offers',
             subtitle: 'New arrivals and exclusive discounts',
             icon: Icons.local_offer_outlined,
             value: _promosEnabled,
-            onChanged: (val) => setState(() => _promosEnabled = val),
+            onChanged: (val) {
+              setState(() => _promosEnabled = val);
+              _saveSetting('promos_enabled', val);
+            },
           ),
           
           Divider(height: 32, thickness: 1, color: context.colors.border),
@@ -75,7 +104,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: 'Used for faster address suggestions',
             icon: Icons.location_on_outlined,
             value: _locationEnabled,
-            onChanged: (val) => setState(() => _locationEnabled = val),
+            onChanged: (val) {
+              setState(() => _locationEnabled = val);
+              _saveSetting('location_enabled', val);
+            },
           ),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
@@ -95,16 +127,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Divider(height: 32, thickness: 1, color: context.colors.border),
           
           _buildSectionHeader('ACCOUNT'),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-            leading: Icon(Icons.lock_outline_rounded, color: context.colors.textSecondary),
-            title: Text(
-              'Change Password',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: context.colors.textPrimary),
-            ),
-            trailing: Icon(Icons.chevron_right_rounded, color: context.colors.textHint),
-            onTap: () {},
-          ),
+
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
             leading: Icon(Icons.delete_outline_rounded, color: context.colors.error),
@@ -131,7 +154,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           await ref.read(authProvider.notifier).deleteAccount();
                           if (context.mounted) {
                             context.pop();
-                            context.go('/splash');
+                            context.go('/onboarding');
                           }
                         } catch (e) {
                           if (context.mounted) {

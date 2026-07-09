@@ -56,7 +56,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
 
     // Navigate after animation and profile check
-    Future.delayed(const Duration(milliseconds: 2500), () async {
+    Future.delayed(const Duration(milliseconds: 1500), () async {
       final user = FirebaseAuth.instance.currentUser;
       
       if (user != null) {

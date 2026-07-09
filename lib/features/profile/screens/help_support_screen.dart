@@ -1,6 +1,7 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,18 +48,46 @@ class HelpSupportScreen extends ConsumerWidget {
                 icon: Icons.chat_rounded,
                 title: 'Live Chat',
                 subtitle: 'Start a conversation now',
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: context.colors.surface,
+                      title: Text('Coming Soon', style: TextStyle(color: context.colors.textPrimary)),
+                      content: Text('Live chat support will be available soon!', style: TextStyle(color: context.colors.textSecondary)),
+                      actions: [
+                        TextButton(
+                          onPressed: () => context.pop(),
+                          child: Text('OK', style: TextStyle(color: context.colors.primary)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               _buildContactCard(
                 icon: Icons.email_rounded,
                 title: 'Email Support',
                 subtitle: details.email,
+                onTap: () async {
+                  final uri = Uri.parse('mailto:${details.email}');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
               ),
               const SizedBox(height: 12),
               _buildContactCard(
                 icon: Icons.phone_rounded,
                 title: 'Call Us',
                 subtitle: details.phone,
+                onTap: () async {
+                  final uri = Uri.parse('tel:${details.phone}');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                },
               ),
           const SizedBox(height: 32),
           Text(
@@ -83,50 +112,53 @@ class HelpSupportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContactCard({required IconData icon, required String title, required String subtitle}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildContactCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 24),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: AppColors.textHint, size: 20),
-        ],
+            Icon(Icons.chevron_right_rounded, color: AppColors.textHint, size: 20),
+          ],
+        ),
       ),
     );
   }

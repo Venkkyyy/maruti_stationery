@@ -113,7 +113,7 @@ class AdminDashboardScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('orders').where('status', isNotEqualTo: 'Cancelled').snapshots(),
+                  stream: FirebaseFirestore.instance.collection('orders').where('status', isNotEqualTo: 'cancelled').snapshots(),
                   builder: (context, snapshot) {
                     final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
                     return _buildMetricCard(

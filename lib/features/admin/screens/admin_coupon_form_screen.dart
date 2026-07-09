@@ -5,6 +5,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../models/coupon_model.dart';
 import '../../../services/admin_coupon_service.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../services/admin_fcm_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminCouponFormScreen extends StatefulWidget {
   final CouponModel? existingCoupon;
@@ -118,6 +120,24 @@ class _AdminCouponFormScreenState extends State<AdminCouponFormScreen> {
 
       if (widget.existingCoupon == null) {
         await AdminCouponService().addCoupon(couponData);
+
+        // Also add an in-app notification
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'title': 'New Coupon: ${couponData.code}',
+          'body': 'Use code ${couponData.code} to get ${couponData.name}!',
+          'type': 'coupon',
+          'userId': null,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
+        // Dispatch FCM v1 Push Notification
+        await AdminFCMService.sendNotification(
+          targetTokenOrTopic: '/topics/offers',
+          title: 'New Coupon: ${couponData.code}',
+          body: 'Use code ${couponData.code} to get ${couponData.name}!',
+          data: {'type': 'coupon', 'code': couponData.code},
+        );
       } else {
         await AdminCouponService().editCoupon(widget.existingCoupon!.id, couponData);
       }

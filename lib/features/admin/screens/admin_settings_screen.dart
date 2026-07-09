@@ -117,12 +117,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              const Divider(),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.storefront_outlined, color: context.colors.primary),
-                title: Text('Return to Customer View', style: TextStyle(color: context.colors.textPrimary)),
-                onTap: () => context.go('/home'),
+                leading: Icon(Icons.campaign_rounded, color: context.colors.primary),
+                title: Text('Broadcast Notifications', style: TextStyle(color: context.colors.textPrimary)),
+                onTap: () => context.push('/admin/settings/broadcast'),
               ),
               const Divider(),
               ListTile(

@@ -72,6 +72,29 @@ class _ManageAddressScreenState extends ConsumerState<ManageAddressScreen> {
                             address: address,
                             isSelected: _selectedAddressId == address.id,
                             onTap: () => setState(() => _selectedAddressId = address.id),
+                            onDelete: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: context.colors.surface,
+                                  title: Text('Delete Address', style: TextStyle(color: context.colors.textPrimary)),
+                                  content: Text('Are you sure you want to delete this address?', style: TextStyle(color: context.colors.textSecondary)),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => context.pop(),
+                                      child: Text('Cancel', style: TextStyle(color: context.colors.textSecondary)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        ref.read(addressProvider.notifier).removeAddress(address.id);
+                                        context.pop();
+                                      },
+                                      child: Text('Delete', style: TextStyle(color: context.colors.error)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         );
                       }).toList(),
@@ -127,11 +150,13 @@ class _AddressCard extends StatelessWidget {
   final AddressModel address;
   final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const _AddressCard({
     required this.address,
     required this.isSelected,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
@@ -202,13 +227,23 @@ class _AddressCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        address.name,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
+                      Expanded(
+                        child: Text(
+                          address.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(Icons.delete_outline_rounded, color: context.colors.error, size: 20),
+                        onPressed: onDelete,
                       ),
                     ],
                   ),

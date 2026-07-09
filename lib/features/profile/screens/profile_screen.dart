@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
@@ -167,7 +168,18 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.star_border_rounded,
                       label: 'Rate the App',
                       subtitle: 'Share your feedback',
-                      onTap: () => _showUnimplementedSnackBar(context, 'Redirecting to App Store...'),
+                      onTap: () async {
+                        final url = Uri.parse('https://play.google.com/store/apps/details?id=com.marutistationery.app');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not open App Store')),
+                            );
+                          }
+                        }
+                      },
                     ),
                     _ProfileOption(
                       icon: Icons.info_outline_rounded,
@@ -197,7 +209,7 @@ class ProfileScreen extends ConsumerWidget {
                   GestureDetector(
                     onTap: () async {
                       await ref.read(authProvider.notifier).signOut();
-                      if (context.mounted) context.go('/splash');
+                      if (context.mounted) context.go('/onboarding');
                     },
                     child: Container(
                       padding: const EdgeInsets.all(16),

@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 class OrderConfirmationScreen extends StatefulWidget {
   final String orderId;
@@ -181,7 +182,13 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                                   color: context.colors.textSecondary, fontSize: 13),
                             ),
                             Text(
-                              'July 3 – 5, 2026',
+                              () {
+                                final now = DateTime.now();
+                                final start = now.add(const Duration(days: 3));
+                                final end = now.add(const Duration(days: 5));
+                                final fmt = DateFormat('MMM d');
+                                return '${fmt.format(start)} – ${fmt.format(end)}, ${end.year}';
+                              }(),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,

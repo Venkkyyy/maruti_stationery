@@ -139,7 +139,9 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
             child: SizedBox(
               height: 54,
               child: ElevatedButton(
-                onPressed: () => context.push('/checkout/payment'),
+                onPressed: _selectedAddressId == null
+                    ? null
+                    : () => context.push('/checkout/payment', extra: _selectedAddressId),
                 child: const Text('Continue to Payment'),
               ),
             ),

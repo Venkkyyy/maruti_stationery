@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/order_model.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../services/admin_fcm_service.dart';
 
 class AdminOrderListScreen extends StatelessWidget {
   const AdminOrderListScreen({super.key});
@@ -83,6 +84,27 @@ class _AdminOrderTile extends StatelessWidget {
         'createdAt': FieldValue.serverTimestamp(),
         'isRead': false,
       });
+
+      // Option B Workaround: Send push notification to customer
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(order.userId).get();
+        final tokens = List<String>.from(userDoc.data()?['fcmTokens'] ?? []);
+        if (tokens.isNotEmpty) {
+          for (final token in tokens) {
+            await AdminFCMService.sendNotification(
+              targetTokenOrTopic: token,
+              title: 'Order ${newStatus.name.toUpperCase()}',
+              body: 'Your order #${order.id.substring(0, 8).toUpperCase()} has been ${newStatus.name}.',
+              data: {
+                'type': 'order',
+                'orderId': order.id,
+              },
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to send FCM to customer: $e');
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -108,14 +130,37 @@ class _AdminOrderTile extends StatelessWidget {
                   status.name.toUpperCase(),
                   style: TextStyle(
                     fontWeight: order.status == status ? FontWeight.bold : FontWeight.normal,
-                    color: order.status == status ? context.colors.primary : context.colors.textPrimary,
+                    color: _getStatusColor(context, status),
                   ),
                 ),
-                trailing: order.status == status ? Icon(Icons.check, color: context.colors.primary) : null,
-                onTap: () {
+                trailing: order.status == status ? Icon(Icons.check, color: _getStatusColor(context, status)) : null,
+                onTap: () async {
                   Navigator.pop(context);
                   if (order.status != status) {
-                    _updateStatus(context, status);
+                    if (status == OrderStatus.cancelled) {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: context.colors.surface,
+                          title: Text('Cancel Order', style: TextStyle(color: context.colors.textPrimary)),
+                          content: Text('Are you sure you want to cancel this order? This will restore the stock.', style: TextStyle(color: context.colors.textSecondary)),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text('No', style: TextStyle(color: context.colors.textSecondary)),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text('Yes, Cancel', style: TextStyle(color: context.colors.error)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm != true) return;
+                    }
+                    if (context.mounted) {
+                      _updateStatus(context, status);
+                    }
                   }
                 },
               );
@@ -126,16 +171,16 @@ class _AdminOrderTile extends StatelessWidget {
     );
   }
 
+  Color _getStatusColor(BuildContext context, OrderStatus status) {
+    if (status == OrderStatus.cancelled) return context.colors.error;
+    if (status == OrderStatus.delivered) return Colors.green;
+    if (status == OrderStatus.placed || status == OrderStatus.confirmed) return Colors.orange;
+    return context.colors.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool isProcessing = order.status == OrderStatus.placed || order.status == OrderStatus.confirmed;
-    final bool isDelivered = order.status == OrderStatus.delivered;
-    final bool isCancelled = order.status == OrderStatus.cancelled;
-
-    Color statusColor = context.colors.primary;
-    if (isProcessing) statusColor = Colors.orange;
-    if (isDelivered) statusColor = Colors.green;
-    if (isCancelled) statusColor = context.colors.error;
+    Color statusColor = _getStatusColor(context, order.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

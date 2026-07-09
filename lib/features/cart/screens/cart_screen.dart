@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/wishlist_provider.dart';
+import '../../../providers/product_provider.dart';
 import '../../../models/cart_item_model.dart';
+import '../../../models/product_model.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../catalog/widgets/product_card.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -85,6 +89,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       _buildCouponsSection(cartNotifier.subtotal),
                       const SizedBox(height: 8),
                       _buildPriceDetails(cartNotifier),
+                      _buildProductRecommendations(context),
+                      _buildWishlistSection(context),
                       const SizedBox(height: 100),
                     ],
                   ),
@@ -98,6 +104,28 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ),
       bottomSheet: cartAsync.value?.isNotEmpty == true ? _buildBottomBar(context, cartNotifier) : null,
     );
+  }
+
+  Future<bool> _confirmRemove(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.colors.surface,
+        title: Text('Remove Item', style: TextStyle(color: context.colors.textPrimary)),
+        content: Text('Are you sure you want to remove this item from your cart?', style: TextStyle(color: context.colors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: context.colors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Remove', style: TextStyle(color: context.colors.error)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Widget _buildDeliveryBanner() {
@@ -164,7 +192,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             child: Row(
                               children: [
                                 GestureDetector(
-                                  onTap: () => cartNotifier.updateQty(item.productId, item.qty - 1),
+                                  onTap: () async {
+                                    if (item.qty == 1) {
+                                      if (await _confirmRemove(context)) {
+                                        cartNotifier.removeItem(item.productId);
+                                      }
+                                    } else {
+                                      cartNotifier.updateQty(item.productId, item.qty - 1);
+                                    }
+                                  },
                                   child: Icon(Icons.remove, size: 16, color: context.colors.textSecondary),
                                 ),
                                 const SizedBox(width: 8),
@@ -186,7 +222,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 IconButton(
                   icon: Icon(Icons.close_rounded, color: context.colors.textSecondary, size: 20),
-                  onPressed: () => cartNotifier.removeItem(item.productId),
+                  onPressed: () async {
+                    if (await _confirmRemove(context)) {
+                      cartNotifier.removeItem(item.productId);
+                    }
+                  },
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -198,7 +238,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Expanded(
                 child: TextButton.icon(
-                  onPressed: () => cartNotifier.removeItem(item.productId),
+                  onPressed: () async {
+                    if (await _confirmRemove(context)) {
+                      cartNotifier.removeItem(item.productId);
+                    }
+                  },
                   icon: Icon(Icons.delete_outline, size: 18, color: context.colors.textSecondary),
                   label: Text('REMOVE', style: TextStyle(color: context.colors.textSecondary, fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
@@ -570,6 +614,66 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProductRecommendations(BuildContext context) {
+    final productsAsync = ref.watch(getNewArrivalsProvider(limit: 10));
+    
+    return productsAsync.when(
+      data: (products) {
+        if (products.isEmpty) return const SizedBox.shrink();
+        final trendingProducts = products.toList()..sort((a, b) => b.salesCount.compareTo(a.salesCount));
+        return _buildHorizontalProductSection('You Might Also Like', trendingProducts.take(6).toList());
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildWishlistSection(BuildContext context) {
+    final wishlistAsync = ref.watch(watchWishlistProvider);
+    return wishlistAsync.when(
+      data: (products) {
+        if (products.isEmpty) return const SizedBox.shrink();
+        return _buildHorizontalProductSection('Your Wishlist', products);
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildHorizontalProductSection(String title, List<ProductModel> products) {
+    if (products.isEmpty) return const SizedBox.shrink();
+    return Container(
+      color: context.colors.surface,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(title, style: AppTextStyles.sectionTitle),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 260,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
+                return SizedBox(
+                  width: 155,
+                  child: ProductCard(product: products[i]),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
