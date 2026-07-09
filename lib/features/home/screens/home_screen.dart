@@ -291,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
         else
           SizedBox(
-            height: 72,
+            height: 85,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),

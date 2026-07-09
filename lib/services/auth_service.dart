@@ -25,8 +25,11 @@ class AuthService {
 
   Future<UserModel?> signInWithGoogle() async {
     try {
-      await GoogleSignIn.instance.initialize();
+      await GoogleSignIn.instance.initialize(
+        serverClientId: '731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com',
+      );
       final googleUser = await GoogleSignIn.instance.authenticate();
+      if (googleUser == null) throw const AppException('Sign in canceled by user');
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(

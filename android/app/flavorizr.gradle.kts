@@ -13,7 +13,7 @@ android.apply {
         }
         create("admin") {
             dimension = "flavor-type"
-            applicationId = "com.example.maruti_stationery.admin"
+            applicationId = "com.example.maruti_stationery"
             resValue(type = "string", name = "app_name", value = "Maruti Admin")
         }
     }

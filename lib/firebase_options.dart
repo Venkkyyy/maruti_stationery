@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
   // Android options — update appId and apiKey from your google-services.json
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDNtuUN-WABc5xW6NYapb7l2EDy68NS39o',
-    appId: '1:731940586001:android:515bacb2b21e5b1bada7b0',
+    appId: '1:731940586001:android:d74841431c0d651eada7b0',
     messagingSenderId: '731940586001',
     projectId: 'maruti-stationery-d7862',
     storageBucket: 'maruti-stationery-d7862.firebasestorage.app',
