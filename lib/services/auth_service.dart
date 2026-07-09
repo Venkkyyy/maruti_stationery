@@ -48,7 +48,7 @@ class AuthService {
       if (e.code == GoogleSignInExceptionCode.canceled.name || e.code == 'canceled') {
         throw const AppException('Sign in canceled by user');
       }
-      throw AppException(e.message ?? 'Google sign in failed');
+      throw AppException(e.description ?? 'Google sign in failed');
     } on FirebaseAuthException catch (e) {
       throw AppException(_mapAuthError(e.code));
     } catch (e) {
