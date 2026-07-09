@@ -7,6 +7,7 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
 import '../../features/auth/screens/complete_profile_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/admin/screens/admin_product_categories_screen.dart';
 import '../../features/admin/screens/admin_product_list_screen.dart';
 import '../../features/admin/screens/admin_add_product_screen.dart';
 import '../../features/admin/screens/admin_coupons_screen.dart';
@@ -17,8 +18,11 @@ import '../../features/admin/screens/admin_broadcast_screen.dart';
 import '../../features/admin/screens/admin_categories_screen.dart';
 import '../../features/admin/screens/admin_edit_product_screen.dart';
 import '../../features/admin/screens/admin_coupon_form_screen.dart';
+import '../../features/admin/screens/admin_banners_screen.dart';
+import '../../features/admin/screens/admin_banner_form_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../models/coupon_model.dart';
+import '../../models/banner_model.dart';
 
 final GlobalKey<NavigatorState> adminRootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -44,8 +48,15 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin/dashboard', builder: (context, state) => const AdminDashboardScreen()),
           GoRoute(
             path: '/admin/products',
-            builder: (context, state) => const AdminProductListScreen(),
+            builder: (context, state) => const AdminProductCategoriesScreen(),
             routes: [
+              GoRoute(
+                path: 'category/:id',
+                builder: (context, state) => AdminProductListScreen(
+                  categoryId: state.pathParameters['id']!,
+                  categoryName: state.extra as String? ?? 'Category',
+                ),
+              ),
               GoRoute(
                 path: 'add',
                 builder: (context, state) => const AdminAddProductScreen(),
@@ -83,6 +94,22 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'broadcast',
                 builder: (context, state) => const AdminBroadcastScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/admin/banners',
+            builder: (context, state) => const AdminBannersScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                builder: (context, state) => const AdminBannerFormScreen(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                builder: (context, state) => AdminBannerFormScreen(
+                  existingBanner: state.extra as BannerModel?,
+                ),
               ),
             ],
           ),

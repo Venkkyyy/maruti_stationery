@@ -14,9 +14,9 @@ class MainScaffold extends ConsumerWidget {
     final String location = GoRouterState.of(context).matchedLocation;
     
     final cartState = ref.watch(cartProvider);
+    final bool isProductDetail = location.contains('/product/');
     final bool showCartBar = (cartState.value?.isNotEmpty ?? false) && 
-                            !location.startsWith('/cart') && 
-                            !location.startsWith('/checkout');
+                            (location == '/home' || location == '/categories' || location == '/catalog' || isProductDetail);
 
     int selectedIndex = 0;
     if (location.startsWith('/home')) {
@@ -60,7 +60,7 @@ class MainScaffold extends ConsumerWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              child: _FloatingCartBar(
+              child: FloatingCartBar(
                 itemCount: cartState.value?.fold<int>(0, (sum, i) => sum + i.qty) ?? 0,
                 totalPrice: cartState.value?.fold<int>(0, (sum, i) => sum + (i.price * i.qty)) ?? 0,
               ),
@@ -206,11 +206,11 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _FloatingCartBar extends StatelessWidget {
+class FloatingCartBar extends StatelessWidget {
   final int itemCount;
   final int totalPrice;
 
-  const _FloatingCartBar({
+  const FloatingCartBar({
     required this.itemCount,
     required this.totalPrice,
   });

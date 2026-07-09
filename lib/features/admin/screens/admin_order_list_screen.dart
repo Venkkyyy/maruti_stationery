@@ -5,8 +5,15 @@ import '../../../models/order_model.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../services/admin_fcm_service.dart';
 
-class AdminOrderListScreen extends StatelessWidget {
+class AdminOrderListScreen extends StatefulWidget {
   const AdminOrderListScreen({super.key});
+
+  @override
+  State<AdminOrderListScreen> createState() => _AdminOrderListScreenState();
+}
+
+class _AdminOrderListScreenState extends State<AdminOrderListScreen> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -17,30 +24,66 @@ class AdminOrderListScreen extends StatelessWidget {
         backgroundColor: context.colors.surface,
         automaticallyImplyLeading: false,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('orders').orderBy('createdAt', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No orders found.'));
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search orders by ID...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: context.colors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('orders').orderBy('createdAt', descending: true).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No orders found.'));
+                }
 
-          final orders = snapshot.data!.docs
-              .map((doc) => OrderModel.fromFirestore(doc))
-              .toList();
+                var orders = snapshot.data!.docs
+                    .map((doc) => OrderModel.fromFirestore(doc))
+                    .toList();
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              return _AdminOrderTile(order: order);
-            },
-          );
-        },
+                if (_searchQuery.isNotEmpty) {
+                  orders = orders.where((order) {
+                    return order.id.toLowerCase().contains(_searchQuery);
+                  }).toList();
+                }
+
+                if (orders.isEmpty) {
+                  return const Center(child: Text('No matching orders found.'));
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: orders.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final order = orders[index];
+                    return _AdminOrderTile(order: order);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

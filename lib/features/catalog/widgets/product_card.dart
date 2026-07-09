@@ -172,18 +172,16 @@ class ProductCard extends ConsumerWidget {
 
                     const SizedBox(height: 4),
                     // Name
-                    Expanded(
-                      child: Text(
-                        product.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.textPrimary,
+                        height: 1.2,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     
                     // Rating row
@@ -219,7 +217,6 @@ class ProductCard extends ConsumerWidget {
                   ],
                 ),
               ),
-            ),
           ],
         ),
       ),

@@ -7,15 +7,29 @@ import '../../../models/product_model.dart';
 import '../../../services/admin_product_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AdminProductListScreen extends StatelessWidget {
-  const AdminProductListScreen({super.key});
+class AdminProductListScreen extends StatefulWidget {
+  final String categoryId;
+  final String categoryName;
+
+  const AdminProductListScreen({
+    super.key,
+    required this.categoryId,
+    required this.categoryName,
+  });
+
+  @override
+  State<AdminProductListScreen> createState() => _AdminProductListScreenState();
+}
+
+class _AdminProductListScreenState extends State<AdminProductListScreen> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: const Text('Manage Products'),
+        title: Text('${widget.categoryName} Products'),
         backgroundColor: context.colors.surface,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
@@ -27,30 +41,70 @@ class AdminProductListScreen extends StatelessWidget {
         onPressed: () => context.go('/admin/products/add'),
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('products').orderBy('createdAt', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No products found.'));
-          }
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: context.colors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
 
-          final products = snapshot.data!.docs
-              .map((doc) => ProductModel.fromFirestore(doc))
-              .toList();
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('products')
+                  .where('categoryId', isEqualTo: widget.categoryId)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No products found.'));
+                }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSizes.screenHorizontal),
-            itemCount: products.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return _AdminProductTile(product: product);
-            },
-          );
-        },
+                var products = snapshot.data!.docs
+                    .map((doc) => ProductModel.fromFirestore(doc))
+                    .toList();
+
+                if (_searchQuery.isNotEmpty) {
+                  products = products.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
+                }
+
+                if (products.isEmpty) {
+                  return const Center(child: Text('No matching products found.'));
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: products.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    return _AdminProductTile(product: product);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

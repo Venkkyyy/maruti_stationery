@@ -14,6 +14,7 @@ import '../../../providers/coupon_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/quantity_selector_sheet.dart';
+import '../../../shared/widgets/main_scaffold.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -111,10 +112,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
         final wishlistAsync = ref.watch(watchWishlistProvider);
         final isWishlisted = wishlistAsync.value?.any((p) => p.id == product.id) ?? false;
         
+        final cartState = ref.watch(cartProvider);
+        final bool showCartBar = cartState.value?.isNotEmpty ?? false;
+
         return Scaffold(
           backgroundColor: context.colors.background,
-          body: CustomScrollView(
-        slivers: [
+          body: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
           // Collapsing image header
           SliverAppBar(
             expandedHeight: 280,
@@ -538,9 +544,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
           ),
         ],
       ),
+      
+      // Floating Cart Bar (Positions dynamically)
+      if (showCartBar)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 12,
+          child: FloatingCartBar(
+            itemCount: cartState.value?.fold<int>(0, (sum, i) => sum + i.qty) ?? 0,
+            totalPrice: cartState.value?.fold<int>(0, (sum, i) => sum + (i.price * i.qty)) ?? 0,
+          ),
+        ),
+      ],
+    ),
 
-      // Bottom Add-to-Bag bar
-      bottomNavigationBar: Container(
+    // Bottom Add-to-Bag bar
+    bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         decoration: BoxDecoration(
           color: context.colors.surface,
@@ -652,8 +672,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       },
                     ),
                   ),
-                ],
-              ),
+                  ],
+                ),
               ),
         );
       },

@@ -31,6 +31,7 @@ import '../../features/cart/screens/offers_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
 import '../../features/profile/screens/manage_address_screen.dart';
 import '../../features/profile/screens/manage_payment_methods_screen.dart';
+import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../models/coupon_model.dart';
@@ -42,9 +43,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
-      GoRoute(path: '/auth/complete-profile', builder: (context, state) => const CompleteProfileScreen()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/auth/complete-profile',
+        builder: (context, state) => const CompleteProfileScreen(),
+      ),
 
       GoRoute(
         path: '/auth/phone',
@@ -56,7 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => MainScaffold(child: child),
         routes: [
           GoRoute(
-            path: '/home', 
+            path: '/home',
             builder: (context, state) => const HomeScreen(),
             routes: [
               GoRoute(
@@ -71,74 +81,115 @@ final routerProvider = Provider<GoRouter>((ref) {
               final categoryId = state.uri.queryParameters['categoryId'];
               return CatalogScreen(initialCategoryId: categoryId);
             },
-            routes: [
-              GoRoute(
-                path: 'product/:id',
-                builder: (context, state) => ProductDetailScreen(
-                  productId: state.pathParameters['id']!,
-                ),
-                routes: [
-                  GoRoute(
-                    path: 'reviews',
-                    builder: (context, state) => ReviewsScreen(
-                      productId: state.pathParameters['id']!,
-                    ),
-                  ),
-                  GoRoute(
-                    path: 'rate',
-                    builder: (context, state) => RateOrderScreen(
-                      productId: state.pathParameters['id']!,
-                    ),
-                    routes: [
-                      GoRoute(
-                        path: 'success',
-                        builder: (context, state) => ReviewSuccessScreen(
-                          productId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
           ),
-          GoRoute(path: '/cart/offers', builder: (context, state) => const OffersScreen()),
+          GoRoute(
+            path: '/cart/offers',
+            builder: (context, state) => const OffersScreen(),
+          ),
           GoRoute(
             path: '/orders',
             builder: (context, state) => const OrderListScreen(),
             routes: [
               GoRoute(
                 path: ':id',
-                builder: (context, state) => OrderDetailScreen(
-                  orderId: state.pathParameters['id']!,
-                ),
+                builder: (context, state) =>
+                    OrderDetailScreen(orderId: state.pathParameters['id']!),
               ),
             ],
           ),
-          GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
-          GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
-          GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
-          GoRoute(path: '/categories', builder: (context, state) => const CategoryListScreen()),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfileScreen(),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, state) => const EditProfileScreen(),
+              ),
+              GoRoute(
+                path: 'address',
+                builder: (context, state) => const ManageAddressScreen(),
+              ),
+              GoRoute(
+                path: 'payment',
+                builder: (context, state) => const ManagePaymentMethodsScreen(),
+              ),
+              GoRoute(
+                path: 'support',
+                builder: (context, state) => const HelpSupportScreen(),
+              ),
+              GoRoute(
+                path: 'about',
+                builder: (context, state) => const AboutScreen(),
+              ),
+              GoRoute(
+                path: 'settings',
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/search',
+            builder: (context, state) => const SearchScreen(),
+          ),
+          GoRoute(
+            path: '/cart',
+            builder: (context, state) => const CartScreen(),
+          ),
+          GoRoute(
+            path: '/categories',
+            builder: (context, state) => const CategoryListScreen(),
+          ),
         ],
       ),
 
       // Notifications (outside shell)
-      GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
 
       // Profile settings & support (outside shell)
-      GoRoute(path: '/profile/settings', builder: (context, state) => const SettingsScreen()),
-      GoRoute(path: '/profile/support', builder: (context, state) => const HelpSupportScreen()),
-      GoRoute(path: '/profile/about', builder: (context, state) => const AboutScreen()),
-      GoRoute(path: '/profile/address', builder: (context, state) => const ManageAddressScreen()),
-      GoRoute(path: '/profile/payment', builder: (context, state) => const ManagePaymentMethodsScreen()),
+      GoRoute(
+        path: '/profile/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/support',
+        builder: (context, state) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: '/profile/about',
+        builder: (context, state) => const AboutScreen(),
+      ),
+      GoRoute(
+        path: '/profile/address',
+        builder: (context, state) => const ManageAddressScreen(),
+      ),
+      GoRoute(
+        path: '/profile/payment',
+        builder: (context, state) => const ManagePaymentMethodsScreen(),
+      ),
 
       // Wishlist — outside shell
-      GoRoute(path: '/wishlist', builder: (context, state) => const WishlistScreen()),
+      GoRoute(
+        path: '/wishlist',
+        builder: (context, state) => const WishlistScreen(),
+      ),
 
       // Checkout — outside shell (no bottom nav)
-      GoRoute(path: '/checkout/address', builder: (context, state) => const AddressScreen()),
-      GoRoute(path: '/checkout/address/add', builder: (context, state) => const AddAddressScreen()),
-      GoRoute(path: '/checkout/payment', builder: (context, state) => PaymentScreen(selectedAddressId: state.extra as String?)),
+      GoRoute(
+        path: '/checkout/address',
+        builder: (context, state) => const AddressScreen(),
+      ),
+      GoRoute(
+        path: '/checkout/address/add',
+        builder: (context, state) => const AddAddressScreen(),
+      ),
+      GoRoute(
+        path: '/checkout/payment',
+        builder: (context, state) =>
+            PaymentScreen(selectedAddressId: state.extra as String?),
+      ),
       GoRoute(
         path: '/checkout/confirmation',
         builder: (context, state) => OrderConfirmationScreen(
@@ -146,7 +197,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-
+      // Product Details — outside shell (no bottom nav)
+      GoRoute(
+        path: '/catalog/product/:id',
+        builder: (context, state) =>
+            ProductDetailScreen(productId: state.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'reviews',
+            builder: (context, state) =>
+                ReviewsScreen(productId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'rate',
+            builder: (context, state) =>
+                RateOrderScreen(productId: state.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'success',
+                builder: (context, state) =>
+                    ReviewSuccessScreen(productId: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
     errorBuilder: (context, state) => const NotFoundScreen(),
   );

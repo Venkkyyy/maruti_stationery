@@ -7,8 +7,15 @@ import '../../../services/admin_coupon_service.dart';
 import '../../../core/utils/formatters.dart';
 import 'package:go_router/go_router.dart';
 
-class AdminCouponsScreen extends StatelessWidget {
+class AdminCouponsScreen extends StatefulWidget {
   const AdminCouponsScreen({super.key});
+
+  @override
+  State<AdminCouponsScreen> createState() => _AdminCouponsScreenState();
+}
+
+class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -24,41 +31,74 @@ class AdminCouponsScreen extends StatelessWidget {
         onPressed: () => context.push('/admin/coupons/add'),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('coupons').orderBy('createdAt', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.local_offer_outlined, size: 64, color: context.colors.textSecondary.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  Text('No coupons active.', style: TextStyle(color: context.colors.textSecondary)),
-                ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search coupons by code or name...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: context.colors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
-            );
-          }
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('coupons').orderBy('createdAt', descending: true).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.local_offer_outlined, size: 64, color: context.colors.textSecondary.withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        Text('No coupons active.', style: TextStyle(color: context.colors.textSecondary)),
+                      ],
+                    ),
+                  );
+                }
 
-          final coupons = snapshot.data!.docs.map((doc) => CouponModel.fromFirestore(doc)).toList();
+                var coupons = snapshot.data!.docs.map((doc) => CouponModel.fromFirestore(doc)).toList();
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: coupons.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final coupon = coupons[index];
-              return _CouponTile(coupon: coupon);
-            },
-          );
-        },
+                if (_searchQuery.isNotEmpty) {
+                  coupons = coupons.where((c) => c.code.toLowerCase().contains(_searchQuery) || c.name.toLowerCase().contains(_searchQuery)).toList();
+                }
+
+                if (coupons.isEmpty) {
+                  return const Center(child: Text('No matching coupons found.'));
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: coupons.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final coupon = coupons[index];
+                    return _CouponTile(coupon: coupon);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
-
 }
 
 class _CouponTile extends StatelessWidget {

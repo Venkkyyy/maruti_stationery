@@ -176,13 +176,26 @@ class AdminDashboardScreen extends StatelessWidget {
                   onTap: () => context.push('/admin/coupons'),
                 ),
               ),
-              const SizedBox(width: 16),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
               Expanded(
                 child: _buildActionCard(
                   context,
                   title: 'Categories',
                   icon: Icons.category_rounded,
                   onTap: () => context.push('/admin/categories'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Banners',
+                  icon: Icons.view_carousel_rounded,
+                  onTap: () => context.push('/admin/banners'),
                 ),
               ),
             ],

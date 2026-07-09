@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,8 @@ import '../../../shared/widgets/coupon_popup.dart';
 import '../../../providers/coupon_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
+import '../../../providers/banner_provider.dart';
+import '../../../shared/widgets/animated_search_hint.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -93,7 +96,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             slivers: [
               _buildAppBar(context),
               const SliverToBoxAdapter(child: CouponTicker()),
-              SliverToBoxAdapter(child: _buildHeader(context)),
+              SliverToBoxAdapter(child: _buildHeader(context, products.map((p) => p.name).toList())),
+              SliverToBoxAdapter(child: _buildBanners(context, ref)),
               
               if (products.isEmpty)
                 SliverToBoxAdapter(
@@ -175,7 +179,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           slivers: [
             _buildAppBar(context),
             const SliverToBoxAdapter(child: CouponTicker()),
-            SliverToBoxAdapter(child: _buildHeader(context)),
+            SliverToBoxAdapter(child: _buildHeader(context, [])),
+            SliverToBoxAdapter(child: _buildBanners(context, ref)),
             const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))),
           ],
         ),
@@ -186,7 +191,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           slivers: [
             _buildAppBar(context),
             const SliverToBoxAdapter(child: CouponTicker()),
-            SliverToBoxAdapter(child: _buildHeader(context)),
+            SliverToBoxAdapter(child: _buildHeader(context, [])),
+            SliverToBoxAdapter(child: _buildBanners(context, ref)),
             SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(32), child: Center(child: Text('Error: $e')))),
           ],
         ),
@@ -205,6 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         icon: Icon(Icons.notifications_none_rounded, color: context.colors.textPrimary),
         onPressed: () => context.push('/home/notifications'),
       ),
+      centerTitle: true,
       title: Text(
         'Maruti Stationery',
         style: TextStyle(
@@ -219,7 +226,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildBanners(BuildContext context, WidgetRef ref) {
+    final bannersAsync = ref.watch(bannerProvider);
+
+    return bannersAsync.when(
+      data: (banners) {
+        if (banners.isEmpty) return const SizedBox.shrink();
+        return _AutoBannerSlider(banners: banners);
+      },
+      loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, List<String> productNames) {
+    final searchHints = productNames.take(10).toList();
+    if (searchHints.isEmpty) searchHints.addAll(['atta', 'dal', 'coke']);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -247,14 +270,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Icon(Icons.search_rounded, color: Colors.black87, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      'Search for atta, dal, coke and more',
+                    child: AnimatedSearchHint(
+                      hints: searchHints,
                       style: TextStyle(
                         color: context.colors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -262,7 +284,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
 
         // Category Chips
         if (_isLoadingCategories)
@@ -320,97 +342,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           height: 4,
           color: const Color(0xFFF1F2F4),
         ),
-        const SizedBox(height: 16),
-
-        // Hero Banner
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            height: 180, // slightly more compact
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0D1B2A), Color(0xFF1A2D42)],
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x30000000),
-                  blurRadius: 20,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -10,
-                  top: -20,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: context.colors.primary.withValues(alpha: 0.12),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 20,
-                  bottom: -30,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.04),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 24,
-                  top: 24,
-                  child: Icon(
-                    Icons.edit_rounded,
-                    size: 64,
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'PREMIUM COLLECTION',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white.withValues(alpha: 0.6),
-                          letterSpacing: 1.8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Elevate Your Desk\nExperience',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          height: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
       ],
     );
   }
@@ -476,9 +407,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+class _AutoBannerSlider extends StatefulWidget {
+  final List banners;
 
+  const _AutoBannerSlider({required this.banners});
 
+  @override
+  State<_AutoBannerSlider> createState() => _AutoBannerSliderState();
+}
 
+class _AutoBannerSliderState extends State<_AutoBannerSlider> {
+  late PageController _pageController;
+  Timer? _autoPlayTimer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.9);
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      final nextPage = (_currentPage + 1) % widget.banners.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoPlayTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onBannerTap(dynamic banner, BuildContext context) {
+    if (banner.targetCategoryId != null) {
+      context.go('/catalog?categoryId=${banner.targetCategoryId}');
+    } else if (banner.targetProductId != null) {
+      context.push('/catalog/product/${banner.targetProductId}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 180,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: widget.banners.length,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemBuilder: (context, index) {
+                final banner = widget.banners[index];
+                final bool hasLink =
+                    banner.targetCategoryId != null || banner.targetProductId != null;
+                return GestureDetector(
+                  onTap: hasLink ? () => _onBannerTap(banner, context) : null,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: DecorationImage(
+                        image: NetworkImage(banner.imageUrl),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: hasLink
+                        ? Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.15)],
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                );
+              },
+            ),
+          ),
+          // Dot indicators
+          if (widget.banners.length > 1) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(widget.banners.length, (i) {
+                final isActive = i == _currentPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isActive ? 20 : 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    color: isActive
+                        ? Theme.of(context).primaryColor
+                        : Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 
 

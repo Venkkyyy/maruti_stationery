@@ -35,6 +35,12 @@ class ProfileScreen extends ConsumerWidget {
             pinned: false,
             backgroundColor: context.colors.primary,
             automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                onPressed: () => context.push('/profile/edit'),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
