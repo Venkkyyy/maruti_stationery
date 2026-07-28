@@ -58,7 +58,7 @@ class ProductCard extends ConsumerWidget {
                     ),
                     child: Container(
                       width: double.infinity,
-                      color: const Color(0xFFF9F9F9),
+                      color: context.colors.surfaceGrey,
                       child: product.images.isNotEmpty
                           ? Image.network(
                               product.images.first,
@@ -108,14 +108,14 @@ class ProductCard extends ConsumerWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           isWishlisted ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                           size: 16,
-                          color: isWishlisted ? Colors.red : Colors.black45,
+                          color: isWishlisted ? Colors.red : context.colors.textHint,
                         ),
                       ),
                     ),
@@ -244,7 +244,7 @@ class ProductCard extends ConsumerWidget {
             padding: EdgeInsets.zero,
             side: BorderSide(color: context.colors.primary, width: 1.2),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-            backgroundColor: Colors.white,
+            backgroundColor: context.colors.surface,
             foregroundColor: context.colors.primary,
           ),
           onPressed: () {
@@ -336,13 +336,13 @@ class ProductListCard extends StatelessWidget {
                             product.images.first,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Container(
-                              color: const Color(0xFFF1F3F4),
+                              color: context.colors.surfaceGrey,
                               child: Icon(Icons.image_not_supported_rounded,
                                   color: context.colors.border),
                             ),
                           )
                         : Container(
-                            color: const Color(0xFFF1F3F4),
+                            color: context.colors.surfaceGrey,
                             child: Icon(
                               Icons.edit_rounded,
                               size: 36,

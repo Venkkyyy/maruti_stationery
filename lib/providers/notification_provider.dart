@@ -21,3 +21,19 @@ Stream<List<NotificationModel>> userNotifications(Ref ref) {
             .toList();
       });
 }
+
+/// Deletes a single notification document from Firestore.
+Future<void> deleteNotification(String notificationId) async {
+  await FirebaseFirestore.instance.collection('notifications').doc(notificationId).delete();
+}
+
+/// Clears all notifications visible to the current user.
+/// For global notifications (userId == null) it deletes the document entirely.
+/// This is safe because admins re-create broadcasts when needed.
+Future<void> clearAllNotifications(List<NotificationModel> notifications) async {
+  final batch = FirebaseFirestore.instance.batch();
+  for (final notif in notifications) {
+    batch.delete(FirebaseFirestore.instance.collection('notifications').doc(notif.id));
+  }
+  await batch.commit();
+}

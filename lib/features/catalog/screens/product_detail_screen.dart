@@ -132,10 +132,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
               child: Container(
                 margin: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x20000000), blurRadius: 8),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
                   ],
                 ),
                 child: Icon(Icons.arrow_back_rounded,
@@ -146,10 +146,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
               Container(
                 margin: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x20000000), blurRadius: 8),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
                   ],
                 ),
                 child: IconButton(
@@ -170,10 +170,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
               Container(
                 margin: const EdgeInsets.only(right: 10, top: 10, bottom: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x20000000), blurRadius: 8),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8),
                   ],
                 ),
                 child: IconButton(
@@ -221,7 +221,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                 children: [
                   // Image area
                   Container(
-                    color: const Color(0xFFF1F3F4),
+                    color: context.colors.surfaceGrey,
                     width: double.infinity,
                     height: double.infinity,
                     child: product.images.isNotEmpty
@@ -241,9 +241,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                             return Image.network(img, fit: BoxFit.contain);
                           }).toList(),
                         )
-                      : const Center(
+                      : Center(
                           child: Icon(Icons.image_not_supported_rounded,
-                              size: 100, color: Color(0xFFBEC3C8)),
+                              size: 100, color: context.colors.border),
                         ),
                   ),
                   // Image pagination dots

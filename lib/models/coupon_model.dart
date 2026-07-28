@@ -75,15 +75,25 @@ class CouponModel {
     };
   }
 
+  // Standard delivery fee in paise (₹40). Waived when a free_delivery coupon is applied.
+  static const int deliveryFee = 4000;
+
   int calculateDiscount(int subtotal) {
-    if (discountType == 'percentage') {
-      int calculated = (subtotal * discountAmount) ~/ 100;
-      if (maxDiscountAmount > 0 && calculated > maxDiscountAmount) {
-        return maxDiscountAmount;
-      }
-      return calculated;
-    } else {
-      return discountAmount;
+    switch (discountType) {
+      case 'percentage':
+        int calculated = (subtotal * discountAmount) ~/ 100;
+        if (maxDiscountAmount > 0 && calculated > maxDiscountAmount) {
+          return maxDiscountAmount;
+        }
+        return calculated;
+      case 'flat':
+      case 'first_order':
+        return discountAmount > subtotal ? subtotal : discountAmount;
+      case 'free_delivery':
+        // Returns the delivery fee as the "discount" (delivery becomes free)
+        return deliveryFee;
+      default:
+        return 0;
     }
   }
 }

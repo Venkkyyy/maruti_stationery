@@ -26,7 +26,16 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _AddCategorySheet(),
+      builder: (context) => const _CategoryFormSheet(),
+    );
+  }
+
+  void _showEditCategorySheet(BuildContext context, CategoryModel cat) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CategoryFormSheet(existingCategory: cat),
     );
   }
 
@@ -87,6 +96,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                     child: cat.image.isEmpty ? Icon(Icons.category, color: context.colors.border) : null,
                   ),
                   title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Order: ${cat.order}', style: TextStyle(fontSize: 12, color: context.colors.textHint)),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -97,8 +107,16 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                           await AdminCategoryService().updateCategory(cat.id, {'isActive': val});
                         },
                       ),
+                      // Edit button
+                      IconButton(
+                        icon: Icon(Icons.edit_outlined, color: context.colors.primary),
+                        onPressed: () => _showEditCategorySheet(context, cat),
+                        tooltip: 'Edit',
+                      ),
+                      // Delete button
                       IconButton(
                         icon: Icon(Icons.delete_outline_rounded, color: context.colors.error),
+                        tooltip: 'Delete',
                         onPressed: () async {
                           final confirm = await showDialog<bool>(
                             context: context,
@@ -131,19 +149,39 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
   }
 }
 
-class _AddCategorySheet extends StatefulWidget {
-  const _AddCategorySheet();
+// ── Unified Add / Edit Category Sheet ─────────────────────────────────────
+
+class _CategoryFormSheet extends StatefulWidget {
+  final CategoryModel? existingCategory;
+  const _CategoryFormSheet({this.existingCategory});
 
   @override
-  State<_AddCategorySheet> createState() => _AddCategorySheetState();
+  State<_CategoryFormSheet> createState() => _CategoryFormSheetState();
 }
 
-class _AddCategorySheetState extends State<_AddCategorySheet> {
+class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _orderController = TextEditingController(text: '0');
+  late final TextEditingController _nameController;
+  late final TextEditingController _orderController;
+
   File? _imageFile;
   bool _isLoading = false;
+
+  bool get _isEditing => widget.existingCategory != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.existingCategory?.name ?? '');
+    _orderController = TextEditingController(text: widget.existingCategory?.order.toString() ?? '0');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _orderController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -152,9 +190,9 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       final file = File(pickedFile.path);
       final dir = await getTemporaryDirectory();
       final targetPath = '${dir.absolute.path}/${const Uuid().v4()}.jpg';
-      
+
       final compressedFile = await FlutterImageCompress.compressAndGetFile(
-        file.absolute.path, 
+        file.absolute.path,
         targetPath,
         quality: 60,
         minWidth: 400,
@@ -169,22 +207,41 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
     setState(() => _isLoading = true);
-    try {
-      final cat = CategoryModel(
-        id: _nameController.text.trim().toLowerCase().replaceAll(' ', '_'),
-        name: _nameController.text.trim(),
-        image: '',
-        order: int.parse(_orderController.text.trim()),
-        isActive: true,
-      );
 
-      await AdminCategoryService().addCategory(cat, _imageFile);
-      
+    try {
+      final name = _nameController.text.trim();
+      final order = int.tryParse(_orderController.text.trim()) ?? 0;
+
+      if (_isEditing) {
+        // Edit existing category
+        final updates = <String, dynamic>{
+          'name': name,
+          'order': order,
+        };
+        if (_imageFile != null) {
+          // Upload new image and update URL
+          final imageUrl = await AdminCategoryService().uploadCategoryImage(_imageFile!);
+          updates['image'] = imageUrl;
+        }
+        await AdminCategoryService().updateCategory(widget.existingCategory!.id, updates);
+      } else {
+        // Add new category
+        final cat = CategoryModel(
+          id: name.toLowerCase().replaceAll(' ', '_').replaceAll(RegExp(r'[^a-z0-9_]'), ''),
+          name: name,
+          image: '',
+          order: order,
+          isActive: true,
+        );
+        await AdminCategoryService().addCategory(cat, _imageFile);
+      }
+
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category added!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_isEditing ? 'Category updated!' : 'Category added!')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -197,6 +254,8 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final existingImageUrl = widget.existingCategory?.image ?? '';
+
     return Container(
       decoration: BoxDecoration(
         color: context.colors.background,
@@ -215,7 +274,10 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Add Category', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+                Text(
+                  _isEditing ? 'Edit Category' : 'Add Category',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary),
+                ),
                 IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
               ],
             ),
@@ -223,15 +285,41 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
             Center(
               child: GestureDetector(
                 onTap: _pickImage,
-                child: Container(
-                  width: 100, height: 100,
-                  decoration: BoxDecoration(
-                    color: context.colors.surfaceGrey,
-                    borderRadius: BorderRadius.circular(16),
-                    image: _imageFile != null ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover) : null,
-                  ),
-                  child: _imageFile == null ? Icon(Icons.add_a_photo, color: context.colors.primary) : null,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 100, height: 100,
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceGrey,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: context.colors.border),
+                        image: _imageFile != null
+                            ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
+                            : (existingImageUrl.isNotEmpty
+                                ? DecorationImage(image: NetworkImage(existingImageUrl), fit: BoxFit.cover)
+                                : null),
+                      ),
+                      child: (_imageFile == null && existingImageUrl.isEmpty)
+                          ? Icon(Icons.add_a_photo, color: context.colors.primary)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: context.colors.primary, shape: BoxShape.circle),
+                        child: const Icon(Icons.edit, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Tap to ${existingImageUrl.isNotEmpty || _imageFile != null ? "change" : "add"} image',
+                style: TextStyle(fontSize: 12, color: context.colors.textHint),
               ),
             ),
             const SizedBox(height: 20),
@@ -248,7 +336,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
             ),
             const SizedBox(height: 24),
             AppButton(
-              text: 'Save Category',
+              text: _isEditing ? 'Save Changes' : 'Save Category',
               onPressed: _isLoading ? null : _submit,
               isLoading: _isLoading,
               variant: AppButtonVariant.primary,

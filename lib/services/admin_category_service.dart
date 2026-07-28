@@ -14,7 +14,7 @@ class AdminCategoryService {
     String imageUrl = category.image;
     
     if (imageFile != null) {
-      imageUrl = await _uploadImage(imageFile);
+      imageUrl = await uploadCategoryImage(imageFile);
     }
     
     final newCategory = CategoryModel(
@@ -37,7 +37,8 @@ class AdminCategoryService {
     await _db.collection('categories').doc(categoryId).delete();
   }
 
-  Future<String> _uploadImage(File file) async {
+  /// Uploads a category image to Cloudinary and returns the CDN URL.
+  Future<String> uploadCategoryImage(File file) async {
     final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
 
     final request = http.MultipartRequest('POST', url)
@@ -54,3 +55,4 @@ class AdminCategoryService {
     }
   }
 }
+

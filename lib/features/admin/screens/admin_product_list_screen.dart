@@ -132,7 +132,11 @@ class _AdminProductTile extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      await AdminProductService().deleteProduct(product.id, product.images);
+      await AdminProductService().deleteProduct(
+        product.id,
+        product.images,
+        deleteTokens: product.imageDeleteTokens,
+      );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product deleted.')));
       }

@@ -10,6 +10,7 @@ class ProductModel {
   final String? subCategoryId;
   final String brand;
   final List<String> images;
+  final List<String> imageDeleteTokens; // Cloudinary delete tokens for each image
   final int stock;
   final String unit;
   final List<String> tags;
@@ -29,6 +30,7 @@ class ProductModel {
     this.subCategoryId,
     required this.brand,
     required this.images,
+    this.imageDeleteTokens = const [],
     required this.stock,
     required this.unit,
     required this.tags,
@@ -55,6 +57,7 @@ class ProductModel {
     int? mrp,
     int? stock,
     List<String>? images,
+    List<String>? imageDeleteTokens,
     bool? isActive,
   }) {
     return ProductModel(
@@ -67,6 +70,7 @@ class ProductModel {
       subCategoryId: subCategoryId,
       brand: brand,
       images: images ?? this.images,
+      imageDeleteTokens: imageDeleteTokens ?? this.imageDeleteTokens,
       stock: stock ?? this.stock,
       unit: unit,
       tags: tags,
@@ -90,6 +94,7 @@ class ProductModel {
       subCategoryId: data['subCategoryId'],
       brand: data['brand'] ?? '',
       images: List<String>.from(data['images'] ?? []),
+      imageDeleteTokens: List<String>.from(data['imageDeleteTokens'] ?? []),
       stock: (data['stock'] as num).toInt(),
       unit: data['unit'] ?? 'piece',
       tags: List<String>.from(data['tags'] ?? []),
@@ -110,6 +115,7 @@ class ProductModel {
     'subCategoryId': subCategoryId,
     'brand': brand,
     'images': images,
+    'imageDeleteTokens': imageDeleteTokens,
     'stock': stock,
     'unit': unit,
     'tags': tags,

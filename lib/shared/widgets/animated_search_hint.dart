@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+/// Shows search hints as a typewriter animation:
+///   "p" → "pe" → "pen" → "pens" → pause → erases → next hint
 class AnimatedSearchHint extends StatefulWidget {
   final List<String> hints;
   final TextStyle style;
@@ -15,22 +17,25 @@ class AnimatedSearchHint extends StatefulWidget {
   State<AnimatedSearchHint> createState() => _AnimatedSearchHintState();
 }
 
-class _AnimatedSearchHintState extends State<AnimatedSearchHint>
-    with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
+class _AnimatedSearchHintState extends State<AnimatedSearchHint> {
+  // How many characters of the current hint to show
+  int _charCount = 0;
+  int _hintIndex = 0;
+  bool _erasing = false;
+
   Timer? _timer;
+
+  // Timings (tweak freely)
+  static const Duration _typingSpeed  = Duration(milliseconds: 80);
+  static const Duration _erasingSpeed = Duration(milliseconds: 50);
+  static const Duration _pauseAfterType  = Duration(milliseconds: 1400);
+  static const Duration _pauseAfterErase = Duration(milliseconds: 300);
 
   @override
   void initState() {
     super.initState();
-    if (widget.hints.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-        if (mounted) {
-          setState(() {
-            _currentIndex = (_currentIndex + 1) % widget.hints.length;
-          });
-        }
-      });
+    if (widget.hints.isNotEmpty) {
+      _scheduleNextChar();
     }
   }
 
@@ -40,64 +45,115 @@ class _AnimatedSearchHintState extends State<AnimatedSearchHint>
     super.dispose();
   }
 
+  String get _currentHint => widget.hints[_hintIndex];
+
+  void _scheduleNextChar() {
+    if (!mounted) return;
+
+    if (!_erasing) {
+      // ── Typing phase ──────────────────────────────────
+      if (_charCount < _currentHint.length) {
+        _timer = Timer(_typingSpeed, () {
+          if (!mounted) return;
+          setState(() => _charCount++);
+          _scheduleNextChar();
+        });
+      } else {
+        // Finished typing — pause then start erasing
+        _timer = Timer(_pauseAfterType, () {
+          if (!mounted) return;
+          setState(() => _erasing = true);
+          _scheduleNextChar();
+        });
+      }
+    } else {
+      // ── Erasing phase ─────────────────────────────────
+      if (_charCount > 0) {
+        _timer = Timer(_erasingSpeed, () {
+          if (!mounted) return;
+          setState(() => _charCount--);
+          _scheduleNextChar();
+        });
+      } else {
+        // Fully erased — pause then move to next hint
+        _timer = Timer(_pauseAfterErase, () {
+          if (!mounted) return;
+          setState(() {
+            _erasing = false;
+            _hintIndex = (_hintIndex + 1) % widget.hints.length;
+          });
+          _scheduleNextChar();
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.hints.isEmpty) {
       return Text('Search products...', style: widget.style);
     }
 
+    final displayedText = _currentHint.substring(0, _charCount);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Static "Search" prefix — never animates
+          // Static "Search " prefix
+          Text('Search ', style: widget.style),
+          // Typed text
           Text(
-            'Search ',
-            style: widget.style,
+            '"$displayedText',
+            style: widget.style.copyWith(fontWeight: FontWeight.w600),
           ),
-          // Only the hint word animates
-          ClipRect(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                final slideIn = Tween<Offset>(
-                  begin: const Offset(0.0, 0.8),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                ));
-                final slideOut = Tween<Offset>(
-                  begin: const Offset(0.0, -0.8),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeIn,
-                ));
-
-                return SlideTransition(
-                  position: child.key == ValueKey<int>(_currentIndex)
-                      ? slideIn
-                      : slideOut,
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                );
-              },
-              child: Text(
-                '"${widget.hints[_currentIndex]}"',
-                key: ValueKey<int>(_currentIndex),
-                style: widget.style.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
+          // Blinking cursor
+          _BlinkingCursor(style: widget.style),
+          // Closing quote — only shown when fully typed
+          if (_charCount == _currentHint.length && !_erasing)
+            Text('"', style: widget.style.copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+// ── Blinking cursor ──────────────────────────────────────────────────────
+
+class _BlinkingCursor extends StatefulWidget {
+  final TextStyle style;
+  const _BlinkingCursor({required this.style});
+
+  @override
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
+}
+
+class _BlinkingCursorState extends State<_BlinkingCursor>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Text('|', style: widget.style.copyWith(fontWeight: FontWeight.w300)),
     );
   }
 }

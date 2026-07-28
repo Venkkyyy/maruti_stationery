@@ -4,8 +4,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../core/errors/app_exception.dart';
-import 'auth_provider.dart';
-
 import '../models/coupon_model.dart';
 part 'cart_provider.g.dart';
 
@@ -79,10 +77,25 @@ class CartNotifier extends _$CartNotifier {
     
     // Watch real-time cart changes
     ref.listen(cartStreamProvider(userId), (_, next) {
-      next.whenData((items) => state = AsyncData(items));
+      next.whenData((items) {
+        state = AsyncData(items);
+        // Auto-remove applied coupon if subtotal drops below its minimum
+        _validateCouponForItems(items);
+      });
     });
     
     return ref.read(cartStreamProvider(userId).future);
+  }
+
+  /// Checks the currently applied coupon against a given list of cart items.
+  /// Removes the coupon silently if the new subtotal is below the minimum.
+  void _validateCouponForItems(List<CartItemModel> items) {
+    final coupon = ref.read(appliedCouponProvider);
+    if (coupon == null) return;
+    final newSubtotal = items.fold<int>(0, (total, item) => total + (item.price * item.qty));
+    if (newSubtotal < coupon.minOrderAmount) {
+      ref.read(appliedCouponProvider.notifier).removeCoupon();
+    }
   }
 
   Future<void> addItem(ProductModel product, int qty) async {
@@ -166,3 +179,4 @@ class CartNotifier extends _$CartNotifier {
   int get totalItems => state.value?.fold<int>(0, (total, item) => total + item.qty) ?? 0;
   int get subtotal => state.value?.fold<int>(0, (total, item) => total + (item.price * item.qty)) ?? 0;
 }
+

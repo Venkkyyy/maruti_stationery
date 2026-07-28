@@ -38,9 +38,60 @@ class CategoryListScreen extends ConsumerWidget {
               crossAxisSpacing: 16,
               childAspectRatio: 1.1,
             ),
-            itemCount: categories.length,
+            itemCount: categories.length + 1,
             itemBuilder: (context, index) {
-              final category = categories[index];
+              if (index == 0) {
+                // "All Categories" Tile
+                return GestureDetector(
+                  onTap: () => context.push('/catalog'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: context.colors.border),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x05000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: context.colors.primaryLight,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.grid_view_rounded,
+                            color: context.colors.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'All Categories',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final category = categories[index - 1];
               return GestureDetector(
                 onTap: () => context.push('/catalog?categoryId=${category.id}'),
                 child: Container(

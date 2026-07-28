@@ -12,14 +12,17 @@ class AdminProductService {
   static const String _cloudinaryCloudName = 'eizhyg2w';
   static const String _cloudinaryUploadPreset = 'maruti_preset';
 
-  // 1. ADD Product
+  // 1. ADD Product — uploads images and saves their delete_tokens to Firestore
   Future<void> addProduct(ProductModel product, List<File> imageFiles) async {
-    // First, upload images to Cloudinary
-    List<String> imageUrls = await uploadImages(imageFiles);
-    
-    // Create new product with image URLs
-    final newProduct = product.copyWith(images: imageUrls);
-    
+    final uploadResults = await uploadImagesWithTokens(imageFiles);
+    final imageUrls = uploadResults.map((r) => r['url']!).toList();
+    final deleteTokens = uploadResults.map((r) => r['delete_token']!).toList();
+
+    final newProduct = product.copyWith(
+      images: imageUrls,
+      imageDeleteTokens: deleteTokens,
+    );
+
     await _db.collection('products').doc(newProduct.id).set(newProduct.toFirestore());
   }
 
@@ -29,21 +32,40 @@ class AdminProductService {
     await _db.collection('products').doc(productId).update(updates);
   }
 
-  // 3. DELETE Product
-  Future<void> deleteProduct(String productId, List<String> imageUrls) async {
-    // With unsigned uploads, you cannot securely delete images directly from the app.
-    // They will remain on Cloudinary (you have 25,000 GBs of free storage, so it is negligible).
-    // If you ever need to bulk delete orphaned photos, you can do it from the Cloudinary dashboard.
-    
+  // 3. DELETE Product — also deletes images from Cloudinary using stored delete_tokens
+  Future<void> deleteProduct(String productId, List<String> imageUrls, {List<String> deleteTokens = const []}) async {
+    // Delete each image from Cloudinary using its delete_token (works with unsigned presets)
+    for (final token in deleteTokens) {
+      if (token.isNotEmpty) {
+        try {
+          await _deleteCloudinaryImageByToken(token);
+        } catch (e) {
+          // Log but don't fail the whole delete if one image removal fails
+          debugPrint('Warning: Could not delete Cloudinary image (token=$token): $e');
+        }
+      }
+    }
     // Delete from Firestore
     await _db.collection('products').doc(productId).delete();
   }
 
-  // Helper to upload images to Cloudinary using their REST API
-  Future<List<String>> uploadImages(List<File> files) async {
+  /// Deletes a Cloudinary image using the delete_token returned at upload time.
+  /// This works with unsigned upload presets — no API secret needed.
+  Future<void> _deleteCloudinaryImageByToken(String deleteToken) async {
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/delete_by_token');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': deleteToken}),
+    );
+    if (response.statusCode != 200) {
+      debugPrint('Cloudinary delete_by_token returned ${response.statusCode}: ${response.body}');
+    }
+  }
 
-
-    List<String> urls = [];
+  /// Uploads images and returns a list of maps with 'url' and 'delete_token' for each.
+  Future<List<Map<String, String>>> uploadImagesWithTokens(List<File> files) async {
+    final List<Map<String, String>> results = [];
     final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
 
     for (int i = 0; i < files.length; i++) {
@@ -55,11 +77,20 @@ class AdminProductService {
       if (response.statusCode == 200) {
         final responseData = await response.stream.bytesToString();
         final json = jsonDecode(responseData);
-        urls.add(json['secure_url']); // Cloudinary returns the CDN URL!
+        results.add({
+          'url': json['secure_url'] as String,
+          'delete_token': (json['delete_token'] as String?) ?? '',
+        });
       } else {
         throw Exception('Failed to upload image to Cloudinary: ${response.statusCode}');
       }
     }
-    return urls;
+    return results;
+  }
+
+  /// Legacy helper — uploads images and returns only URLs (used where tokens aren't needed).
+  Future<List<String>> uploadImages(List<File> files) async {
+    final results = await uploadImagesWithTokens(files);
+    return results.map((r) => r['url']!).toList();
   }
 }

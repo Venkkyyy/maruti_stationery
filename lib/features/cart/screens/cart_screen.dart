@@ -7,6 +7,7 @@ import '../../../providers/wishlist_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../models/cart_item_model.dart';
 import '../../../models/product_model.dart';
+import '../../../models/coupon_model.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../catalog/widgets/product_card.dart';
@@ -27,10 +28,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     _couponController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
+
+    // Show a snackbar when a coupon is auto-removed due to cart change
+    ref.listen(appliedCouponProvider, (previous, current) {
+      if (previous != null && current == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Coupon removed: order total dropped below the minimum.'),
+            backgroundColor: context.colors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: context.colors.surfaceGrey,
@@ -305,7 +320,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('${appliedCoupon.code} applied', style: TextStyle(fontWeight: FontWeight.bold, color: context.colors.success)),
-                        Text('You saved ${AppFormatters.formatPrice(appliedCoupon.calculateDiscount(subtotal))}', style: TextStyle(fontSize: 12, color: context.colors.success)),
+                        Text(
+                          appliedCoupon.discountType == 'free_delivery'
+                              ? 'Free delivery applied! (Save ${AppFormatters.formatPrice(CouponModel.deliveryFee)})'
+                              : 'You saved ${AppFormatters.formatPrice(appliedCoupon.calculateDiscount(subtotal))}',
+                          style: TextStyle(fontSize: 12, color: context.colors.success),
+                        ),
                       ],
                     ),
                   ),
@@ -330,9 +350,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 Container(
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.colors.surface,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: const Color(0xFFE8EAF6)),
+                    border: Border.all(color: context.colors.border),
                   ),
                   child: Row(
                     children: [
@@ -497,8 +517,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildPriceDetails(CartNotifier cartNotifier) {
     final subtotal = cartNotifier.subtotal;
     final appliedCoupon = ref.watch(appliedCouponProvider);
-    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
-    final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
+    final couponDiscount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
+    final isFreeDelivery = appliedCoupon?.discountType == 'free_delivery';
+    // Delivery fee: ₹40 normally, waived if free_delivery coupon applied
+    final deliveryFee = isFreeDelivery ? 0 : CouponModel.deliveryFee;
+    // couponDiscount for free_delivery = the fee itself, so subtract only non-delivery discounts from subtotal
+    final itemDiscount = isFreeDelivery ? 0 : couponDiscount;
+    final total = subtotal - itemDiscount + deliveryFee;
 
     return Container(
       color: context.colors.surface,
@@ -509,12 +534,30 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Text('PRICE DETAILS (${cartNotifier.totalItems} ITEMS)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: context.colors.textSecondary)),
           const SizedBox(height: 16),
           _priceRow('Total MRP', AppFormatters.formatPrice(subtotal)),
-          if (discount > 0) ...[
+          if (itemDiscount > 0) ...[
             const SizedBox(height: 12),
-            _priceRow('Coupon Discount', '-${AppFormatters.formatPrice(discount)}', isGreen: true),
+            _priceRow('Coupon Discount', '-${AppFormatters.formatPrice(itemDiscount)}', isGreen: true),
           ],
           const SizedBox(height: 12),
-          _priceRow('Shipping Fee', 'Free', isGreen: true),
+          // Show delivery fee, struck-through if waived by free_delivery coupon
+          isFreeDelivery
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Delivery Fee', style: TextStyle(color: context.colors.textSecondary, fontSize: 14)),
+                    Row(
+                      children: [
+                        Text(
+                          AppFormatters.formatPrice(CouponModel.deliveryFee),
+                          style: TextStyle(fontSize: 12, color: context.colors.textHint, decoration: TextDecoration.lineThrough),
+                        ),
+                        const SizedBox(width: 6),
+                        Text('FREE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.colors.success)),
+                      ],
+                    ),
+                  ],
+                )
+              : _priceRow('Delivery Fee', AppFormatters.formatPrice(CouponModel.deliveryFee)),
           const SizedBox(height: 16),
           Divider(height: 1, color: context.colors.divider),
           const SizedBox(height: 16),
@@ -550,8 +593,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildBottomBar(BuildContext context, CartNotifier cartNotifier) {
     final subtotal = cartNotifier.subtotal;
     final appliedCoupon = ref.watch(appliedCouponProvider);
-    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
-    final total = (subtotal - discount) > 0 ? (subtotal - discount) : 0;
+    final isFreeDelivery = appliedCoupon?.discountType == 'free_delivery';
+    final deliveryFee = isFreeDelivery ? 0 : CouponModel.deliveryFee;
+    final itemDiscount = isFreeDelivery ? 0 : (appliedCoupon?.calculateDiscount(subtotal) ?? 0);
+    final total = subtotal - itemDiscount + deliveryFee;
 
     return Container(
       decoration: BoxDecoration(

@@ -16,6 +16,7 @@ import '../../../providers/coupon_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
 import '../../../providers/banner_provider.dart';
+import '../../../providers/cart_provider.dart';
 import '../../../shared/widgets/animated_search_hint.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -39,12 +40,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _fetchCategories() async {
     try {
-      final snap = await FirebaseFirestore.instance.collection('categories').orderBy('order').get();
-      final cats = snap.docs.map((d) => CategoryModel.fromFirestore(d)).toList();
-      
+      final snap = await FirebaseFirestore.instance
+          .collection('categories')
+          .orderBy('order')
+          .get();
+      final cats = snap.docs
+          .map((d) => CategoryModel.fromFirestore(d))
+          .toList();
+
       // Prepend "All"
-      cats.insert(0, CategoryModel(id: 'all', name: 'All', image: '', order: -1, isActive: true));
-      
+      cats.insert(
+        0,
+        CategoryModel(
+          id: 'all',
+          name: 'All',
+          image: '',
+          order: -1,
+          isActive: true,
+        ),
+      );
+
       if (mounted) {
         setState(() {
           _categories = cats;
@@ -66,7 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final latestCoupon = next.value!.first;
         final prefs = await SharedPreferences.getInstance();
         final lastSeenId = prefs.getString('last_seen_coupon_id');
-        
+
         if (lastSeenId != latestCoupon.id) {
           await prefs.setString('last_seen_coupon_id', latestCoupon.id);
           if (context.mounted) {
@@ -81,14 +96,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     final productsAsync = _selectedCategory == 0 || _categories.isEmpty
-        ? ref.watch(getNewArrivalsProvider(limit: 20)) // Load more for All Products grid
-        : ref.watch(getProductsByCategoryProvider(_categories[_selectedCategory].id));
+        ? ref.watch(
+            getNewArrivalsProvider(limit: 20),
+          ) // Load more for All Products grid
+        : ref.watch(
+            getProductsByCategoryProvider(_categories[_selectedCategory].id),
+          );
 
     return productsAsync.when(
       data: (products) {
         final isAll = _selectedCategory == 0;
-        final trendingProducts = products.toList()..sort((a, b) => b.salesCount.compareTo(a.salesCount));
-        final topRatedProducts = products.toList()..sort((a, b) => b.averageRating.compareTo(a.averageRating));
+        final trendingProducts = products.toList()
+          ..sort((a, b) => b.salesCount.compareTo(a.salesCount));
+        final topRatedProducts = products.toList()
+          ..sort((a, b) => b.averageRating.compareTo(a.averageRating));
 
         return Scaffold(
           backgroundColor: context.colors.background,
@@ -96,55 +117,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             slivers: [
               _buildAppBar(context),
               const SliverToBoxAdapter(child: CouponTicker()),
-              SliverToBoxAdapter(child: _buildHeader(context, products.map((p) => p.name).toList())),
+              SliverToBoxAdapter(
+                child: _buildHeader(
+                  context,
+                  products.map((p) => p.name).toList(),
+                ),
+              ),
               SliverToBoxAdapter(child: _buildBanners(context, ref)),
-              
+
               if (products.isEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Center(child: Text('No products available', style: TextStyle(color: context.colors.textHint))),
+                    child: Center(
+                      child: Text(
+                        'No products available',
+                        style: TextStyle(color: context.colors.textHint),
+                      ),
+                    ),
                   ),
                 )
               else if (isAll) ...[
                 // Buy Again and horizontal sections
                 SliverToBoxAdapter(
-                  child: Consumer(builder: (context, ref, _) {
-                    final user = ref.watch(authStateProvider).value;
-                    if (user == null) {
-                      return _buildHorizontalSections(trendingProducts, topRatedProducts, []);
-                    }
-                    return ref.watch(watchUserOrdersProvider(user.uid)).when(
-                      data: (orders) {
-                        final pastProductIds = <String>{};
-                        for (final order in orders) {
-                          for (final item in order.items) pastProductIds.add(item.productId);
-                        }
-                        final buyAgainProducts = products.where((p) => pastProductIds.contains(p.id)).toList();
-                        return _buildHorizontalSections(trendingProducts, topRatedProducts, buyAgainProducts);
-                      },
-                      loading: () => _buildHorizontalSections(trendingProducts, topRatedProducts, []),
-                      error: (_, __) => _buildHorizontalSections(trendingProducts, topRatedProducts, []),
-                    );
-                  }),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final user = ref.watch(authStateProvider).value;
+                      if (user == null) {
+                        return _buildHorizontalSections(
+                          trendingProducts,
+                          topRatedProducts,
+                          [],
+                        );
+                      }
+                      return ref
+                          .watch(watchUserOrdersProvider(user.uid))
+                          .when(
+                            data: (orders) {
+                              final pastProductIds = <String>{};
+                              for (final order in orders) {
+                                for (final item in order.items)
+                                  pastProductIds.add(item.productId);
+                              }
+                              final buyAgainProducts = products
+                                  .where((p) => pastProductIds.contains(p.id))
+                                  .toList();
+                              return _buildHorizontalSections(
+                                trendingProducts,
+                                topRatedProducts,
+                                buyAgainProducts,
+                              );
+                            },
+                            loading: () => _buildHorizontalSections(
+                              trendingProducts,
+                              topRatedProducts,
+                              [],
+                            ),
+                            error: (_, __) => _buildHorizontalSections(
+                              trendingProducts,
+                              topRatedProducts,
+                              [],
+                            ),
+                          );
+                    },
+                  ),
                 ),
-                
+
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-                    child: Text('All Products', style: AppTextStyles.sectionTitle),
+                    child: Text(
+                      'All Products',
+                      style: AppTextStyles.sectionTitle,
+                    ),
                   ),
                 ),
-                
+
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ).copyWith(bottom: 32),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.58, // Adjusted for new ProductCard height
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 12,
+                          childAspectRatio:
+                              0.58, // Adjusted for new ProductCard height
+                        ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => ProductCard(product: products[index]),
                       childCount: products.length,
@@ -154,14 +215,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ] else ...[
                 // Category specific grid
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24).copyWith(bottom: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
+                  ).copyWith(bottom: 32),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.58, // Adjusted for new ProductCard height
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 12,
+                          childAspectRatio:
+                              0.58, // Adjusted for new ProductCard height
+                        ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) => ProductCard(product: products[index]),
                       childCount: products.length,
@@ -169,6 +235,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ],
+              if (products.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 48),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: context.colors.border,
+                            endIndent: 16,
+                            indent: 32,
+                            thickness: 1,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: context.colors.primary.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'MARUTI STATIONERY',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              color: context.colors.primary,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: context.colors.border,
+                            indent: 16,
+                            endIndent: 32,
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -181,7 +300,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SliverToBoxAdapter(child: CouponTicker()),
             SliverToBoxAdapter(child: _buildHeader(context, [])),
             SliverToBoxAdapter(child: _buildBanners(context, ref)),
-            const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
           ],
         ),
       ),
@@ -193,7 +317,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SliverToBoxAdapter(child: CouponTicker()),
             SliverToBoxAdapter(child: _buildHeader(context, [])),
             SliverToBoxAdapter(child: _buildBanners(context, ref)),
-            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(32), child: Center(child: Text('Error: $e')))),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
           ],
         ),
       ),
@@ -201,6 +330,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) {
+    final cartCount =
+        ref
+            .watch(cartProvider)
+            .value
+            ?.fold<int>(0, (total, i) => total + i.qty) ??
+        0;
+
     return SliverAppBar(
       floating: true,
       backgroundColor: context.colors.surface,
@@ -208,7 +344,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       scrolledUnderElevation: 1,
       shadowColor: context.colors.border,
       leading: IconButton(
-        icon: Icon(Icons.notifications_none_rounded, color: context.colors.textPrimary),
+        icon: Icon(
+          Icons.notifications_none_rounded,
+          color: context.colors.textPrimary,
+        ),
         onPressed: () => context.push('/home/notifications'),
       ),
       centerTitle: true,
@@ -221,7 +360,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
       actions: [
-        const SizedBox(width: 4),
+        // Cart icon with item count badge
+        GestureDetector(
+          onTap: () => context.push('/cart'),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.shopping_bag_outlined,
+                  color: context.colors.textPrimary,
+                  size: 26,
+                ),
+                if (cartCount > 0)
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.colors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        cartCount > 99 ? '99+' : '$cartCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -234,7 +415,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (banners.isEmpty) return const SizedBox.shrink();
         return _AutoBannerSlider(banners: banners);
       },
-      loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+      loading: () => const SizedBox(
+        height: 180,
+        child: Center(child: CircularProgressIndicator()),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -255,19 +439,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colors.surface,
                 borderRadius: BorderRadius.circular(50),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x10000000),
+                    color: context.colors.border.withValues(alpha: 0.5),
                     blurRadius: 10,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  Icon(Icons.search_rounded, color: Colors.black87, size: 22),
+                  Icon(
+                    Icons.search_rounded,
+                    color: context.colors.textSecondary,
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: AnimatedSearchHint(
@@ -288,7 +476,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         // Category Chips
         if (_isLoadingCategories)
-          const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          )
         else
           SizedBox(
             height: 85,
@@ -312,22 +503,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         height: 52,
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
-                          color: selected ? context.colors.primary.withValues(alpha: 0.1) : const Color(0xFFF4F6F8),
+                          color: selected
+                              ? context.colors.primary.withValues(alpha: 0.1)
+                              : context.colors.surfaceGrey,
                           shape: BoxShape.circle,
                         ),
-                        child: i == 0 
-                            ? Icon(Icons.grid_view_rounded, size: 24, color: selected ? context.colors.primary : Colors.black87)
+                        child: i == 0
+                            ? Icon(
+                                Icons.grid_view_rounded,
+                                size: 24,
+                                color: selected
+                                    ? context.colors.primary
+                                    : context.colors.textSecondary,
+                              )
                             : cat.image.isNotEmpty
-                                ? Image.network(cat.image, fit: BoxFit.cover)
-                                : Icon(Icons.category_outlined, size: 24, color: selected ? context.colors.primary : Colors.black87),
+                            ? Image.network(cat.image, fit: BoxFit.cover)
+                            : Icon(
+                                Icons.category_outlined,
+                                size: 24,
+                                color: selected
+                                    ? context.colors.primary
+                                    : context.colors.textSecondary,
+                              ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         cat.name,
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                          color: selected ? context.colors.primary : Colors.black87,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          color: selected
+                              ? context.colors.primary
+                              : context.colors.textSecondary,
                         ),
                       ),
                     ],
@@ -338,10 +547,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         const SizedBox(height: 8),
         // A thin divider below categories like the image
-        Container(
-          height: 4,
-          color: const Color(0xFFF1F2F4),
-        ),
+        Container(height: 4, color: context.colors.divider),
       ],
     );
   }
@@ -353,14 +559,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ) {
     return Column(
       children: [
-        _buildHorizontalProductSection('Featured', trendingProducts.take(6).toList(), showViewMore: true),
-        _buildHorizontalProductSection('Trending', topRatedProducts.take(6).toList()),
-        _buildHorizontalProductSection('Buy Again', buyAgainProducts.take(6).toList()),
+        _buildHorizontalProductSection(
+          'Featured',
+          trendingProducts.take(6).toList(),
+          showViewMore: true,
+        ),
+        _buildHorizontalProductSection(
+          'Trending',
+          topRatedProducts.take(6).toList(),
+        ),
+        _buildHorizontalProductSection(
+          'Buy Again',
+          buyAgainProducts.take(6).toList(),
+        ),
       ],
     );
   }
 
-  Widget _buildHorizontalProductSection(String title, List<ProductModel> products, {bool showViewMore = false}) {
+  Widget _buildHorizontalProductSection(
+    String title,
+    List<ProductModel> products, {
+    bool showViewMore = false,
+  }) {
     if (products.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +598,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       Text('View more', style: AppTextStyles.sectionLink),
                       const SizedBox(width: 2),
-                      Icon(Icons.chevron_right_rounded, color: context.colors.primary, size: 18),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: context.colors.primary,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -470,7 +694,8 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
                 final bool hasLink =
-                    banner.targetCategoryId != null || banner.targetProductId != null;
+                    banner.targetCategoryId != null ||
+                    banner.targetProductId != null;
                 return GestureDetector(
                   onTap: hasLink ? () => _onBannerTap(banner, context) : null,
                   child: Container(
@@ -489,7 +714,10 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.15)],
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.15),
+                                ],
                               ),
                             ),
                           )
@@ -526,7 +754,3 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
     );
   }
 }
-
-
-
-
