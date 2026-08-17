@@ -116,6 +116,7 @@ class AppTheme {
     return ThemeData(
       brightness: brightness,
       useMaterial3: true,
+      platform: TargetPlatform.iOS,
       scaffoldBackgroundColor: colors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: colors.primary,

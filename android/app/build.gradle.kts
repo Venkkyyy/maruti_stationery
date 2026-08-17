@@ -52,3 +52,9 @@ apply { from("flavorizr.gradle.kts") }
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+tasks.configureEach {
+    if (name.startsWith("uploadCrashlyticsMappingFile")) {
+        mustRunAfter(tasks.matching { it.name.contains("GoogleServices") })
+    }
+}

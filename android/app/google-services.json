@@ -1,1 +1,62 @@
-{"project_info":{"project_number":"731940586001","project_id":"maruti-stationery-d7862","storage_bucket":"maruti-stationery-d7862.firebasestorage.app"},"client":[{"client_info":{"mobilesdk_app_id":"1:731940586001:android:d74841431c0d651eada7b0","android_client_info":{"package_name":"com.example.maruti_stationery"}},"oauth_client":[{"client_id":"731940586001-rdmjro13spv1l2ucsp9mcr9r2vinnu63.apps.googleusercontent.com","client_type":1,"android_info":{"package_name":"com.example.maruti_stationery","certificate_hash":"7f11d6eab440cf8dc987a296073156e3ac058267"}},{"client_id":"731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com","client_type":3}],"api_key":[{"current_key":"AIzaSyCJQlqHLouQLYOyX9s1IizQLCENqbgvsO4"}],"services":{"appinvite_service":{"other_platform_oauth_client":[{"client_id":"731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com","client_type":3}]}}},{"client_info":{"mobilesdk_app_id":"1:731940586001:android:d74841431c0d651eada7b0","android_client_info":{"package_name":"com.example.maruti_stationery.admin"}},"oauth_client":[{"client_id":"731940586001-rdmjro13spv1l2ucsp9mcr9r2vinnu63.apps.googleusercontent.com","client_type":1,"android_info":{"package_name":"com.example.maruti_stationery.admin","certificate_hash":"7f11d6eab440cf8dc987a296073156e3ac058267"}},{"client_id":"731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com","client_type":3}],"api_key":[{"current_key":"AIzaSyCJQlqHLouQLYOyX9s1IizQLCENqbgvsO4"}],"services":{"appinvite_service":{"other_platform_oauth_client":[{"client_id":"731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com","client_type":3}]}}}],"configuration_version":"1"}
+{
+  "project_info": {
+    "project_number": "731940586001",
+    "project_id": "maruti-stationery-d7862",
+    "storage_bucket": "maruti-stationery-d7862.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:731940586001:android:d74841431c0d651eada7b0",
+        "android_client_info": {
+          "package_name": "com.example.maruti_stationery"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "731940586001-l9mbke3aqt9dtvai29l1o3jec18ilngi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.maruti_stationery",
+            "certificate_hash": "79a74b5255b081a1a6de0762340912fe5daa9e4d"
+          }
+        },
+        {
+          "client_id": "731940586001-rdmjro13spv1l2ucsp9mcr9r2vinnu63.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.maruti_stationery",
+            "certificate_hash": "7f11d6eab440cf8dc987a296073156e3ac058267"
+          }
+        },
+        {
+          "client_id": "731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJQlqHLouQLYOyX9s1IizQLCENqbgvsO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "731940586001-0rphabr4mkvgbf3n3aotasbv2mgc8m76.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "731940586001-mlf81vbuisoe3sgrnp2kpcgb63fbqik0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "MarutiStationery"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

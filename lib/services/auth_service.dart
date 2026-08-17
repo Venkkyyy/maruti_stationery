@@ -45,10 +45,12 @@ class AuthService {
       await _createOrUpdateUser(userCredential.user!);
       return await getUser(userCredential.user!.uid);
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled.name || e.code == 'canceled') {
+      // Only silently handle actual user cancellation; surface all other errors
+      if (e.code == GoogleSignInExceptionCode.canceled &&
+          (e.description == null || !e.description!.contains('failed'))) {
         throw const AppException('Sign in canceled by user');
       }
-      throw AppException(e.description ?? 'Google sign in failed');
+      throw AppException(e.description ?? 'Google sign in failed (${e.code.name})');
     } on FirebaseAuthException catch (e) {
       throw AppException(_mapAuthError(e.code));
     } catch (e) {
