@@ -50,3 +50,44 @@ final class WatchActiveCouponsProvider
 
 String _$watchActiveCouponsHash() =>
     r'551960c6fa4e645c5230a40ffa04b77ee7743649';
+
+@ProviderFor(watchAllCoupons)
+final watchAllCouponsProvider = WatchAllCouponsProvider._();
+
+final class WatchAllCouponsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<CouponModel>>,
+          List<CouponModel>,
+          Stream<List<CouponModel>>
+        >
+    with
+        $FutureModifier<List<CouponModel>>,
+        $StreamProvider<List<CouponModel>> {
+  WatchAllCouponsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchAllCouponsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchAllCouponsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<List<CouponModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<CouponModel>> create(Ref ref) {
+    return watchAllCoupons(ref);
+  }
+}
+
+String _$watchAllCouponsHash() => r'c4e5e71b35037da21a295dafe8c6443e48ea94ad';

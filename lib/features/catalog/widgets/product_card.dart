@@ -37,8 +37,8 @@ class ProductCard extends ConsumerWidget {
           border: Border.all(color: context.colors.border),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 12,
+              color: Color(0x10000000),
+              blurRadius: 14,
               offset: Offset(0, 4),
             ),
           ],
@@ -76,14 +76,14 @@ class ProductCard extends ConsumerWidget {
                             ),
                     ),
                   ),
-                  // Discount badge
+                  // Discount badge — muted amber, professional
                   if (product.isOnSale)
                     Positioned(
                       top: 0, left: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF5383EC),
+                          color: Color(0xFFB45309),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(11),
                             bottomRight: Radius.circular(6),
@@ -137,7 +137,7 @@ class ProductCard extends ConsumerWidget {
                       children: [
                         Text(
                           product.unit.isNotEmpty ? product.unit : '1 pc',
-                          style: TextStyle(fontSize: 10, color: context.colors.textHint, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 11, color: context.colors.textHint, fontWeight: FontWeight.w600),
                         ),
                         _buildAddButton(context, ref, qtyInCart),
                       ],
@@ -151,7 +151,7 @@ class ProductCard extends ConsumerWidget {
                         Text(
                           AppFormatters.formatPrice(product.price),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
                             color: context.colors.textPrimary,
                           ),
@@ -175,10 +175,10 @@ class ProductCard extends ConsumerWidget {
                     Text(
                       product.name,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: context.colors.textPrimary,
-                        height: 1.2,
+                        height: 1.4,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -211,7 +211,7 @@ class ProductCard extends ConsumerWidget {
                       children: [
                         Icon(Icons.battery_2_bar_rounded, size: 12, color: context.colors.textHint),
                         const SizedBox(width: 2),
-                        Text('${product.stock} left', style: TextStyle(fontSize: 10, color: context.colors.textHint)),
+                        Text('${product.stock} left', style: TextStyle(fontSize: 11, color: context.colors.textHint)),
                       ],
                     ),
                   ],
@@ -229,7 +229,7 @@ class ProductCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: context.colors.surfaceGrey,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Text('SOLD OUT', style: TextStyle(fontSize: 9, color: context.colors.textHint, fontWeight: FontWeight.bold)),
       );
@@ -242,8 +242,8 @@ class ProductCard extends ConsumerWidget {
         child: OutlinedButton(
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
-            side: BorderSide(color: context.colors.primary, width: 1.2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            side: BorderSide(color: context.colors.primary, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             backgroundColor: context.colors.surface,
             foregroundColor: context.colors.primary,
           ),
@@ -261,7 +261,7 @@ class ProductCard extends ConsumerWidget {
       width: 64,
       decoration: BoxDecoration(
         color: context.colors.primary,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -312,8 +312,8 @@ class ProductListCard extends StatelessWidget {
           border: Border.all(color: context.colors.border),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 8,
+              color: Color(0x08000000),
+              blurRadius: 10,
               offset: Offset(0, 2),
             ),
           ],
@@ -357,8 +357,8 @@ class ProductListCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 5, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: context.colors.primary,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFB45309),
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(11),
                           bottomRight: Radius.circular(7),
@@ -410,7 +410,7 @@ class ProductListCard extends StatelessWidget {
                     Text(
                       product.name,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: context.colors.textPrimary,
                       ),
@@ -429,7 +429,7 @@ class ProductListCard extends StatelessWidget {
                         Text(
                           AppFormatters.formatPrice(product.price),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: context.colors.textPrimary,
                           ),
@@ -452,7 +452,7 @@ class ProductListCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 8),
               child: Icon(Icons.chevron_right_rounded,
                   color: context.colors.textHint, size: 20),
             ),
@@ -462,9 +462,3 @@ class ProductListCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-

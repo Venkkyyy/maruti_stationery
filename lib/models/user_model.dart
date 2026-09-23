@@ -6,6 +6,7 @@ class UserModel {
   final String phone;
   final String? email;
   final bool isAdmin;
+  final int loyaltyPoints;
   final DateTime createdAt;
 
   const UserModel({
@@ -14,6 +15,7 @@ class UserModel {
     required this.phone,
     this.email,
     this.isAdmin = false,
+    this.loyaltyPoints = 0,
     required this.createdAt,
   });
 
@@ -25,6 +27,7 @@ class UserModel {
       phone: data['phone'] ?? '',
       email: data['email'],
       isAdmin: data['isAdmin'] ?? false,
+      loyaltyPoints: (data['loyaltyPoints'] as num?)?.toInt() ?? 0,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -35,6 +38,7 @@ class UserModel {
       'phone': phone,
       'email': email,
       'isAdmin': isAdmin,
+      'loyaltyPoints': loyaltyPoints,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

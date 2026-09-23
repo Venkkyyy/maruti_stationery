@@ -125,6 +125,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                           details: 'Qty: ${firstItem?.qty ?? 0}',
                           itemCount: order.items.length,
                           price: AppFormatters.formatPrice(order.total),
+                          pointsEarned: order.pointsEarned,
                           buttonText: 'View Details',
                           buttonOutlined: true,
                           onTap: () => context.push('/orders/${order.id}'),
@@ -151,6 +152,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
     required String details,
     required int itemCount,
     required String price,
+    int pointsEarned = 0,
     required String buttonText,
     bool buttonOutlined = false,
     required VoidCallback onTap,
@@ -226,7 +228,30 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text(price, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+          Row(
+            children: [
+              Text(price, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
+              if (pointsEarned > 0) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFD4A017).withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '⭐ +$pointsEarned pts',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF7B5800),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,

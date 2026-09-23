@@ -20,9 +20,12 @@ import '../../features/admin/screens/admin_edit_product_screen.dart';
 import '../../features/admin/screens/admin_coupon_form_screen.dart';
 import '../../features/admin/screens/admin_banners_screen.dart';
 import '../../features/admin/screens/admin_banner_form_screen.dart';
+import '../../features/admin/screens/admin_ads_screen.dart';
+import '../../features/admin/screens/admin_ad_form_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../models/coupon_model.dart';
 import '../../models/banner_model.dart';
+import '../../models/ad_model.dart';
 
 final GlobalKey<NavigatorState> adminRootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -109,6 +112,22 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 path: 'edit/:id',
                 builder: (context, state) => AdminBannerFormScreen(
                   existingBanner: state.extra as BannerModel?,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/admin/ads',
+            builder: (context, state) => const AdminAdsScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                builder: (context, state) => const AdminAdFormScreen(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                builder: (context, state) => AdminAdFormScreen(
+                  existingAd: state.extra as AdModel?,
                 ),
               ),
             ],

@@ -16,8 +16,13 @@ import '../../../providers/coupon_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
 import '../../../providers/banner_provider.dart';
+import '../../../models/banner_model.dart';
 import '../../../providers/cart_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../shared/widgets/animated_search_hint.dart';
+import '../../../providers/ads_provider.dart';
+import '../../../models/ad_model.dart';
+import '../../catalog/widgets/ad_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -31,12 +36,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<CategoryModel> _categories = [];
   bool _isLoadingCategories = true;
+  final Set<String> _loggedImpressions = {};
 
   @override
   void initState() {
     super.initState();
     _fetchCategories();
+    
+    // Ensure initial professional banners exist and clean up any other banners
+    Future.microtask(() async {
+      try {
+        final collection = FirebaseFirestore.instance.collection('banners');
+        final snapshot = await collection.get();
+        
+        // 1. Delete any banner document that is not in the allowed list
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final url = (data['imageUrl']?.toString() ?? '').trim();
+          if (!allowedBannerUrls.contains(url)) {
+            debugPrint('Deleting non-whitelisted/older banner: ${doc.id} ($url)');
+            await doc.reference.delete().catchError((e) {
+              debugPrint('Could not delete banner document: $e');
+            });
+          }
+        }
+        
+        // 2. Refresh snapshot to see remaining URLs
+        final updatedSnapshot = await collection.get();
+        final existingUrls = updatedSnapshot.docs
+            .map((doc) => (doc.data()['imageUrl']?.toString() ?? '').trim())
+            .toSet();
+
+        final newBanners = [
+          {
+            'imageUrl': backToSchoolBannerUrl,
+            'isActive': true,
+            'targetCategoryId': null,
+            'targetProductId': null,
+            'tag': 'back_to_school',
+            'title': 'Back to School',
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+          {
+            'imageUrl': officeEssentialsBannerUrl,
+            'isActive': true,
+            'targetCategoryId': null,
+            'targetProductId': null,
+            'tag': 'office_essentials',
+            'title': 'Office Essentials',
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+        ];
+
+        // 3. Add missing banners, OR update existing ones that lack a tag
+        for (final banner in newBanners) {
+          final bannerUrl = banner['imageUrl'] as String;
+          final bannerTag = banner['tag'] as String;
+          final bannerTitle = banner['title'] as String;
+
+          if (!existingUrls.contains(bannerUrl)) {
+            // Banner document missing entirely — create it
+            debugPrint('Adding professional banner to Firestore: $bannerUrl');
+            await collection.add(banner).catchError((e) {
+              debugPrint('Could not add banner document: $e');
+              return docRef();
+            });
+          } else {
+            // Banner exists — make sure it has the tag and title fields
+            final existingDocs = updatedSnapshot.docs.where(
+              (d) => (d.data()['imageUrl']?.toString() ?? '').trim() == bannerUrl,
+            );
+            for (final existingDoc in existingDocs) {
+              final data = existingDoc.data();
+              if (data['tag'] == null || data['title'] == null) {
+                debugPrint('Patching tag/title on existing banner: $bannerUrl');
+                await existingDoc.reference.update({
+                  'tag': bannerTag,
+                  'title': bannerTitle,
+                }).catchError((e) {
+                  debugPrint('Could not patch banner: $e');
+                  return null;
+                });
+              }
+            }
+          }
+        }
+        debugPrint('Firestore banners verified: only 2 professional banners retained.');
+      } catch (e) {
+        debugPrint('Error syncing professional banners: $e');
+      }
+    });
   }
+
+  DocumentReference<Map<String, dynamic>> docRef() =>
+      FirebaseFirestore.instance.collection('banners').doc();
 
   Future<void> _fetchCategories() async {
     try {
@@ -73,6 +166,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  List<Widget> _buildAdInjectedSlivers({
+    required List<ProductModel> products,
+    required List<AdModel> ads,
+    required double topPadding,
+  }) {
+    if (ads.isEmpty) {
+      return [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, topPadding, 16, 32),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.58,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => ProductCard(product: products[index]),
+              childCount: products.length,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    final slivers = <Widget>[];
+    const cols = 2;
+    final freq = ads.first.placementFrequency.clamp(2, 100);
+    final rowsPerAd = (freq / cols).ceil();
+
+    int productIndex = 0;
+    int adRotationIndex = 0;
+
+    while (productIndex < products.length) {
+      final endProductIndex =
+          (productIndex + rowsPerAd * cols).clamp(0, products.length);
+      final chunk = products.sublist(productIndex, endProductIndex);
+
+      slivers.add(
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            productIndex == 0 ? topPadding : 0,
+            16,
+            0,
+          ),
+          sliver: SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (_, i) => ProductCard(product: chunk[i]),
+              childCount: chunk.length,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: cols,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.58,
+            ),
+          ),
+        ),
+      );
+
+      productIndex = endProductIndex;
+
+      if (productIndex < products.length) {
+        final ad = ads[adRotationIndex % ads.length];
+        adRotationIndex++;
+        slivers.add(
+          SliverToBoxAdapter(
+            child: AdCard(
+              ad: ad,
+              loggedImpressions: _loggedImpressions,
+            ),
+          ),
+        );
+      }
+    }
+
+    slivers.add(const SliverPadding(padding: EdgeInsets.only(bottom: 32)));
+
+    return slivers;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen for active coupons to show one-time popup
@@ -103,6 +278,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             getProductsByCategoryProvider(_categories[_selectedCategory].id),
           );
 
+    final activeAdsAsync = ref.watch(activeAdsProvider);
+    final activeAds = activeAdsAsync.when(
+      data: (ads) => ads,
+      loading: () => <AdModel>[],
+      error: (_, __) => <AdModel>[],
+    );
+
     return productsAsync.when(
       data: (products) {
         final isAll = _selectedCategory == 0;
@@ -110,6 +292,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ..sort((a, b) => b.salesCount.compareTo(a.salesCount));
         final topRatedProducts = products.toList()
           ..sort((a, b) => b.averageRating.compareTo(a.averageRating));
+        // Offered Products — items currently on discount
+        final offeredProducts = products.where((p) => p.isOnSale).toList();
 
         return Scaffold(
           backgroundColor: context.colors.background,
@@ -148,6 +332,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           trendingProducts,
                           topRatedProducts,
                           [],
+                          offeredProducts,
                         );
                       }
                       return ref
@@ -166,17 +351,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 trendingProducts,
                                 topRatedProducts,
                                 buyAgainProducts,
+                                offeredProducts,
                               );
                             },
                             loading: () => _buildHorizontalSections(
                               trendingProducts,
                               topRatedProducts,
                               [],
+                              offeredProducts,
                             ),
                             error: (_, __) => _buildHorizontalSections(
                               trendingProducts,
                               topRatedProducts,
                               [],
+                              offeredProducts,
                             ),
                           );
                     },
@@ -193,46 +381,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                  ).copyWith(bottom: 32),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 12,
-                          childAspectRatio:
-                              0.58, // Adjusted for new ProductCard height
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => ProductCard(product: products[index]),
-                      childCount: products.length,
-                    ),
-                  ),
+                ..._buildAdInjectedSlivers(
+                  products: products,
+                  ads: activeAds,
+                  topPadding: 0.0,
                 ),
               ] else ...[
                 // Category specific grid
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 24,
-                  ).copyWith(bottom: 32),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 12,
-                          childAspectRatio:
-                              0.58, // Adjusted for new ProductCard height
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => ProductCard(product: products[index]),
-                      childCount: products.length,
-                    ),
-                  ),
+                ..._buildAdInjectedSlivers(
+                  products: products,
+                  ads: activeAds,
+                  topPadding: 24.0,
                 ),
               ],
               if (products.isNotEmpty)
@@ -474,7 +633,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Category Chips
+        // Category Chips — bold, dark, high-contrast icons
         if (_isLoadingCategories)
           const Padding(
             padding: EdgeInsets.all(16),
@@ -482,7 +641,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           )
         else
           SizedBox(
-            height: 85,
+            height: 90,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -499,44 +658,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 56,
+                        height: 56,
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           color: selected
-                              ? context.colors.primary.withValues(alpha: 0.1)
+                              ? context.colors.primary
                               : context.colors.surfaceGrey,
                           shape: BoxShape.circle,
+                          boxShadow: selected
+                              ? [
+                                  BoxShadow(
+                                    color: context.colors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: i == 0
                             ? Icon(
                                 Icons.grid_view_rounded,
-                                size: 24,
+                                size: 26,
                                 color: selected
-                                    ? context.colors.primary
-                                    : context.colors.textSecondary,
+                                    ? Colors.white
+                                    : const Color(0xFF1A1A2E),
                               )
                             : cat.image.isNotEmpty
                             ? Image.network(cat.image, fit: BoxFit.cover)
                             : Icon(
-                                Icons.category_outlined,
-                                size: 24,
+                                Icons.category_rounded,
+                                size: 26,
                                 color: selected
-                                    ? context.colors.primary
-                                    : context.colors.textSecondary,
+                                    ? Colors.white
+                                    : const Color(0xFF1A1A2E),
                               ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         cat.name,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: selected
                               ? FontWeight.w700
                               : FontWeight.w600,
                           color: selected
                               ? context.colors.primary
-                              : context.colors.textSecondary,
+                              : context.colors.textPrimary,
                         ),
                       ),
                     ],
@@ -552,13 +720,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// Section order: Offered Products → Featured → Trending → Buy Again
   Widget _buildHorizontalSections(
     List<ProductModel> trendingProducts,
     List<ProductModel> topRatedProducts,
     List<ProductModel> buyAgainProducts,
+    List<ProductModel> offeredProducts,
   ) {
     return Column(
       children: [
+        _buildHorizontalProductSection(
+          'Offered Products',
+          offeredProducts.take(6).toList(),
+          showViewMore: offeredProducts.length > 6,
+        ),
         _buildHorizontalProductSection(
           'Featured',
           trendingProducts.take(6).toList(),
@@ -632,7 +807,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _AutoBannerSlider extends StatefulWidget {
-  final List banners;
+  final List<BannerModel> banners;
 
   const _AutoBannerSlider({required this.banners});
 
@@ -652,9 +827,25 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
     _startAutoPlay();
   }
 
+  @override
+  void didUpdateWidget(_AutoBannerSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.banners.length != oldWidget.banners.length) {
+      if (_currentPage >= widget.banners.length) {
+        _currentPage = 0;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      }
+      _startAutoPlay();
+    }
+  }
+
   void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    if (widget.banners.length <= 1) return;
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
+      if (!mounted || !_pageController.hasClients || widget.banners.isEmpty) return;
       final nextPage = (_currentPage + 1) % widget.banners.length;
       _pageController.animateToPage(
         nextPage,
@@ -671,8 +862,11 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
     super.dispose();
   }
 
-  void _onBannerTap(dynamic banner, BuildContext context) {
-    if (banner.targetCategoryId != null) {
+  void _onBannerTap(BannerModel banner, BuildContext context) {
+    if (banner.tag != null) {
+      final title = Uri.encodeComponent(banner.title ?? banner.tag!);
+      context.push('/banner-products?tag=${banner.tag}&title=$title');
+    } else if (banner.targetCategoryId != null) {
       context.go('/catalog?categoryId=${banner.targetCategoryId}');
     } else if (banner.targetProductId != null) {
       context.push('/catalog/product/${banner.targetProductId}');
@@ -694,6 +888,7 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
                 final bool hasLink =
+                    banner.tag != null ||
                     banner.targetCategoryId != null ||
                     banner.targetProductId != null;
                 return GestureDetector(
@@ -703,7 +898,7 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       image: DecorationImage(
-                        image: NetworkImage(banner.imageUrl),
+                        image: CachedNetworkImageProvider(banner.imageUrl),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -733,7 +928,7 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(widget.banners.length, (i) {
-                final isActive = i == _currentPage;
+                final isActive = i == (_currentPage % widget.banners.length);
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -742,8 +937,8 @@ class _AutoBannerSliderState extends State<_AutoBannerSlider> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
                     color: isActive
-                        ? Theme.of(context).primaryColor
-                        : Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                        ? context.colors.primary
+                        : context.colors.primary.withValues(alpha: 0.3),
                   ),
                 );
               }),

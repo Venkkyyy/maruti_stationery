@@ -3,24 +3,34 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class OrderConfirmationScreen extends StatefulWidget {
+class OrderConfirmationScreen extends ConsumerStatefulWidget {
   final String orderId;
-  const OrderConfirmationScreen({super.key, required this.orderId});
+  final int pointsEarned;
+
+  const OrderConfirmationScreen({
+    super.key,
+    required this.orderId,
+    this.pointsEarned = 0,
+  });
 
   @override
-  State<OrderConfirmationScreen> createState() =>
+  ConsumerState<OrderConfirmationScreen> createState() =>
       _OrderConfirmationScreenState();
 }
 
-class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
+class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScreen>
     with TickerProviderStateMixin {
   late AnimationController _checkController;
   late AnimationController _contentController;
+  late AnimationController _pointsController;
   late Animation<double> _checkScale;
   late Animation<double> _checkFade;
   late Animation<double> _contentFade;
   late Animation<Offset> _contentSlide;
+  late Animation<double> _pointsFade;
+  late Animation<Offset> _pointsSlide;
 
   @override
   void initState() {
@@ -33,6 +43,10 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
     _contentController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
+    );
+    _pointsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
 
     _checkScale = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -49,9 +63,21 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _contentController, curve: Curves.easeOut));
 
+    _pointsFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pointsController, curve: Curves.easeOut),
+    );
+    _pointsSlide = Tween<Offset>(
+      begin: const Offset(0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _pointsController, curve: Curves.easeOut));
+
     _checkController.forward().then((_) {
       if (mounted) {
-        _contentController.forward();
+        _contentController.forward().then((_) {
+          if (mounted && widget.pointsEarned > 0) {
+            _pointsController.forward();
+          }
+        });
       }
     });
   }
@@ -60,6 +86,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
   void dispose() {
     _checkController.dispose();
     _contentController.dispose();
+    _pointsController.dispose();
     super.dispose();
   }
 
@@ -161,6 +188,59 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                       ),
                       const SizedBox(height: 12),
 
+                      // Loyalty Points Earned Banner
+                      if (widget.pointsEarned > 0)
+                        SlideTransition(
+                          position: _pointsSlide,
+                          child: FadeTransition(
+                            opacity: _pointsFade,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFFF8E1), Color(0xFFFFF3CD)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFD4A017).withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text('⭐', style: TextStyle(fontSize: 24)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'You earned ${widget.pointsEarned} loyalty points!',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF7B5800),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        const Text(
+                                          'Points added to your account',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF9A6E00),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 12),
+
                       // Estimated delivery
                       Container(
                         width: double.infinity,
@@ -175,7 +255,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                           children: [
                             Icon(Icons.local_shipping_outlined,
                                 color: context.colors.primary, size: 20),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               'Estimated Delivery: ',
                               style: TextStyle(
@@ -238,7 +318,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                         onPressed: () async {
                           final Uri emailLaunchUri = Uri(
                             scheme: 'mailto',
-                            path: '', // Let user type email
+                            path: '',
                             query: 'subject=Order Receipt - Maruti Stationery&body=Here is the receipt for my order! Order ID: ${widget.orderId}',
                           );
                           if (await canLaunchUrl(emailLaunchUri)) {
@@ -263,9 +343,3 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
     );
   }
 }
-
-
-
-
-
-

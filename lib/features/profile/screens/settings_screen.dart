@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:maruti_stationery/providers/theme_provider.dart';
 import 'package:maruti_stationery/providers/auth_provider.dart';
+import 'package:maruti_stationery/providers/ad_autoplay_provider.dart';
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -107,6 +108,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (val) {
               setState(() => _locationEnabled = val);
               _saveSetting('location_enabled', val);
+            },
+          ),
+          _buildSwitchTile(
+            title: 'Wi-Fi Only Video Ads',
+            subtitle: 'Autoplay ad videos only on Wi-Fi to save mobile data',
+            icon: Icons.wifi_rounded,
+            value: ref.watch(adWifiOnlyProvider),
+            onChanged: (val) {
+              ref.read(adWifiOnlyProvider.notifier).toggle(val);
             },
           ),
           ListTile(

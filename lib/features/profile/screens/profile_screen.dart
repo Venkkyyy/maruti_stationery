@@ -24,6 +24,7 @@ class ProfileScreen extends ConsumerWidget {
     final int ordersCount = ordersAsync.value?.length ?? 0;
     final int wishlistCount = wishlistAsync.value?.length ?? 0;
     final int addressesCount = addressesAsync.value?.length ?? 0;
+    final int loyaltyPoints = user?.loyaltyPoints ?? 0;
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -48,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF1557B0),
+                      Color(0xFF101D4A),
                       context.colors.primary,
                     ],
                   ),
@@ -121,6 +122,8 @@ class ProfileScreen extends ConsumerWidget {
                         _StatBox(value: '$wishlistCount', label: 'Wishlist'),
                         const _StatDivider(),
                         _StatBox(value: '$addressesCount', label: 'Addresses'),
+                        const _StatDivider(),
+                        _StatBox(value: '$loyaltyPoints', label: 'Points', isHighlighted: true),
                       ],
                     ),
                   ),
@@ -278,7 +281,8 @@ class ProfileScreen extends ConsumerWidget {
 class _StatBox extends StatelessWidget {
   final String value;
   final String label;
-  const _StatBox({required this.value, required this.label});
+  final bool isHighlighted;
+  const _StatBox({required this.value, required this.label, this.isHighlighted = false});
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +293,7 @@ class _StatBox extends StatelessWidget {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
-            color: context.colors.primary,
+            color: isHighlighted ? const Color(0xFFB45309) : context.colors.primary,
           ),
         ),
         const SizedBox(height: 2),

@@ -116,7 +116,7 @@ final class WishlistNotifierProvider
   WishlistNotifier create() => WishlistNotifier();
 }
 
-String _$wishlistNotifierHash() => r'8d6e15d187479905d28354f2f4f6694b3a1bfeec';
+String _$wishlistNotifierHash() => r'fbc4e5c1dc8cdfa89a60c08c617310b8c7105e26';
 
 abstract class _$WishlistNotifier extends $AsyncNotifier<void> {
   FutureOr<void> build();

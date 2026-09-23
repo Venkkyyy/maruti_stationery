@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Ignore node_modules and objective-c temp folders
+node_modules/
+fake_objective_c/
+local_objective_c/

@@ -20,6 +20,7 @@ class OrderModel {
   final String? razorpayOrderId;
   final String? razorpayPaymentId;
   final String idempotencyKey;  // CRITICAL for duplicate prevention
+  final int pointsEarned;       // loyalty points credited on this order
   final DateTime createdAt;
 
   const OrderModel({
@@ -37,6 +38,7 @@ class OrderModel {
     this.razorpayOrderId,
     this.razorpayPaymentId,
     required this.idempotencyKey,
+    this.pointsEarned = 0,
     required this.createdAt,
   });
 
@@ -84,6 +86,7 @@ class OrderModel {
       razorpayOrderId: data['razorpayOrderId'],
       razorpayPaymentId: data['razorpayPaymentId'],
       idempotencyKey: data['idempotencyKey'] ?? '',
+      pointsEarned: (data['pointsEarned'] as num?)?.toInt() ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -102,6 +105,7 @@ class OrderModel {
     'razorpayOrderId': razorpayOrderId,
     'razorpayPaymentId': razorpayPaymentId,
     'idempotencyKey': idempotencyKey,
+    'pointsEarned': pointsEarned,
     'createdAt': Timestamp.fromDate(createdAt),
     'updatedAt': FieldValue.serverTimestamp(),
   };
