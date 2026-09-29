@@ -79,5 +79,18 @@
     </array>
     <key>GIDClientID</key>
     <string>731940586001-mlf81vbuisoe3sgrnp2kpcgb63fbqik0.apps.googleusercontent.com</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>tel</string>
+      <string>mailto</string>
+      <string>http</string>
+      <string>https</string>
+    </array>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library to upload product images, reviews, and banners.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>We need access to your camera to take product photos.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>We need access to your microphone to record video ads.</string>
   </dict>
 </plist>
