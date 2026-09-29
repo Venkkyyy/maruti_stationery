@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../providers/app_mode_provider.dart';
 
 class CompleteProfileScreen extends ConsumerStatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -54,7 +55,14 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
       // Invalidate the user provider to fetch the latest details
       ref.invalidate(currentUserModelProvider);
       
-      if (mounted) context.go('/home');
+      if (mounted) {
+        final appMode = ref.read(appModeProvider);
+        if (appMode == AppMode.admin) {
+          context.go('/admin');
+        } else {
+          context.go('/home');
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

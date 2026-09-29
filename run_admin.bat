@@ -1,0 +1,3 @@
+@echo off
+echo Running Admin App (release)...
+flutter run --release --flavor admin -t lib/main_admin.dart %*

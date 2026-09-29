@@ -1,10 +1,15 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_compress/video_compress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/ad_model.dart';
 import '../../../providers/ads_provider.dart';
+import '../../../services/admin_product_service.dart';
 
 class AdminAdFormScreen extends StatefulWidget {
   final AdModel? existingAd;
@@ -17,6 +22,12 @@ class AdminAdFormScreen extends StatefulWidget {
 class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+  File? _pickedVideoFile;
+  File? _pickedImageFile;
+  bool _isCompressing = false;
+  String _compressProgress = '';
+  final _adminProductService = AdminProductService();
+  Subscription? _subscription;
 
   // Controllers
   late TextEditingController _videoUrlCtrl;
@@ -49,10 +60,19 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
     _isActive = ad?.isActive ?? true;
     _startDate = ad?.startDate;
     _endDate = ad?.endDate;
+
+    _subscription = VideoCompress.compressProgress$.subscribe((progress) {
+      if (mounted) {
+        setState(() {
+          _compressProgress = '${progress.toStringAsFixed(0)}%';
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _subscription?.unsubscribe();
     _videoUrlCtrl.dispose();
     _thumbnailUrlCtrl.dispose();
     _ctaLabelCtrl.dispose();
@@ -62,28 +82,89 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndCompressVideo() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickVideo(source: ImageSource.gallery);
+      if (pickedFile == null) return;
+
+      setState(() {
+        _isCompressing = true;
+        _compressProgress = '0%';
+      });
+
+      // Compress video
+      final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
+        pickedFile.path,
+        quality: VideoQuality.MediumQuality,
+        deleteOrigin: false,
+      );
+
+      if (mediaInfo != null && mediaInfo.file != null) {
+        setState(() {
+          _pickedVideoFile = mediaInfo.file;
+          _videoUrlCtrl.text = 'Video selected and compressed (${(mediaInfo.filesize! / 1024 / 1024).toStringAsFixed(2)} MB)';
+        });
+        
+        // Generate a thumbnail using VideoCompress
+        final thumbnailFile = await VideoCompress.getFileThumbnail(pickedFile.path);
+        if (thumbnailFile != null) {
+          // Upload thumbnail if necessary, or let them pick one manually.
+          // For now, let's keep it simple.
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error compressing video: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCompressing = false;
+        });
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final ad = AdModel(
-      id: widget.existingAd?.id ?? '',
-      videoUrl: _videoUrlCtrl.text.trim(),
-      thumbnailUrl: _thumbnailUrlCtrl.text.trim(),
-      ctaType: _ctaType,
-      ctaValue: _ctaValueCtrl.text.trim(),
-      ctaLabel: _ctaLabelCtrl.text.trim(),
-      isActive: _isActive,
-      startDate: _startDate,
-      endDate: _endDate,
-      placementFrequency: int.tryParse(_freqCtrl.text) ?? 8,
-      sortOrder: int.tryParse(_orderCtrl.text) ?? 0,
-      impressions: widget.existingAd?.impressions ?? 0,
-      clicks: widget.existingAd?.clicks ?? 0,
-      createdAt: widget.existingAd?.createdAt ?? DateTime.now(),
-    );
+    String finalVideoUrl = _videoUrlCtrl.text.trim();
 
     try {
+      // 1. Upload video if a new one is selected
+      if (_pickedVideoFile != null) {
+        finalVideoUrl = await _adminProductService.uploadVideo(_pickedVideoFile!);
+      }
+
+      String finalThumbnailUrl = _thumbnailUrlCtrl.text.trim();
+      if (_pickedImageFile != null) {
+        final urls = await _adminProductService.uploadImages([_pickedImageFile!]);
+        if (urls.isNotEmpty) {
+          finalThumbnailUrl = urls.first;
+        }
+      }
+
+      final ad = AdModel(
+        id: widget.existingAd?.id ?? '',
+        videoUrl: finalVideoUrl,
+        thumbnailUrl: finalThumbnailUrl,
+        ctaType: _ctaType,
+        ctaValue: _ctaValueCtrl.text.trim(),
+        ctaLabel: _ctaLabelCtrl.text.trim(),
+        isActive: _isActive,
+        startDate: _startDate,
+        endDate: _endDate,
+        placementFrequency: int.tryParse(_freqCtrl.text) ?? 8,
+        sortOrder: int.tryParse(_orderCtrl.text) ?? 0,
+        impressions: widget.existingAd?.impressions ?? 0,
+        clicks: widget.existingAd?.clicks ?? 0,
+        createdAt: widget.existingAd?.createdAt ?? DateTime.now(),
+      );
+
       await saveAd(ad);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -166,21 +247,56 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
             _SectionHeader(label: 'Video Content'),
             const SizedBox(height: 12),
 
-            _buildTextField(
-              controller: _videoUrlCtrl,
-              label: 'Video URL *',
-              hint: 'https://res.cloudinary.com/.../video.mp4',
-              icon: Icons.smart_display_outlined,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Video URL is required';
-                final uri = Uri.tryParse(v.trim());
-                if (uri == null || !uri.isAbsolute ||
-                    !uri.scheme.startsWith('http')) {
-                  return 'Enter a valid https:// URL';
-                }
-                return null;
-              },
+            // Video Upload Box
+            GestureDetector(
+              onTap: _isCompressing ? null : _pickAndCompressVideo,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceGrey,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _videoUrlCtrl.text.isEmpty ? context.colors.error : context.colors.border,
+                    width: 1,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (_isCompressing) ...[
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      Text('Compressing Video... $_compressProgress',
+                          style: TextStyle(color: context.colors.textPrimary)),
+                    ] else if (_pickedVideoFile != null) ...[
+                      Icon(Icons.video_file_outlined, size: 48, color: context.colors.primary),
+                      const SizedBox(height: 12),
+                      Text('Video selected (Ready to upload)',
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+                    ] else if (_videoUrlCtrl.text.isNotEmpty) ...[
+                      Icon(Icons.check_circle_outline, size: 48, color: Colors.green),
+                      const SizedBox(height: 12),
+                      Text('Video Uploaded',
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+                    ] else ...[
+                      Icon(Icons.video_library_outlined, size: 48, color: context.colors.textHint),
+                      const SizedBox(height: 12),
+                      Text('Tap to upload video from Gallery',
+                          style: TextStyle(color: context.colors.textSecondary)),
+                      const SizedBox(height: 4),
+                      Text('Required • Auto-compresses on device',
+                          style: TextStyle(color: context.colors.textHint, fontSize: 12)),
+                    ],
+                  ],
+                ),
+              ),
             ),
+            if (_videoUrlCtrl.text.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 12),
+                child: Text('Video is required', style: TextStyle(color: context.colors.error, fontSize: 12)),
+              ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
@@ -197,9 +313,8 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Recommended: ≤ 30 seconds, ≤ 30 MB, 16:9 or 1:1 ratio. '
-                      'Large or long videos will slow the customer feed. '
-                      'Upload to Cloudinary or Firebase Storage first, then paste the URL.',
+                      'Recommended: ≤ 30 seconds, 16:9 or 1:1 ratio. '
+                      'The video will automatically be compressed before uploading.',
                       style: TextStyle(fontSize: 12, color: Colors.amber),
                     ),
                   ),
@@ -208,19 +323,59 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _thumbnailUrlCtrl,
-              label: 'Thumbnail / Cover Image URL',
-              hint: 'https://res.cloudinary.com/.../thumbnail.jpg',
-              icon: Icons.image_outlined,
+            // Thumbnail Upload Box
+            GestureDetector(
+              onTap: () async {
+                final picker = ImagePicker();
+                final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                if (pickedFile != null) {
+                  setState(() {
+                    _pickedImageFile = File(pickedFile.path);
+                    _thumbnailUrlCtrl.text = 'Local image selected';
+                  });
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceGrey,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: context.colors.border,
+                    width: 1,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (_pickedImageFile != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_pickedImageFile!, height: 100, fit: BoxFit.cover),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('Thumbnail selected',
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+                    ] else if (_thumbnailUrlCtrl.text.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(_thumbnailUrlCtrl.text, height: 100, fit: BoxFit.cover),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('Thumbnail Uploaded',
+                          style: TextStyle(color: context.colors.textPrimary, fontWeight: FontWeight.bold)),
+                    ] else ...[
+                      Icon(Icons.image_outlined, size: 48, color: context.colors.textHint),
+                      const SizedBox(height: 12),
+                      Text('Tap to upload a thumbnail (Optional)',
+                          style: TextStyle(color: context.colors.textSecondary)),
+                    ],
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 8),
-
-            Text(
-              'Tip: Upload your video to Cloudinary or any CDN and paste the URL above. '
-              'Recommended aspect ratio: 16:9 or 1:1 (max ~30 sec for best experience).',
-              style: TextStyle(fontSize: 12, color: colors.textHint),
-            ),
             const SizedBox(height: 24),
 
             // ── Section: CTA ────────────────────────────────────────────
@@ -252,19 +407,59 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
             const SizedBox(height: 16),
 
             if (_ctaType != AdCtaType.none) ...[
-              _buildTextField(
-                controller: _ctaValueCtrl,
-                label: _ctaValueLabel(_ctaType),
-                hint: _ctaValueHint(_ctaType),
-                icon: Icons.link_rounded,
-                validator: (v) {
-                  if (_ctaType != AdCtaType.none &&
-                      (v == null || v.trim().isEmpty)) {
-                    return 'Required for selected CTA type';
-                  }
-                  return null;
-                },
-              ),
+              if (_ctaType == AdCtaType.category)
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('categories').orderBy('order').snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                    final docs = snapshot.data!.docs;
+                    return DropdownButtonFormField<String>(
+                      value: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
+                      hint: const Text('Choose a category'),
+                      decoration: _inputDecoration(context, 'Link to Category', Icons.category_outlined),
+                      items: docs.map((doc) {
+                        return DropdownMenuItem(value: doc.id, child: Text(doc['name']));
+                      }).toList(),
+                      onChanged: (val) => setState(() {
+                        if (val != null) _ctaValueCtrl.text = val;
+                      }),
+                      validator: (v) => v == null || v.isEmpty ? 'Select a category' : null,
+                    );
+                  },
+                )
+              else if (_ctaType == AdCtaType.product)
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('products').where('isActive', isEqualTo: true).snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                    final docs = snapshot.data!.docs;
+                    return DropdownButtonFormField<String>(
+                      value: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
+                      hint: const Text('Choose a product'),
+                      decoration: _inputDecoration(context, 'Link to Product', Icons.inventory_2_outlined),
+                      items: docs.map((doc) {
+                        return DropdownMenuItem(value: doc.id, child: Text(doc['name']));
+                      }).toList(),
+                      onChanged: (val) => setState(() {
+                        if (val != null) _ctaValueCtrl.text = val;
+                      }),
+                      validator: (v) => v == null || v.isEmpty ? 'Select a product' : null,
+                    );
+                  },
+                )
+              else
+                _buildTextField(
+                  controller: _ctaValueCtrl,
+                  label: _ctaValueLabel(_ctaType),
+                  hint: _ctaValueHint(_ctaType),
+                  icon: Icons.link_rounded,
+                  validator: (v) {
+                    if (_ctaType != AdCtaType.none && (v == null || v.trim().isEmpty)) {
+                      return 'Required for selected CTA type';
+                    }
+                    return null;
+                  },
+                ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _ctaLabelCtrl,

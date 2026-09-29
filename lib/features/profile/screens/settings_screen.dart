@@ -42,8 +42,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
-    final isDarkMode = themeMode == ThemeMode.dark || (themeMode == ThemeMode.system && MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     return Scaffold(
       backgroundColor: context.colors.background,
@@ -91,15 +89,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Divider(height: 32, thickness: 1, color: context.colors.border),
           
           _buildSectionHeader('APP SETTINGS'),
-          _buildSwitchTile(
-            title: 'Dark Mode',
-            subtitle: 'Toggle dark theme',
-            icon: Icons.dark_mode_outlined,
-            value: isDarkMode,
-            onChanged: (val) {
-              ref.read(themeModeProvider.notifier).setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
-            },
-          ),
+
           _buildSwitchTile(
             title: 'Location Services',
             subtitle: 'Used for faster address suggestions',

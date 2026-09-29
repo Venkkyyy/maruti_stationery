@@ -1,5 +1,4 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
-import 'package:maruti_stationery/providers/theme_provider.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,51 +13,49 @@ import 'services/local_notification_service.dart';
 import 'services/fcm_service.dart';
 import 'providers/auth_provider.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN APP ENTRY POINT
+// Run with: flutter run --release --flavor admin -t lib/main_admin.dart
+// OR use:   .\run_admin.bat
+// ─────────────────────────────────────────────────────────────────────────────
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   debugPrint("Handling a background message: ${message.messageId}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   try {
-    debugPrint("Firebase init START");
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint("Firebase init END - success");
-
-    // Enable Crashlytics even in debug (optional during dev)
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
-
-    // Catch Flutter errors
     FlutterError.onError = (errorDetails) {
       FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
       FlutterError.dumpErrorToConsole(errorDetails);
     };
-
-    // Catch async errors
-    
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      debugPrint('Async Error: $error\n$stack');
       return true;
     };
   } catch (e) {
-    debugPrint("Firebase initialization bypassed or failed: $e");
+    debugPrint("Firebase init failed: $e");
   }
 
   try {
     await LocalNotificationService.initialize();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
-    debugPrint("Local notifications initialization failed: $e");
+    debugPrint("Notifications init failed: $e");
   }
 
-  debugPrint("runApp START");
   runApp(
     ProviderScope(
       overrides: [
@@ -67,7 +64,6 @@ void main() async {
       child: const MarutiAdminApp(),
     ),
   );
-  debugPrint("runApp END");
 }
 
 class MarutiAdminApp extends ConsumerWidget {
@@ -75,8 +71,6 @@ class MarutiAdminApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-
     ref.listen(authStateProvider, (prev, next) {
       final user = next.value;
       if (user != null) {
@@ -88,8 +82,7 @@ class MarutiAdminApp extends ConsumerWidget {
       title: 'Maruti Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      themeMode: ThemeMode.light,
       routerConfig: ref.watch(adminRouterProvider),
     );
   }

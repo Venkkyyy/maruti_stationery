@@ -10,8 +10,8 @@ class AdminFCMService {
   static const Map<String, dynamic> _serviceAccount = {
     "type": "service_account",
     "project_id": "maruti-stationery-d7862",
-    "private_key_id": "ba6d68daad567682aff1873177318f3b24ad5133",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC6bd454u+VN8cA\nohiFQtz1oHQ7dI83CGLXwMuwyinraOR4uN/wBYqBhJ9S20E/J3264iP0Gh7UXDTy\n8TIcGOm6/4PWr8tTLWTtkP7FQMbB2zHmedWHLE2BJbEgzB475hCCUSoLVJKqW209\nMhNWAVN99vZ4j91bN4DoxegevwE3CVvyJTnxcM2Ldu7ZEfSjrM2r8c6YXPobrKTE\nlXgQNMAZ2PmzeKy2dogDAgd9CAZkn4cLMNmFQ01aMbkIg92wuHG/yBSVaXbzICWb\n+NL96sGtv/GMPjX2pvtcUPMNy04ZnaCn3jYfDzKwGYaHZ2UczN9YgrQYDr+X9S44\nBPs4sw09AgMBAAECggEAA2YM2tPNB9SeO1/5H/bN1emArPPNR5TOzn2ciQLKfFjr\nb1r5dCP5uC49hFJscFUNOPq16pWOUdNDgNlOT05R9n+BfQiz5XaKpD0UM+7gILkZ\nAglfD+mKGSxhfAZUl8V0MBgAMvgt+06S4X539UWtarq1mBGRWMAciMHQ3zyerkzk\nqV4T+9lldkxmEEQCmFVgiH+FXVWaHmY5Q32xLehOh3aC+J8IRxO6k3wcPAlh8BKG\nSPZYZXwUYm+GGIVC1jAAmzv2nKSg6gJPkZoNcgnnJTdqomN0kh/+Y4IrMx5q872d\n2r2rmYzIqBl7QAbna8tEOY3w0DejwLtq4YEbjyrjOQKBgQDfOcxueWJGuti7D9pz\nIHNHmH6zyEvfK731WOMyqpMmdfA7Pm7tBkYJ1wfQ2hLBHFWoTgkyp/u8fslUXMUf\nngh5ZeiIzbryHUTuf3LZd2m8gqlNfmL61+QCGEZg3ds8TDN5OSdVxDorLU9Q3E0+\npmKs9SpOAesayaAfWJkHxRz9FQKBgQDVzQa1F9/2kab2oUsIzfUld3LrfWtFCokj\nuUWZbGI+P+O5BLS0eBpIc4D/Dizu1XKO+rrVITVhf/zE3nNnQDNqc//TpSHx7Fww\nipQ2rh980B4C9ttLEO1leNjDFiWD0GZUkScwOwmyGG2tSIEsC3QaUisOJeXwr3DV\n5LozI1ppiQKBgGziBXyRisVTWGoONpDXcEOo94x8E74c2QB2xgOtvi8RcgeD0Zmd\n6MXd9DsEVAeL6aA5yDTESX9NHKkgwypD7IBCnCU2rIxyiHAJDJ1UqOfBmBFrp54R\ndm8rJhETxl9oD+d+YFhuaa0r4bdgbfE0OYeB4ovAVcxwMsF3dtWaaSRtAoGBAMgA\nWsTvh6BF0pWmfuXGnQwmeIeYtM9KMs4LU/NY83JeG+4JW+3y6EtcWZC/NwNZAyiD\nnmEgBqqlqtSTcAtngHGV//yB3oZMYFU8XbflHSmKGnkVakEHnbwt10BwKDntqrxz\naOByafiDZ54RVFzafgrdUM+UXkzQIdLFe/W4naxZAoGAVomHZ9sK8LJuTeRSjyhB\nJl70AkY/FzbPPWixgUkYnEgxJ3EIzurvQTMlDu1XTHrQ3I66rXhIfKt9+F6vEK32\nsD2iEoyZXLJhRpaAhEeQOz4DPdSQqsM7z4wKaUKbIL9Dt7+XVMAVSXgeaATn7DKx\ngw2RP5XwYFEnz0uSa1AO4QM=\n-----END PRIVATE KEY-----\n",
+    "private_key_id": "e86200872d46e03e91daaf13f35d6db921fe5e28",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC20ba5Fzp3HPxw\ndSJ0AXA/kiQE2jRtOmSqIbKMQHFa8wcT3PjCkHHf4bBu5VvXHhuyM63KWEdS4mXL\nZ67EBd6Q+MwNc4YHNvC/sj+e1IvL/HxsYc15JsKma35oQHPOr3Xa+Z2xtav2kK39\n+3xviCanI0nzChQ94jV/A9fheydMbEz2IOv9gPmnER5a8RPMDzFnarzeqyB98jYW\nzIugfn6JbxoT6j9J5HxTq1jIzLI6h6dayylHEdKwphiF+20QUaxa6Ko1DSvlAZjI\nF6JiMSnOjLpVrQhdXom6T1WDwGIQ/v2LG8GKXncViSFwEEbPTUm2NSmQh9PU0JJK\n/+V2o/RRAgMBAAECggEAKAgS0UO/Vx6/PibABRPdjuYCwhc/vJ05NrHLRX/E8ovd\nxGEyDXSQotvqBNZvPlMG8IX1a6XZ9FHDxX7uG1lHq4n3MIjX09OZcvhmivJyrBec\n7SSbWAh/Pe6yzsQyN5NfJLRc7fFgdsymdMNxM4DmKdoF0tSlqwlR+n6Ocn7Dk62S\nNHeQGiBLJG4/Js05tgb4158uVSfmnagbmwHiWDEJkt0ocO+BJByzeHHO8dRJTAj5\n1pKWMSEzgxk5VOHDM7lX79+Enn2voTBj0+4lJqJ2xR5W3CJ76G7Hp3U5t7QbKIo1\nkrgWCaJ++nA2c7Jh3RjzixD61GVcV3PCtq9a7M2gKwKBgQDrjoCmh6WfRuY3ebLN\neur614Y2emqbiJuSdocL+cyWIObptcYg1gWSxFxXNiSeDSn/mMi5nQvTv0dqUAqO\nqI0LSCrFpnIxlfb6FN4PNdBP+Jnkw7kOnZt7JL7Kt9ih7n/e0la4nIOScshIcb/J\nm3S4BavXdZkuz2rsI31Nm32uxwKBgQDGr4NKXN260Zl3lvs1VqsWhXlm6JQLzZbE\nG+fRuj1jFKX+HQLyHtEV57toTAAsyhhlsuRohAct/PYHV4V1Qw3tW7ah5q40x1SG\n6jSa8jrPjM5qhu5mbSVN5BXndoWFoPpnbSEJE6oXnLYcRnMj9DDBEebcpVemdeEz\nHq/94ksMJwKBgBZmPqWXUJCM1WeBExenEKE5zXFwwqJ3oxOSYdUps+KyzkJ7HpQQ\nxgbm1UEVzPWamtvLU4sS/ATus4PQiLB4JrFj821IHqPIduvhABzCKUTxhvDSC87v\n/dD/9YShZuA/JbmylryHZZuPfqwk5O/u8HJvV5/tdtuUrb42wbuXhaQRAoGAH5JY\nPILRQRR5XIWDWZByE1wWVIH0tINwx6zfg3YitxHa5qxZgXvgIaj3ILWi+XsLsW1h\n2jHQqkAeIECKFn4XQnZmaQes+voJtn6U6WJAciafzlGupFwHp37s9CDjSr6vy6uN\nqlGTn7jpP0j6luYAsU1U8A7eBLeKl4Ly2FcTMdUCgYApXyD3YkklOHh4k9ZnovqI\ng1WzrhLwB+wm/dpKFi8C/gQJJia4t7/mUteTn4byDgz0c7NMrQzx4CVuGhSqtqPf\nxXV70m9UqCyzfRXhF4HWljpQ/IE+FJWJnaq/55KxPJwVI9U4SqLIJljGQifJSd1i\npu2vsNOhszYVxsgoCYVANw==\n-----END PRIVATE KEY-----\n",
     "client_email": "firebase-adminsdk-fbsvc@maruti-stationery-d7862.iam.gserviceaccount.com",
     "client_id": "104083225308182380407",
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -54,6 +54,21 @@ class AdminFCMService {
           'notification': {
             'title': title,
             'body': body,
+          },
+          'android': {
+            'priority': 'high',
+            'notification': {
+              'channel_id': 'maruti_stationery_channel_v2',
+              'sound': 'default',
+            }
+          },
+          'apns': {
+            'payload': {
+              'aps': {
+                'content-available': 1,
+                'sound': 'default',
+              }
+            }
           },
           'data': data ?? {},
         }

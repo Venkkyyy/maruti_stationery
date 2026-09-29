@@ -126,32 +126,32 @@ class ProductCard extends ConsumerWidget {
 
             // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 8.0),
+              padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Unit and Add Button row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          product.unit.isNotEmpty ? product.unit : '1 pc',
-                          style: TextStyle(fontSize: 11, color: context.colors.textHint, fontWeight: FontWeight.w600),
-                        ),
-                        _buildAddButton(context, ref, qtyInCart),
-                      ],
+                    // Name
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: context.colors.textSecondary,
+                        height: 1.4,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     
                     const SizedBox(height: 6),
                     // Price Row
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           AppFormatters.formatPrice(product.price),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: context.colors.textPrimary,
                           ),
@@ -161,59 +161,50 @@ class ProductCard extends ConsumerWidget {
                           Text(
                             AppFormatters.formatPrice(product.mrp),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: context.colors.textHint,
                               decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${((product.mrp - product.price) / product.mrp * 100).round()}% off',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ],
                     ),
-
-                    const SizedBox(height: 4),
-                    // Name
-                    Text(
-                      product.name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: context.colors.textPrimary,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                     
-                    // Rating row
+                    const SizedBox(height: 6),
+                    // Rating Pill
                     if (product.reviewCount > 0)
                       Row(
                         children: [
-                          Icon(Icons.star_rounded, size: 12, color: Colors.amber[700]),
-                          const SizedBox(width: 2),
-                          Icon(Icons.star_rounded, size: 12, color: Colors.amber[700]),
-                          const SizedBox(width: 2),
-                          Icon(Icons.star_rounded, size: 12, color: Colors.amber[700]),
-                          const SizedBox(width: 2),
-                          Icon(Icons.star_rounded, size: 12, color: Colors.amber[700]),
-                          const SizedBox(width: 2),
-                          Icon(Icons.star_rounded, size: 12, color: Colors.amber[700]),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(product.averageRating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 2),
+                                const Icon(Icons.star, color: Colors.white, size: 10),
+                              ],
+                            ),
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            '${product.reviewCount}',
-                            style: TextStyle(fontSize: 9, color: context.colors.textHint, fontWeight: FontWeight.w500),
+                            '(${product.reviewCount})',
+                            style: TextStyle(fontSize: 11, color: context.colors.textHint),
                           ),
                         ],
                       ),
-                    
-                    const SizedBox(height: 4),
-                    // Stock indicator
-                    Row(
-                      children: [
-                        Icon(Icons.battery_2_bar_rounded, size: 12, color: context.colors.textHint),
-                        const SizedBox(width: 2),
-                        Text('${product.stock} left', style: TextStyle(fontSize: 11, color: context.colors.textHint)),
-                      ],
-                    ),
                   ],
                 ),
               ),

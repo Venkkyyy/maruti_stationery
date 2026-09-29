@@ -13,7 +13,7 @@ class AdminDashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
-        title: const Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Admin Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: context.colors.surface,
         automaticallyImplyLeading: false,
       ),
@@ -40,7 +40,7 @@ class AdminDashboardScreen extends StatelessWidget {
           
           // Total Revenue Card
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('orders').where('status', isEqualTo: 'delivered').snapshots(),
+            stream: FirebaseFirestore.instance.collection('orders').where('status', isNotEqualTo: 'cancelled').snapshots(),
             builder: (context, snapshot) {
               int totalRevenue = 0;
               if (snapshot.hasData) {

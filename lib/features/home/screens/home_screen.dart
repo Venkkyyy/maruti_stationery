@@ -42,94 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _fetchCategories();
-    
-    // Ensure initial professional banners exist and clean up any other banners
-    Future.microtask(() async {
-      try {
-        final collection = FirebaseFirestore.instance.collection('banners');
-        final snapshot = await collection.get();
-        
-        // 1. Delete any banner document that is not in the allowed list
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final url = (data['imageUrl']?.toString() ?? '').trim();
-          if (!allowedBannerUrls.contains(url)) {
-            debugPrint('Deleting non-whitelisted/older banner: ${doc.id} ($url)');
-            await doc.reference.delete().catchError((e) {
-              debugPrint('Could not delete banner document: $e');
-            });
-          }
-        }
-        
-        // 2. Refresh snapshot to see remaining URLs
-        final updatedSnapshot = await collection.get();
-        final existingUrls = updatedSnapshot.docs
-            .map((doc) => (doc.data()['imageUrl']?.toString() ?? '').trim())
-            .toSet();
-
-        final newBanners = [
-          {
-            'imageUrl': backToSchoolBannerUrl,
-            'isActive': true,
-            'targetCategoryId': null,
-            'targetProductId': null,
-            'tag': 'back_to_school',
-            'title': 'Back to School',
-            'createdAt': FieldValue.serverTimestamp(),
-          },
-          {
-            'imageUrl': officeEssentialsBannerUrl,
-            'isActive': true,
-            'targetCategoryId': null,
-            'targetProductId': null,
-            'tag': 'office_essentials',
-            'title': 'Office Essentials',
-            'createdAt': FieldValue.serverTimestamp(),
-          },
-        ];
-
-        // 3. Add missing banners, OR update existing ones that lack a tag
-        for (final banner in newBanners) {
-          final bannerUrl = banner['imageUrl'] as String;
-          final bannerTag = banner['tag'] as String;
-          final bannerTitle = banner['title'] as String;
-
-          if (!existingUrls.contains(bannerUrl)) {
-            // Banner document missing entirely — create it
-            debugPrint('Adding professional banner to Firestore: $bannerUrl');
-            await collection.add(banner).catchError((e) {
-              debugPrint('Could not add banner document: $e');
-              return docRef();
-            });
-          } else {
-            // Banner exists — make sure it has the tag and title fields
-            final existingDocs = updatedSnapshot.docs.where(
-              (d) => (d.data()['imageUrl']?.toString() ?? '').trim() == bannerUrl,
-            );
-            for (final existingDoc in existingDocs) {
-              final data = existingDoc.data();
-              if (data['tag'] == null || data['title'] == null) {
-                debugPrint('Patching tag/title on existing banner: $bannerUrl');
-                await existingDoc.reference.update({
-                  'tag': bannerTag,
-                  'title': bannerTitle,
-                }).catchError((e) {
-                  debugPrint('Could not patch banner: $e');
-                  return null;
-                });
-              }
-            }
-          }
-        }
-        debugPrint('Firestore banners verified: only 2 professional banners retained.');
-      } catch (e) {
-        debugPrint('Error syncing professional banners: $e');
-      }
-    });
   }
-
-  DocumentReference<Map<String, dynamic>> docRef() =>
-      FirebaseFirestore.instance.collection('banners').doc();
 
   Future<void> _fetchCategories() async {
     try {
@@ -171,81 +84,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required List<AdModel> ads,
     required double topPadding,
   }) {
+    List<dynamic> combinedItems = [];
+    
     if (ads.isEmpty) {
-      return [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(16, topPadding, 16, 32),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.58,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => ProductCard(product: products[index]),
-              childCount: products.length,
-            ),
-          ),
-        ),
-      ];
-    }
-
-    final slivers = <Widget>[];
-    const cols = 2;
-    final freq = ads.first.placementFrequency.clamp(2, 100);
-    final rowsPerAd = (freq / cols).ceil();
-
-    int productIndex = 0;
-    int adRotationIndex = 0;
-
-    while (productIndex < products.length) {
-      final endProductIndex =
-          (productIndex + rowsPerAd * cols).clamp(0, products.length);
-      final chunk = products.sublist(productIndex, endProductIndex);
-
-      slivers.add(
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            productIndex == 0 ? topPadding : 0,
-            16,
-            0,
-          ),
-          sliver: SliverGrid(
-            delegate: SliverChildBuilderDelegate(
-              (_, i) => ProductCard(product: chunk[i]),
-              childCount: chunk.length,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: cols,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.58,
-            ),
-          ),
-        ),
-      );
-
-      productIndex = endProductIndex;
-
-      if (productIndex < products.length) {
-        final ad = ads[adRotationIndex % ads.length];
-        adRotationIndex++;
-        slivers.add(
-          SliverToBoxAdapter(
-            child: AdCard(
-              ad: ad,
-              loggedImpressions: _loggedImpressions,
-            ),
-          ),
-        );
+      combinedItems.addAll(products);
+    } else {
+      final freq = ads.first.placementFrequency.clamp(2, 100);
+      int adRotationIndex = 0;
+      
+      for (int i = 0; i < products.length; i++) {
+        combinedItems.add(products[i]);
+        if ((i + 1) % freq == 0) {
+          combinedItems.add(ads[adRotationIndex % ads.length]);
+          adRotationIndex++;
+        }
       }
     }
 
-    slivers.add(const SliverPadding(padding: EdgeInsets.only(bottom: 32)));
-
-    return slivers;
+    return [
+      SliverPadding(
+        padding: EdgeInsets.fromLTRB(16, topPadding, 16, 32),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.58,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final item = combinedItems[index];
+              if (item is ProductModel) {
+                return ProductCard(product: item);
+              } else if (item is AdModel) {
+                return AdCard(
+                  ad: item,
+                  loggedImpressions: _loggedImpressions,
+                );
+              }
+              return const SizedBox.shrink();
+            },
+            childCount: combinedItems.length,
+          ),
+        ),
+      ),
+    ];
   }
 
   @override

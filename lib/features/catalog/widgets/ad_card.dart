@@ -162,9 +162,7 @@ class _AdCardState extends ConsumerState<AdCard> {
     final colors = context.colors;
     final wifiOnly = ref.watch(adWifiOnlyProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
+    return Container(
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -186,11 +184,10 @@ class _AdCardState extends ConsumerState<AdCard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Video / Thumbnail area ──────────────────────────────────
-              VisibilityDetector(
-                key: Key('ad_${widget.ad.id}'),
-                onVisibilityChanged: _onVisibilityChanged,
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
+              Expanded(
+                child: VisibilityDetector(
+                  key: Key('ad_${widget.ad.id}'),
+                  onVisibilityChanged: _onVisibilityChanged,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -208,7 +205,16 @@ class _AdCardState extends ConsumerState<AdCard> {
 
                       // Video layer — only shown when successfully initialized
                       if (_initialized && _controller != null)
-                        VideoPlayer(_controller!),
+                        SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: _controller!.value.size.width,
+                              height: _controller!.value.size.height,
+                              child: VideoPlayer(_controller!),
+                            ),
+                          ),
+                        ),
 
                       // Wi-Fi only hint — shown when autoplay was skipped
                       if (!_initialized && !_failed && wifiOnly)
@@ -353,7 +359,6 @@ class _AdCardState extends ConsumerState<AdCard> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

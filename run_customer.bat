@@ -1,0 +1,3 @@
+@echo off
+echo Running Customer App (release)...
+flutter run --release --flavor customer -t lib/main.dart %*

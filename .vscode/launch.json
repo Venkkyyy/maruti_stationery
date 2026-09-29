@@ -1,25 +1,35 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Customer App",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "args": [
-                "--flavor",
-                "customer"
-            ]
-        },
-        {
-            "name": "Admin App",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main_admin.dart",
-            "args": [
-                "--flavor",
-                "admin"
-            ]
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Customer App (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "customer"]
+    },
+    {
+      "name": "Admin App (release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "program": "lib/main_admin.dart",
+      "args": ["--flavor", "admin"]
+    },
+    {
+      "name": "Customer App (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "customer"]
+    },
+    {
+      "name": "Admin App (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_admin.dart",
+      "args": ["--flavor", "admin"]
+    }
+  ]
 }

@@ -146,46 +146,99 @@ class _AdminProductTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: context.colors.surface,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: context.colors.border),
-      ),
-      child: ListTile(
-        onTap: () => context.push('/admin/products/edit/${product.id}'),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: 50, height: 50,
-            color: context.colors.surfaceGrey,
-            child: product.images.isNotEmpty
-                ? Image.network(product.images.first, fit: BoxFit.cover)
-                : Icon(Icons.image_not_supported_rounded, color: context.colors.border),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        title: Text(
-          product.name,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          maxLines: 1, overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          '${AppFormatters.formatPrice(product.price)} • Stock: ${product.stock}',
-          style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        ],
+      ),
+      child: InkWell(
+        onTap: () => context.push('/admin/products/edit/${product.id}'),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Switch(
-              value: product.isActive,
-              activeThumbColor: context.colors.primary,
-              onChanged: (val) async {
-                await AdminProductService().updateProduct(product.id, {'isActive': val});
-              },
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 80,
+                height: 80,
+                color: context.colors.surfaceGrey,
+                child: product.images.isNotEmpty
+                    ? Image.network(product.images.first, fit: BoxFit.cover)
+                    : Icon(Icons.image_not_supported_rounded, color: context.colors.textHint),
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.delete_outline_rounded, color: context.colors.error),
-              onPressed: () => _deleteProduct(context),
+            const SizedBox(width: 16),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: context.colors.textPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        AppFormatters.formatPrice(product.price),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: context.colors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: product.stock > 5 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Stock: ${product.stock}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: product.stock > 5 ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Actions
+            Column(
+              children: [
+                Switch(
+                  value: product.isActive,
+                  activeColor: context.colors.primary,
+                  onChanged: (val) async {
+                    await AdminProductService().updateProduct(product.id, {'isActive': val});
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, color: context.colors.error, size: 20),
+                  onPressed: () => _deleteProduct(context),
+                  tooltip: 'Delete Product',
+                ),
+              ],
             ),
           ],
         ),

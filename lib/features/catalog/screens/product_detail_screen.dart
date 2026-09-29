@@ -15,6 +15,7 @@ import '../../../providers/settings_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/quantity_selector_sheet.dart';
 import '../../../shared/widgets/main_scaffold.dart';
+import '../../../features/catalog/widgets/product_card.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -289,45 +290,29 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Stock badge
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isInStock
-                              ? context.colors.success.withValues(alpha: 0.1)
-                              : context.colors.errorLight,
-                          borderRadius: BorderRadius.circular(6),
+                  if (product.reviewCount > 0)
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(product.averageRating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.star, color: Colors.white, size: 12),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isInStock
-                                  ? Icons.check_circle_rounded
-                                  : Icons.cancel_rounded,
-                              size: 12,
-                              color: isInStock
-                                  ? context.colors.success
-                                  : context.colors.error,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isInStock ? 'In Stock' : 'Out of Stock',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: isInStock
-                                    ? context.colors.success
-                                    : context.colors.error,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${product.reviewCount} reviews)',
+                          style: TextStyle(fontSize: 12, color: context.colors.textHint),
                         ),
-                      ),
-                      const Spacer(),
+                        const Spacer(),
                       // Discount badge
                       if (product.isOnSale)
                         Container(
@@ -473,31 +458,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   ),
                   const SizedBox(height: 16),
                   
-                  if (isInStock && product.stock <= 3) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: context.colors.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: context.colors.warning.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.timer_outlined, size: 16, color: context.colors.warning),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Only ${product.stock} items left in stock',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: context.colors.warning,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+
 
                   const Divider(),
                   const SizedBox(height: 16),
@@ -534,8 +495,114 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   SizedBox(height: 10),
                   _SpecRow('Brand', product.brand.isNotEmpty ? product.brand : 'Generic'),
                   _SpecRow('Category', product.categoryId),
-                  _SpecRow('Status', product.isInStock ? 'In Stock' : 'Out of Stock'),
+
                   _SpecRow('SKU', product.id.substring(0, 8).toUpperCase()),
+                  const SizedBox(height: 24),
+                  
+                  // Ratings & Reviews Preview
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Ratings & Reviews',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: context.colors.textPrimary,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/catalog/product/${product.id}/reviews'),
+                        child: Text(
+                          'View All',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: context.colors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: context.colors.surfaceGrey,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(product.averageRating > 0 ? product.averageRating.toStringAsFixed(1) : '0.0', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.star, color: Colors.green, size: 28),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${product.reviewCount} ratings',
+                              style: TextStyle(fontSize: 13, color: context.colors.textHint),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        ElevatedButton(
+                          onPressed: () => context.push('/catalog/product/${product.id}/rate'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: context.colors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Rate Product', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                  // Suggested Products
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Similar Products',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final suggestedAsync = ref.watch(getNewArrivalsProvider(limit: 6));
+                      return suggestedAsync.when(
+                        data: (products) {
+                          if (products.isEmpty) return const SizedBox.shrink();
+                          final filtered = products.where((p) => p.id != product.id).take(4).toList();
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 0.58,
+                            ),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) => ProductCard(product: filtered[index]),
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (_, __) => const SizedBox.shrink(),
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 120), // space for bottom bar
                 ],

@@ -64,21 +64,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           final userModel = await ref.read(currentUserModelProvider.future);
           if (!mounted) return;
           
+          final appMode = ref.read(appModeProvider);
+
           if (userModel == null || userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
             context.go('/auth/complete-profile');
+          } else if (appMode == AppMode.admin) {
+            // Trust the admin flavor — no Firestore isAdmin check needed
+            context.go('/admin');
           } else {
-            final appMode = ref.read(appModeProvider);
-            if (appMode == AppMode.admin) {
-              if (userModel.isAdmin) {
-                context.go('/admin');
-              } else {
-                // Not an admin, maybe show a snackbar or log out
-                FirebaseAuth.instance.signOut();
-                context.go('/onboarding');
-              }
-            } else {
-              context.go('/home');
-            }
+            context.go('/home');
           }
         } catch (e) {
           // Fallback if offline or firestore fails
@@ -178,28 +172,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     position: _textSlideAnim,
                     child: FadeTransition(
                       opacity: _textFadeAnim,
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Maruti Stationery',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Premium Writing Instruments',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white.withValues(alpha: 0.8),
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final isAdminMode = ref.read(appModeProvider) == AppMode.admin;
+                          return Column(
+                            children: [
+                              Text(
+                                isAdminMode ? 'Maruti Admin' : 'Maruti Stationery',
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                isAdminMode ? 'Admin Panel' : 'Premium Writing Instruments',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),

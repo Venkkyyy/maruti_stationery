@@ -1057,11 +1057,12 @@ packages:
     source: hosted
     version: "2.0.2"
   objective_c:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: local_objective_c
-      relative: true
-    source: path
+      name: objective_c
+      sha256: b7fb95a6d9a4f009edd63dc5ac69f07420b23a16161c6dd8660290b59c602e8e
+      url: "https://pub.dev"
+    source: hosted
     version: "9.5.0"
   octo_image:
     dependency: transitive
@@ -1620,6 +1621,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  video_compress:
+    dependency: "direct main"
+    description:
+      name: video_compress
+      sha256: "31bc5cdb9a02ba666456e5e1907393c28e6e0e972980d7d8d619a7beda0d4f20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.4"
   video_player:
     dependency: "direct main"
     description:

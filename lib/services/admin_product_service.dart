@@ -93,4 +93,21 @@ class AdminProductService {
     final results = await uploadImagesWithTokens(files);
     return results.map((r) => r['url']!).toList();
   }
+
+  /// Uploads a single video file to Cloudinary and returns its secure URL.
+  Future<String> uploadVideo(File file) async {
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/video/upload');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = _cloudinaryUploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final responseData = await response.stream.bytesToString();
+      final json = jsonDecode(responseData);
+      return json['secure_url'] as String;
+    } else {
+      throw Exception('Failed to upload video to Cloudinary: ${response.statusCode}');
+    }
+  }
 }

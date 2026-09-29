@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart' as import_url_launcher;
 
 import '../../../core/constants/app_sizes.dart';
 import '../../../features/catalog/widgets/product_card.dart';
@@ -227,7 +228,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 size: 64, color: context.colors.border),
             SizedBox(height: 16),
             Text(
-              'No results found',
+              'Item Not Available',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -236,9 +237,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No products match "$_query"',
+              'Sorry, "$_query" is currently not in stock.\nPlease contact the store owner for availability.',
               style: TextStyle(
                   color: context.colors.textSecondary, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                // You can replace this with your actual store number
+                final Uri launchUri = Uri(scheme: 'tel', path: '+919999999999'); 
+                import_url_launcher.launchUrl(launchUri);
+              },
+              icon: const Icon(Icons.call),
+              label: const Text('Contact Store Owner'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
         ),

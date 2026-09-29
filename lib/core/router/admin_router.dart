@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/screens/splash_screen.dart';
-import '../../features/auth/screens/onboarding_screen.dart';
-import '../../features/auth/screens/phone_input_screen.dart';
-import '../../features/auth/screens/complete_profile_screen.dart';
+// Admin-specific auth screens (completely separate from customer)
+import '../../features/admin/screens/admin_splash_screen.dart';
+import '../../features/admin/screens/admin_login_screen.dart';
+
+// Admin panel screens
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/admin/screens/admin_product_categories_screen.dart';
 import '../../features/admin/screens/admin_product_list_screen.dart';
@@ -22,6 +23,9 @@ import '../../features/admin/screens/admin_banners_screen.dart';
 import '../../features/admin/screens/admin_banner_form_screen.dart';
 import '../../features/admin/screens/admin_ads_screen.dart';
 import '../../features/admin/screens/admin_ad_form_screen.dart';
+
+// Shared screens still needed
+import '../../features/auth/screens/complete_profile_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../models/coupon_model.dart';
 import '../../models/banner_model.dart';
@@ -32,16 +36,12 @@ final GlobalKey<NavigatorState> adminRootNavigatorKey = GlobalKey<NavigatorState
 final adminRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: adminRootNavigatorKey,
-    initialLocation: '/splash',
+    initialLocation: '/admin/splash',
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
-      GoRoute(path: '/auth/complete-profile', builder: (context, state) => const CompleteProfileScreen()),
-
-      GoRoute(
-        path: '/auth/phone',
-        builder: (context, state) => const PhoneInputScreen(),
-      ),
+      // Dedicated admin auth routes — completely separate from customer
+      GoRoute(path: '/admin/splash', builder: (context, state) => const AdminSplashScreen()),
+      GoRoute(path: '/admin/login', builder: (context, state) => const AdminLoginScreen()),
+      GoRoute(path: '/admin/auth/complete-profile', builder: (context, state) => const CompleteProfileScreen()),
 
       // Admin Panel ShellRoute
       ShellRoute(

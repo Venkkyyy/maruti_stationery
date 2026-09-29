@@ -39,10 +39,12 @@ class LocalNotificationService {
   }) async {
     const NotificationDetails notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
-        'maruti_stationery_channel',
-        'Orders & Updates',
+        'maruti_stationery_channel_v2',
+        'Orders & Updates (High Priority)',
         importance: Importance.max,
         priority: Priority.high,
+        enableVibration: true,
+        playSound: true,
       ),
       iOS: DarwinNotificationDetails(),
     );

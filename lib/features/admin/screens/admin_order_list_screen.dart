@@ -48,7 +48,7 @@ class _AdminOrderListScreenState extends State<AdminOrderListScreen> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('orders').orderBy('createdAt', descending: true).snapshots(),
+              stream: FirebaseFirestore.instance.collection('orders').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -60,6 +60,9 @@ class _AdminOrderListScreenState extends State<AdminOrderListScreen> {
                 var orders = snapshot.data!.docs
                     .map((doc) => OrderModel.fromFirestore(doc))
                     .toList();
+                
+                // Sort locally to handle pending server timestamps
+                orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                 if (_searchQuery.isNotEmpty) {
                   orders = orders.where((order) {
@@ -77,7 +80,10 @@ class _AdminOrderListScreenState extends State<AdminOrderListScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final order = orders[index];
-                    return _AdminOrderTile(order: order);
+                    return _AdminOrderTile(
+                      key: ValueKey('${order.id}_${order.status.name}'),
+                      order: order,
+                    );
                   },
                 );
               },
@@ -92,7 +98,7 @@ class _AdminOrderListScreenState extends State<AdminOrderListScreen> {
 class _AdminOrderTile extends StatelessWidget {
   final OrderModel order;
 
-  const _AdminOrderTile({required this.order});
+  const _AdminOrderTile({super.key, required this.order});
 
   Future<void> _updateStatus(BuildContext context, OrderStatus newStatus) async {
     try {
@@ -106,22 +112,56 @@ class _AdminOrderTile extends StatelessWidget {
         // Increment stock
         for (final item in order.items) {
           final productRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-          batch.update(productRef, {'stock': FieldValue.increment(item.qty)});
+          batch.set(productRef, {'stock': FieldValue.increment(item.qty)}, SetOptions(merge: true));
         }
       } else if (order.status == OrderStatus.cancelled && newStatus != OrderStatus.cancelled) {
         // Decrement stock
         for (final item in order.items) {
           final productRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-          batch.update(productRef, {'stock': FieldValue.increment(-item.qty)});
+          batch.set(productRef, {'stock': FieldValue.increment(-item.qty)}, SetOptions(merge: true));
         }
       }
 
       await batch.commit();
 
+      // Detailed notification text based on status
+      final productNames = order.items.map((i) => '${i.qty}x ${i.name}').take(2).join(', ');
+      final moreCount = order.items.length > 2 ? ' and ${order.items.length - 2} more' : '';
+      final itemsStr = '$productNames$moreCount';
+
+      String notifTitle = 'Order Update';
+      String notifBody = 'Your order #${order.id.substring(0, 8).toUpperCase()} has been updated.';
+      
+      switch (newStatus) {
+        case OrderStatus.confirmed:
+          notifTitle = 'Order Confirmed! 🎉';
+          notifBody = 'Your order containing $itemsStr is confirmed and being prepared.';
+          break;
+        case OrderStatus.packed:
+          notifTitle = 'Order Packed 📦';
+          notifBody = 'Your order containing $itemsStr is packed and ready for shipping.';
+          break;
+        case OrderStatus.shipped:
+          notifTitle = 'Order Shipped! 🚚';
+          notifBody = 'Great news! Your order containing $itemsStr is on the way to you.';
+          break;
+        case OrderStatus.delivered:
+          notifTitle = 'Order Delivered ✅';
+          notifBody = 'Your order containing $itemsStr has been delivered successfully. Thank you for shopping with us!';
+          break;
+        case OrderStatus.cancelled:
+          notifTitle = 'Order Cancelled ❌';
+          notifBody = 'Your order containing $itemsStr has been cancelled.';
+          break;
+        default:
+          notifTitle = 'Order ${newStatus.name.toUpperCase()}';
+          notifBody = 'Your order #${order.id.substring(0, 8).toUpperCase()} has been ${newStatus.name}.';
+      }
+
       // Write to notifications collection
       await FirebaseFirestore.instance.collection('notifications').add({
-        'title': 'Order ${newStatus.name.toUpperCase()}',
-        'body': 'Your order #${order.id.substring(0, 8).toUpperCase()} has been ${newStatus.name}.',
+        'title': notifTitle,
+        'body': notifBody,
         'type': 'order',
         'userId': order.userId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -136,8 +176,8 @@ class _AdminOrderTile extends StatelessWidget {
           for (final token in tokens) {
             await AdminFCMService.sendNotification(
               targetTokenOrTopic: token,
-              title: 'Order ${newStatus.name.toUpperCase()}',
-              body: 'Your order #${order.id.substring(0, 8).toUpperCase()} has been ${newStatus.name}.',
+              title: notifTitle,
+              body: notifBody,
               data: {
                 'type': 'order',
                 'orderId': order.id,
@@ -162,7 +202,7 @@ class _AdminOrderTile extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -178,22 +218,22 @@ class _AdminOrderTile extends StatelessWidget {
                 ),
                 trailing: order.status == status ? Icon(Icons.check, color: _getStatusColor(context, status)) : null,
                 onTap: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   if (order.status != status) {
                     if (status == OrderStatus.cancelled) {
                       final confirm = await showDialog<bool>(
                         context: context,
-                        builder: (context) => AlertDialog(
+                        builder: (c) => AlertDialog(
                           backgroundColor: context.colors.surface,
                           title: Text('Cancel Order', style: TextStyle(color: context.colors.textPrimary)),
                           content: Text('Are you sure you want to cancel this order? This will restore the stock.', style: TextStyle(color: context.colors.textSecondary)),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context, false),
+                              onPressed: () => Navigator.pop(c, false),
                               child: Text('No', style: TextStyle(color: context.colors.textSecondary)),
                             ),
                             TextButton(
-                              onPressed: () => Navigator.pop(context, true),
+                              onPressed: () => Navigator.pop(c, true),
                               child: Text('Yes, Cancel', style: TextStyle(color: context.colors.error)),
                             ),
                           ],

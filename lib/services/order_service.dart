@@ -3,6 +3,7 @@ import '../models/order_model.dart';
 import '../core/errors/app_exception.dart';
 import '../core/utils/formatters.dart';
 import 'fcm_service.dart';
+import 'admin_fcm_service.dart';
 import 'loyalty_service.dart';
 
 class OrderService {
@@ -110,7 +111,7 @@ class OrderService {
 
     // Send push notification to admin topic
     try {
-      await FCMService().sendNotification(
+      await AdminFCMService.sendNotification(
         targetTokenOrTopic: '/topics/admin',
         title: 'New Order Received!',
         body: 'Order #${order.id.substring(0, 8).toUpperCase()} for ${AppFormatters.formatPrice(order.total)}',
@@ -156,5 +157,18 @@ class OrderService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
+
+    // Notify admins about the cancellation
+    try {
+      await AdminFCMService.sendNotification(
+        targetTokenOrTopic: '/topics/admin',
+        title: 'Order Cancelled',
+        body: 'Order #${orderId.substring(0, 8).toUpperCase()} was cancelled by the customer.',
+        data: {
+          'type': 'order',
+          'orderId': orderId,
+        },
+      );
+    } catch (_) {}
   }
 }
