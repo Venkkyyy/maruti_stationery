@@ -45,6 +45,25 @@ class _AnimatedSearchHintState extends State<AnimatedSearchHint> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(AnimatedSearchHint oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.hints != oldWidget.hints) {
+      if (widget.hints.isEmpty) {
+        _timer?.cancel();
+        _charCount = 0;
+        _hintIndex = 0;
+      } else {
+        if (_hintIndex >= widget.hints.length) {
+          _hintIndex = 0;
+        }
+        if (_charCount > _currentHint.length) {
+          _charCount = _currentHint.length;
+        }
+      }
+    }
+  }
+
   String get _currentHint => widget.hints[_hintIndex];
 
   void _scheduleNextChar() {

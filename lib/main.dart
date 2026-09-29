@@ -43,19 +43,6 @@ void main() async {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
-    ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
-      return const Material(
-        child: SafeArea(
-          child: Center(
-            child: Text(
-              'Oops! Something went wrong.\nWe are working to fix it.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ),
-        ),
-      );
-    };
   } catch (e) {
     debugPrint("Firebase init failed: $e");
   }
