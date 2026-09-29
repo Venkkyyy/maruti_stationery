@@ -46,6 +46,7 @@ class _AdCardState extends ConsumerState<AdCard> {
   bool _muted = true;
   bool _initStarted = false;
   bool _isVisible = false;
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _AdCardState extends ConsumerState<AdCard> {
   }
 
   Future<void> _maybeInitVideo() async {
-    if (_initStarted || widget.ad.videoUrl.isEmpty) return;
+    if (_isDisposed || _initStarted || widget.ad.videoUrl.isEmpty) return;
     _initStarted = true;
 
     // Check connectivity before creating the controller
@@ -62,8 +63,6 @@ class _AdCardState extends ConsumerState<AdCard> {
     if (wifiOnly) {
       try {
         final results = await InternetAddress.lookup('example.com');
-        // InternetAddress.lookup works over any network; for Wi-Fi check
-        // we use the NetworkInterface approach below.
         final interfaces = await NetworkInterface.list(
           type: InternetAddressType.IPv4,
         );
@@ -72,12 +71,10 @@ class _AdCardState extends ConsumerState<AdCard> {
             iface.name.toLowerCase().contains('en0') ||
             iface.name.toLowerCase().contains('wifi'));
         if (!isOnWifi && results.isNotEmpty) {
-          // On mobile data — skip autoplay init. Card shows thumbnail + CTA.
-          if (mounted) setState(() => _failed = false); // thumbnail shown
+          if (mounted && !_isDisposed) setState(() => _failed = false);
           return;
         }
       } catch (_) {
-        // Can't determine connection type — skip init to save data
         return;
       }
     }
@@ -86,43 +83,57 @@ class _AdCardState extends ConsumerState<AdCard> {
   }
 
   Future<void> _initController() async {
-    final ctrl = VideoPlayerController.networkUrl(
-      Uri.parse(widget.ad.videoUrl),
-    );
-    ctrl.setVolume(0);
-    ctrl.setLooping(true);
+    if (_isDisposed || !mounted) return;
+    VideoPlayerController? ctrl;
     try {
+      final uri = Uri.tryParse(widget.ad.videoUrl);
+      if (uri == null || !uri.hasScheme) return;
+      ctrl = VideoPlayerController.networkUrl(uri);
+      ctrl.setVolume(0);
+      ctrl.setLooping(true);
       await ctrl.initialize();
-      if (!mounted) {
+      if (!mounted || _isDisposed) {
         ctrl.dispose();
         return;
       }
       _controller = ctrl;
       setState(() => _initialized = true);
-      // If the card is already visible, start playing immediately
-      if (_isVisible) ctrl.play();
+      if (_isVisible && !_isDisposed) ctrl.play();
     } catch (_) {
-      ctrl.dispose();
-      if (mounted) setState(() => _failed = true);
+      try {
+        ctrl?.dispose();
+      } catch (_) {}
+      if (mounted && !_isDisposed) setState(() => _failed = true);
     }
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _isDisposed = true;
+    try {
+      _controller?.pause();
+      _controller?.dispose();
+    } catch (_) {}
+    _controller = null;
     super.dispose();
   }
 
   void _onVisibilityChanged(VisibilityInfo info) {
+    if (!mounted || _isDisposed) return;
     final fraction = info.visibleFraction;
     _isVisible = fraction >= 0.5;
 
-    if (_initialized && _controller != null) {
-      if (_isVisible) {
-        if (!_controller!.value.isPlaying) _controller!.play();
-      } else {
-        if (_controller!.value.isPlaying) _controller!.pause();
-      }
+    final ctrl = _controller;
+    if (_initialized && ctrl != null && !_isDisposed) {
+      try {
+        if (ctrl.value.isInitialized) {
+          if (_isVisible) {
+            if (!ctrl.value.isPlaying) ctrl.play();
+          } else {
+            if (ctrl.value.isPlaying) ctrl.pause();
+          }
+        }
+      } catch (_) {}
     }
 
     // Log impression once per session
@@ -162,7 +173,7 @@ class _AdCardState extends ConsumerState<AdCard> {
     final colors = context.colors;
     final wifiOnly = ref.watch(adWifiOnlyProvider);
 
-    return Container(
+    final card = Container(
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -360,5 +371,14 @@ class _AdCardState extends ConsumerState<AdCard> {
           ),
         ),
       );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedHeight) {
+          return SizedBox(height: 280, child: card);
+        }
+        return card;
+      },
+    );
   }
 }

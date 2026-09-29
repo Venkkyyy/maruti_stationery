@@ -81,6 +81,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               _selectedCategory = 0;
             }
           }
+          if (_selectedCategory < 0 || _selectedCategory >= categories.length) {
+            _selectedCategory = 0;
+          }
 
           final selectedCategoryId = categories[_selectedCategory].id;
           final productsAsync = _selectedCategory == 0
@@ -361,9 +364,15 @@ class _ProductFeedWithAds extends StatelessWidget {
         adRotationIndex++;
         slivers.add(
           SliverToBoxAdapter(
-            child: AdCard(
-              ad: ad,
-              loggedImpressions: loggedImpressions,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SizedBox(
+                height: 280,
+                child: AdCard(
+                  ad: ad,
+                  loggedImpressions: loggedImpressions,
+                ),
+              ),
             ),
           ),
         );

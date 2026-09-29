@@ -43,6 +43,9 @@ void main() async {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
+    ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
+      return const SizedBox.shrink();
+    };
   } catch (e) {
     debugPrint("Firebase init failed: $e");
   }

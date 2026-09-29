@@ -64,14 +64,19 @@ class _AnimatedSearchHintState extends State<AnimatedSearchHint> {
     }
   }
 
-  String get _currentHint => widget.hints[_hintIndex];
+  String get _currentHint => widget.hints.isEmpty
+      ? ''
+      : widget.hints[_hintIndex.clamp(0, widget.hints.length - 1)];
 
   void _scheduleNextChar() {
-    if (!mounted) return;
+    if (!mounted || widget.hints.isEmpty) return;
+
+    final hint = _currentHint;
+    if (hint.isEmpty) return;
 
     if (!_erasing) {
       // ── Typing phase ──────────────────────────────────
-      if (_charCount < _currentHint.length) {
+      if (_charCount < hint.length) {
         _timer = Timer(_typingSpeed, () {
           if (!mounted) return;
           setState(() => _charCount++);
@@ -113,7 +118,9 @@ class _AnimatedSearchHintState extends State<AnimatedSearchHint> {
       return Text('Search products...', style: widget.style);
     }
 
-    final displayedText = _currentHint.substring(0, _charCount);
+    final hint = _currentHint;
+    final safeLength = _charCount.clamp(0, hint.length);
+    final displayedText = hint.substring(0, safeLength);
 
     return Align(
       alignment: Alignment.centerLeft,
