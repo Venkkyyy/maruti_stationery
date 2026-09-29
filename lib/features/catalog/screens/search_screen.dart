@@ -354,7 +354,9 @@ class _SearchChip extends StatelessWidget {
     required this.label,
     required this.icon,
     this.onTap,
-  }) : color = null : textColor;
+    this.color,
+    this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
