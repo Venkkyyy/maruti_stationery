@@ -2,29 +2,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ── Public read-only ──────────────────────────────────────────────────────
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ── Public read, Admin write ──────────────────────────────────────────────
     match /products/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
     match /categories/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
     match /banners/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // ── Authenticated users only ──────────────────────────────────────────────
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Only allow users to edit their own doc but NOT their isAdmin field
+      allow update: if request.auth != null && request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']));
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow delete: if isAdmin();
     }
     match /orders/{orderId} {
-      allow read, write: if request.auth != null;
+      // Users can read their own orders; Admins can read/write all
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
     match /coupons/{couponId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
     match /cart/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -34,15 +47,17 @@ service cloud.firestore {
     }
     match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
     match /notifications/{notifId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // ── Catch-all: authenticated only ────────────────────────────────────────
+    // ── Catch-all: block ────────────────────────────────────────
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }
