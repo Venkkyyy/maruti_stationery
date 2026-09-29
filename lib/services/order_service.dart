@@ -3,6 +3,7 @@ import '../models/order_model.dart';
 import '../core/errors/app_exception.dart';
 import '../core/utils/formatters.dart';
 import 'fcm_service.dart';
+import 'loyalty_service.dart';
 
 class OrderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -26,8 +27,21 @@ class OrderService {
     );
   }
 
-  // Create new order and update stock — uses a transaction to prevent overselling
-  Future<void> createOrder(OrderModel order) async {
+  // Create new order and update stock — uses a transaction to prevent overselling.
+  // Returns the number of loyalty points credited.
+  Future<int> createOrder(OrderModel order) async {
+    // Fetch the loyalty rule before the transaction
+    int pointsPer100 = 10; // default
+    try {
+      final ruleDoc = await _db.collection('settings').doc('loyalty_rule').get();
+      if (ruleDoc.exists && ruleDoc.data() != null) {
+        pointsPer100 = (ruleDoc.data()!['pointsPer100'] as num?)?.toInt() ?? 10;
+      }
+    } catch (_) {}
+
+    // Calculate points: total is in paise; divide by 10000 to get ₹100 units
+    final pointsEarned = (order.total ~/ 10000) * pointsPer100;
+
     await _db.runTransaction((transaction) async {
       // First, read all product documents to validate stock
       final productRefs = order.items
@@ -45,7 +59,7 @@ class OrderService {
         if (!doc.exists) {
           throw AppException('Product "${item.name}" is no longer available.');
         }
-        final currentStock = (doc.data() as Map<String, dynamic>?)?['stock'] as int? ?? 0;
+        final currentStock = doc.data()?['stock'] as int? ?? 0;
         if (currentStock < item.qty) {
           throw AppException(
             'Only $currentStock unit(s) of "${item.name}" left in stock. Please update your cart.',
@@ -53,9 +67,12 @@ class OrderService {
         }
       }
 
-      // All stock checks passed — write order and decrement stock
+      // All stock checks passed — write order (with pointsEarned) and decrement stock
       final orderRef = _db.collection('orders').doc(order.id);
-      transaction.set(orderRef, order.toFirestore());
+      // Write order with pointsEarned baked in
+      final orderData = order.toFirestore();
+      orderData['pointsEarned'] = pointsEarned;
+      transaction.set(orderRef, orderData);
 
       for (int i = 0; i < order.items.length; i++) {
         transaction.update(productRefs[i], {
@@ -72,12 +89,26 @@ class OrderService {
         'userId': order.userId,
         'total': order.total,
         'itemCount': order.items.length,
+        'pointsEarned': pointsEarned,
         'createdAt': FieldValue.serverTimestamp(),
         'sent': false,
       });
     });
 
-    // Option B Workaround: Send push notification to admin topic
+    // Credit loyalty points (outside main transaction — failure here is non-fatal)
+    if (pointsEarned > 0) {
+      try {
+        await LoyaltyService().creditPoints(
+          userId: order.userId,
+          orderId: order.id,
+          pointsEarned: pointsEarned,
+        );
+      } catch (_) {
+        // Non-fatal — points can be manually credited by admin if needed
+      }
+    }
+
+    // Send push notification to admin topic
     try {
       await FCMService().sendNotification(
         targetTokenOrTopic: '/topics/admin',
@@ -89,6 +120,8 @@ class OrderService {
         },
       );
     } catch (_) {}
+
+    return pointsEarned;
   }
 
 

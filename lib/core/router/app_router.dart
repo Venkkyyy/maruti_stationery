@@ -23,6 +23,7 @@ import '../../features/home/screens/notification_screen.dart';
 import '../../features/checkout/screens/payment_screen.dart';
 import '../../features/checkout/screens/order_confirmation_screen.dart';
 import '../../features/catalog/screens/category_list_screen.dart';
+import '../../features/catalog/screens/banner_products_screen.dart';
 import '../../features/home/screens/notifications_screen.dart';
 import '../../features/profile/screens/help_support_screen.dart';
 import '../../features/profile/screens/about_screen.dart';
@@ -192,9 +193,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/checkout/confirmation',
-        builder: (context, state) => OrderConfirmationScreen(
-          orderId: state.extra as String? ?? 'ORD-TEMP',
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          String orderId = 'ORD-TEMP';
+          int pointsEarned = 0;
+          if (extra is Map<String, dynamic>) {
+            orderId = extra['orderId'] as String? ?? 'ORD-TEMP';
+            pointsEarned = extra['pointsEarned'] as int? ?? 0;
+          } else if (extra is String) {
+            orderId = extra;
+          }
+          return OrderConfirmationScreen(
+            orderId: orderId,
+            pointsEarned: pointsEarned,
+          );
+        },
       ),
 
       // Product Details — outside shell (no bottom nav)
@@ -221,6 +234,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      // Banner Collection — outside shell (no bottom nav)
+      GoRoute(
+        path: '/banner-products',
+        builder: (context, state) {
+          final tag = state.uri.queryParameters['tag'] ?? '';
+          final title = Uri.decodeComponent(
+              state.uri.queryParameters['title'] ?? tag);
+          return BannerProductsScreen(tag: tag, title: title);
+        },
       ),
     ],
     errorBuilder: (context, state) => const NotFoundScreen(),

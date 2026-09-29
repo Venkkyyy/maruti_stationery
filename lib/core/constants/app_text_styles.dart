@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
@@ -34,17 +35,17 @@ class AppTextStyles {
   // ── Body ─────────────────────────────────────────────────────
   static TextStyle bodyLarge = TextStyle(
     fontSize: 16, fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary, height: 1.5,
+    color: AppColors.textPrimary, height: 1.55,
   );
 
   static TextStyle bodyMedium = TextStyle(
-    fontSize: 14, fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary, height: 1.5,
+    fontSize: 15, fontWeight: FontWeight.w400,
+    color: AppColors.textSecondary, height: 1.55,
   );
 
   static TextStyle bodySmall = TextStyle(
-    fontSize: 12, fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary,
+    fontSize: 13, fontWeight: FontWeight.w400,
+    color: AppColors.textSecondary, height: 1.5,
   );
 
   // ── Labels / Chips ───────────────────────────────────────────
@@ -96,10 +97,13 @@ class AppTextStyles {
     color: AppColors.primary,
   );
 
-  // ── Section Headers ──────────────────────────────────────────
-  static TextStyle sectionTitle = TextStyle(
-    fontSize: 16, fontWeight: FontWeight.w700,
+  // ── Section Headers — Playfair Display for premium branded look ───────────
+  static TextStyle sectionTitle = GoogleFonts.playfairDisplay(
+    fontSize: 19,
+    fontWeight: FontWeight.w800,
     color: AppColors.textPrimary,
+    letterSpacing: 0.1,
+    height: 1.2,
   );
 
   static TextStyle sectionLink = TextStyle(
@@ -107,8 +111,3 @@ class AppTextStyles {
     color: AppColors.primary,
   );
 }
-
-
-
-
-

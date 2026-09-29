@@ -4,10 +4,10 @@ class AppColors {
   AppColors._();
 
   // ── Primary Brand ────────────────────────────────────────────
-  static const Color primary        = Color(0xFF1A73E8); // Google Blue
-  static const Color primaryDark    = Color(0xFF1557B0);
-  static const Color primaryLight   = Color(0xFFE8F0FE);
-  static const Color primarySurface = Color(0xFFD2E3FC);
+  static const Color primary        = Color(0xFF1B2D6E); // Deep navy
+  static const Color primaryDark    = Color(0xFF101D4A);
+  static const Color primaryLight   = Color(0xFFEEF1F9);
+  static const Color primarySurface = Color(0xFFD8DFF4);
 
   // ── Neutral / Background ─────────────────────────────────────
   static const Color background   = Color(0xFFF8F9FA);

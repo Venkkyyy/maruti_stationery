@@ -185,8 +185,8 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               isSelected ? activeIcon : icon,
-              size: 22,
-              color: isSelected ? Colors.white : context.colors.textSecondary,
+              size: 24,
+              color: isSelected ? Colors.white : context.colors.textPrimary,
             ),
             if (isSelected) ...[
               const SizedBox(width: 6),

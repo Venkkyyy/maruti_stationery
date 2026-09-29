@@ -75,9 +75,9 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 class AppTheme {
   // ── Light Colors ─────────────────────────────────────────────────────────
   static const AppThemeColors _lightColors = AppThemeColors(
-    primary: Color(0xFF1A73E8),
-    primaryLight: Color(0xFFE8F0FE),
-    secondary: Color(0xFFE8F0FE),
+    primary: Color(0xFF1B2D6E),
+    primaryLight: Color(0xFFEEF1F9),
+    secondary: Color(0xFFEEF1F9),
     background: Color(0xFFF8F9FA),
     surface: Color(0xFFFFFFFF),
     surfaceGrey: Color(0xFFF1F3F4),
@@ -94,9 +94,9 @@ class AppTheme {
 
   // ── Dark Colors ──────────────────────────────────────────────────────────
   static const AppThemeColors _darkColors = AppThemeColors(
-    primary: Color(0xFF8AB4F8),
-    primaryLight: Color(0xFF1F2B4C),
-    secondary: Color(0xFF303C5C),
+    primary: Color(0xFF8AB9F8),
+    primaryLight: Color(0xFF1A2540),
+    secondary: Color(0xFF253158),
     background: Color(0xFF121212),
     surface: Color(0xFF1E1E1E),
     surfaceGrey: Color(0xFF2C2C2C),

@@ -52,7 +52,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             }
           },
         ),
-        title: const Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A73E8), fontSize: 18)),
+        title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
         actions: [
           Row(
             children: [
@@ -214,8 +214,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     builder: (_) => const Center(child: CircularProgressIndicator()),
                   );
                   
-                  // Save order
-                  await ref.read(orderServiceProvider).createOrder(order);
+                  // Save order and get points earned
+                  final pointsEarned = await ref.read(orderServiceProvider).createOrder(order);
                   
                   // Clear cart and coupons
                   await cartNotifier.clearCart();
@@ -231,8 +231,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   // Pop loading dialog
                   if (context.mounted) Navigator.pop(context);
                   
-                  // Navigate to confirmation
-                  if (context.mounted) context.go('/checkout/confirmation', extra: order.id);
+                  // Navigate to confirmation — pass both orderId and pointsEarned
+                  if (context.mounted) context.go('/checkout/confirmation', extra: {'orderId': order.id, 'pointsEarned': pointsEarned});
                 } catch (e) {
                   // Pop loading dialog
                   if (context.mounted) Navigator.pop(context);
@@ -245,7 +245,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A73E8),
+                backgroundColor: context.colors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -271,7 +271,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             children: [
               Text('Total Amount to Pay', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
               const SizedBox(height: 4),
-              Text(AppFormatters.formatPrice(totalAmount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A73E8))),
+              Text(AppFormatters.formatPrice(totalAmount), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.primary)),
             ],
           ),
           GestureDetector(
@@ -331,7 +331,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 },
               );
             },
-            child: const Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A73E8))),
+            child: Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary)),
           ),
         ],
       ),

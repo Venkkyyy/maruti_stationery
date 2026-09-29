@@ -200,6 +200,21 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Video Ads',
+                  icon: Icons.smart_display_rounded,
+                  onTap: () => context.push('/admin/ads'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: const SizedBox()),
+            ],
+          ),
           const SizedBox(height: 32),
           
           Row(

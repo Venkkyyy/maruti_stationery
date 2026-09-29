@@ -79,5 +79,8 @@
   },
   "scripts": {
     "test": "node --test test/extension.test.js"
+  },
+  "devDependencies": {
+    "firebase-admin": "^14.4.0"
   }
 }

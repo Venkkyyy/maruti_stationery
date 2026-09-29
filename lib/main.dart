@@ -26,9 +26,11 @@ void main() async {
   // Initialize Firebase
   try {
     debugPrint("Firebase init START");
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     debugPrint("Firebase init END - success");
 
     // Enable Crashlytics even in debug (optional during dev)
