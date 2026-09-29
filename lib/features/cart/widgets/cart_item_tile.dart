@@ -1,5 +1,6 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/cart_item_model.dart';
@@ -37,10 +38,12 @@ class CartItemTile extends StatelessWidget {
               width: 80,
               height: 80,
               child: item.image.isNotEmpty
-                  ? Image.network(
-                      item.image,
+                  ? CachedNetworkImage(
+                      imageUrl: item.image,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
+                      memCacheWidth: 200, // Optimize memory for cart thumb
+                      placeholder: (context, url) => Container(color: context.colors.primaryLight),
+                      errorWidget: (context, url, error) => Container(
                         color: context.colors.primaryLight,
                         child: Icon(Icons.image_not_supported_rounded,
                             color: context.colors.border),

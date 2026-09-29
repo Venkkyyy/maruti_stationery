@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/coupon_model.dart';
 import '../../../services/admin_coupon_service.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../services/admin_fcm_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -160,8 +159,11 @@ class _AdminCouponFormScreenState extends State<AdminCouponFormScreen> {
     );
     if (picked != null) {
       setState(() {
-        if (isStart) _startDate = picked;
-        else _expiryDate = picked;
+        if (isStart) {
+          _startDate = picked;
+        } else {
+          _expiryDate = picked;
+        }
       });
     }
   }
@@ -189,7 +191,7 @@ class _AdminCouponFormScreenState extends State<AdminCouponFormScreen> {
             const SizedBox(height: 24),
             _buildSectionTitle('Discount Details'),
             DropdownButtonFormField<String>(
-              value: _discountType,
+              initialValue: _discountType,
               decoration: _inputDecoration('Discount Type'),
               items: const [
                 DropdownMenuItem(value: 'percentage', child: Text('Percentage (%)')),
@@ -215,7 +217,7 @@ class _AdminCouponFormScreenState extends State<AdminCouponFormScreen> {
             _buildTextField(_usageLimitPerUserController, 'Usage Limit Per User (Optional)', keyboardType: TextInputType.number),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _customerEligibility,
+              initialValue: _customerEligibility,
               decoration: _inputDecoration('Customer Eligibility'),
               items: const [
                 DropdownMenuItem(value: 'all', child: Text('All Users')),

@@ -48,7 +48,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) {
       setState(() => _imageFile = pickedFile);
     }
@@ -160,7 +160,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
               value: _isActive,
               onChanged: (val) => setState(() => _isActive = val),
               contentPadding: EdgeInsets.zero,
-              activeColor: context.colors.primary,
+              activeThumbColor: context.colors.primary,
             ),
             const Divider(height: 32),
 
@@ -245,7 +245,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
                   }
                   final docs = snapshot.data!.docs;
                   return DropdownButtonFormField<String>(
-                    value: _selectedCategoryId,
+                    initialValue: _selectedCategoryId,
                     hint: const Text('Choose a category'),
                     decoration: InputDecoration(
                       filled: true,
@@ -292,7 +292,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
                   }
                   final docs = snapshot.data!.docs;
                   return DropdownButtonFormField<String>(
-                    value: _selectedProductId,
+                    initialValue: _selectedProductId,
                     hint: const Text('Choose a product'),
                     isExpanded: true,
                     decoration: InputDecoration(

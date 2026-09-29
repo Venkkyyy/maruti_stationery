@@ -135,7 +135,7 @@ class _CouponTile extends StatelessWidget {
                 ),
                 Switch(
                   value: coupon.isActive,
-                  activeColor: context.colors.primary,
+                  activeThumbColor: context.colors.primary,
                   onChanged: (val) {
                     AdminCouponService().toggleCouponStatus(coupon.id, coupon.isActive);
                   },

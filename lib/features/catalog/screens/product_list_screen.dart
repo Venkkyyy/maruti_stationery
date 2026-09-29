@@ -42,7 +42,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final activeAds = adsAsync.when(
       data: (ads) => ads,
       loading: () => <AdModel>[],
-      error: (_, __) => <AdModel>[],
+      error: (_, _) => <AdModel>[],
     );
 
     return Scaffold(
@@ -185,7 +185,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                     itemCount: categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, i) {
                       final bool selected = _selectedCategory == i;
                       return GestureDetector(

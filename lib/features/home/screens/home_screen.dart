@@ -145,7 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (context.mounted) {
             showDialog(
               context: context,
-              barrierColor: Colors.black.withOpacity(0.8),
+              barrierColor: Colors.black.withValues(alpha: 0.8),
               builder: (context) => CouponPopup(coupon: latestCoupon),
             );
           }
@@ -165,7 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final activeAds = activeAdsAsync.when(
       data: (ads) => ads,
       loading: () => <AdModel>[],
-      error: (_, __) => <AdModel>[],
+      error: (_, _) => <AdModel>[],
     );
 
     return productsAsync.when(
@@ -224,8 +224,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             data: (orders) {
                               final pastProductIds = <String>{};
                               for (final order in orders) {
-                                for (final item in order.items)
+                                for (final item in order.items) {
                                   pastProductIds.add(item.productId);
+                                }
                               }
                               final buyAgainProducts = products
                                   .where((p) => pastProductIds.contains(p.id))
@@ -243,7 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               [],
                               offeredProducts,
                             ),
-                            error: (_, __) => _buildHorizontalSections(
+                            error: (_, _) => _buildHorizontalSections(
                               trendingProducts,
                               topRatedProducts,
                               [],
@@ -461,7 +462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         height: 180,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -568,7 +569,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     : const Color(0xFF1A1A2E),
                               )
                             : cat.image.isNotEmpty
-                            ? Image.network(cat.image, fit: BoxFit.cover)
+                            ? CachedNetworkImage(
+                                imageUrl: cat.image, 
+                                fit: BoxFit.cover,
+                                memCacheWidth: 200, // Optimize memory for tiny chips
+                                placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                                errorWidget: (context, url, error) => Icon(
+                                  Icons.category_rounded,
+                                  size: 26,
+                                  color: selected
+                                      ? Colors.white
+                                      : const Color(0xFF1A1A2E),
+                                ),
+                              )
                             : Icon(
                                 Icons.category_rounded,
                                 size: 26,
@@ -674,7 +687,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               return SizedBox(
                 width: 155, // Slightly narrower for horizontal scroll

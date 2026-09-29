@@ -112,7 +112,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                     return ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: filteredOrders.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      separatorBuilder: (_, _) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final order = filteredOrders[index];
                         final firstItem = order.items.isNotEmpty ? order.items.first : null;

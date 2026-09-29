@@ -35,7 +35,6 @@ import '../../features/profile/screens/manage_payment_methods_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
-import '../../models/coupon_model.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 

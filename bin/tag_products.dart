@@ -73,7 +73,7 @@ Future<void> main() async {
   do {
     final uri = Uri.parse('$baseUrl/products').replace(queryParameters: {
       'pageSize': '300',
-      if (pageToken != null) 'pageToken': pageToken,
+      'pageToken': ?pageToken,
     });
 
     final res = await http.get(uri);

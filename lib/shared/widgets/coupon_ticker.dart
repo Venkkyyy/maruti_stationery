@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import '../../providers/coupon_provider.dart';
-import 'dart:async';
 
 class CouponTicker extends ConsumerStatefulWidget {
   const CouponTicker({super.key});
@@ -101,7 +100,7 @@ class _CouponTickerState extends ConsumerState<CouponTicker> with SingleTickerPr
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

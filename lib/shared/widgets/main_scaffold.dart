@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/cart_provider.dart';
-import '../../core/utils/formatters.dart';
 
 class MainScaffold extends ConsumerWidget {
   final Widget child;
@@ -210,7 +209,7 @@ class FloatingCartBar extends StatelessWidget {
   final int itemCount;
   final int totalPrice;
 
-  const FloatingCartBar({
+  const FloatingCartBar({super.key, 
     required this.itemCount,
     required this.totalPrice,
   });

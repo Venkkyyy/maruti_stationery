@@ -2,12 +2,12 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/wishlist_provider.dart';
-import '../../../shared/widgets/quantity_selector_sheet.dart';
 
 /// Reusable product card for both home grid and catalog grid.
 class ProductCard extends ConsumerWidget {
@@ -60,10 +60,12 @@ class ProductCard extends ConsumerWidget {
                       width: double.infinity,
                       color: context.colors.surfaceGrey,
                       child: product.images.isNotEmpty
-                          ? Image.network(
-                              product.images.first,
+                          ? CachedNetworkImage(
+                              imageUrl: product.images.first,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Icon(
+                              memCacheWidth: 400, // Optimize memory usage
+                              placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                              errorWidget: (context, url, error) => Icon(
                                 Icons.image_not_supported_rounded,
                                 size: 40,
                                 color: context.colors.border,
@@ -323,10 +325,12 @@ class ProductListCard extends StatelessWidget {
                     width: AppSizes.productListThumbSize,
                     height: AppSizes.productListCardHeight,
                     child: product.images.isNotEmpty
-                        ? Image.network(
-                            product.images.first,
+                        ? CachedNetworkImage(
+                            imageUrl: product.images.first,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
+                            memCacheWidth: 400,
+                            placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                            errorWidget: (context, url, error) => Container(
                               color: context.colors.surfaceGrey,
                               child: Icon(Icons.image_not_supported_rounded,
                                   color: context.colors.border),

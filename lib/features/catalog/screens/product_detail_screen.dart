@@ -4,13 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../../core/constants/app_sizes.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/wishlist_provider.dart';
 import '../../../providers/review_provider.dart';
-import '../../../providers/coupon_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/quantity_selector_sheet.dart';
@@ -239,7 +238,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                             },
                           ),
                           items: product.images.map((img) {
-                            return Image.network(img, fit: BoxFit.contain);
+                            return CachedNetworkImage(
+                              imageUrl: img,
+                              fit: BoxFit.contain,
+                              memCacheWidth: 600, // Optimize memory for detail view
+                              placeholder: (context, url) => Center(child: CircularProgressIndicator(color: context.colors.primary)),
+                              errorWidget: (context, url, error) => Icon(Icons.image_not_supported_rounded, size: 40, color: context.colors.border),
+                            );
                           }).toList(),
                         )
                       : Center(
@@ -372,7 +377,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       }
                       
                       double avgRating = 0;
-                      for (var r in reviews) avgRating += r.rating;
+                      for (var r in reviews) {
+                        avgRating += r.rating;
+                      }
                       avgRating /= reviews.length;
                       
                       return GestureDetector(
@@ -401,7 +408,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       );
                     },
                     loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 16),
                   
@@ -599,7 +606,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                           );
                         },
                         loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (_, __) => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
                       );
                     },
                   ),

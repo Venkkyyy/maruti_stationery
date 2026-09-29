@@ -87,7 +87,7 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
 
   Future<void> _pickImages() async {
     final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage();
+    final pickedFiles = await picker.pickMultiImage(imageQuality: 70);
     if (pickedFiles.isNotEmpty) {
       setState(() {
         _newImages.addAll(pickedFiles.map((f) => File(f.path)));
@@ -250,7 +250,7 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
             const SizedBox(height: 16),
             if (_categories.isNotEmpty)
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+initialValue           initialValue: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category',
                   filled: true,

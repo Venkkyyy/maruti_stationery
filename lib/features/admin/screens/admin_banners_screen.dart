@@ -71,7 +71,7 @@ class AdminBannersScreen extends ConsumerWidget {
                           ),
                           Switch(
                             value: banner.isActive,
-                            activeColor: context.colors.primary,
+                            activeThumbColor: context.colors.primary,
                             onChanged: (value) async {
                               await FirebaseFirestore.instance
                                   .collection('banners')

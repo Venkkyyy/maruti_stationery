@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/review_provider.dart';
 import '../../../core/utils/formatters.dart';
@@ -85,7 +86,7 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
 
             const SizedBox(height: 32),
@@ -194,7 +195,13 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
               child: imageUrl.isNotEmpty 
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(imageUrl, fit: BoxFit.cover)
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl, 
+                      fit: BoxFit.cover,
+                      memCacheWidth: 150,
+                      placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                      errorWidget: (context, url, error) => Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
+                    )
                   )
                 : Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
             ),

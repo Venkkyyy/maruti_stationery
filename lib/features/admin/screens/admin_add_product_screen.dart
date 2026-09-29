@@ -239,7 +239,7 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
             const SizedBox(height: 16),
             if (_categories.isNotEmpty)
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category',
                   filled: true,

@@ -108,10 +108,8 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
         
         // Generate a thumbnail using VideoCompress
         final thumbnailFile = await VideoCompress.getFileThumbnail(pickedFile.path);
-        if (thumbnailFile != null) {
-          // Upload thumbnail if necessary, or let them pick one manually.
-          // For now, let's keep it simple.
-        }
+        // Upload thumbnail if necessary, or let them pick one manually.
+        // For now, let's keep it simple.
       }
     } catch (e) {
       if (mounted) {
@@ -384,7 +382,7 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
 
             // CTA Type dropdown
             DropdownButtonFormField<AdCtaType>(
-              value: _ctaType,
+              initialValue: _ctaType,
               decoration: _inputDecoration(
                   context, 'CTA Type', Icons.touch_app_outlined),
               items: const [
@@ -414,7 +412,7 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
                     if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                     final docs = snapshot.data!.docs;
                     return DropdownButtonFormField<String>(
-                      value: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
+                      initialValue: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
                       hint: const Text('Choose a category'),
                       decoration: _inputDecoration(context, 'Link to Category', Icons.category_outlined),
                       items: docs.map((doc) {
@@ -434,7 +432,7 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
                     if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                     final docs = snapshot.data!.docs;
                     return DropdownButtonFormField<String>(
-                      value: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
+                      initialValue: _ctaValueCtrl.text.isNotEmpty ? _ctaValueCtrl.text : null,
                       hint: const Text('Choose a product'),
                       decoration: _inputDecoration(context, 'Link to Product', Icons.inventory_2_outlined),
                       items: docs.map((doc) {

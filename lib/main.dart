@@ -1,5 +1,4 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
-import 'package:maruti_stationery/providers/theme_provider.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,6 +42,19 @@ void main() async {
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
+    };
+    ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
+      return const Material(
+        child: SafeArea(
+          child: Center(
+            child: Text(
+              'Oops! Something went wrong.\nWe are working to fix it.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ),
+        ),
+      );
     };
   } catch (e) {
     debugPrint("Firebase init failed: $e");

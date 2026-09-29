@@ -1,7 +1,7 @@
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_sizes.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
 import '../../../services/admin_product_service.dart';
@@ -171,7 +171,13 @@ class _AdminProductTile extends StatelessWidget {
                 height: 80,
                 color: context.colors.surfaceGrey,
                 child: product.images.isNotEmpty
-                    ? Image.network(product.images.first, fit: BoxFit.cover)
+                    ? CachedNetworkImage(
+                        imageUrl: product.images.first, 
+                        fit: BoxFit.cover,
+                        memCacheWidth: 200,
+                        placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                        errorWidget: (context, url, error) => Icon(Icons.image_not_supported_rounded, color: context.colors.textHint),
+                      )
                     : Icon(Icons.image_not_supported_rounded, color: context.colors.textHint),
               ),
             ),
@@ -228,7 +234,7 @@ class _AdminProductTile extends StatelessWidget {
               children: [
                 Switch(
                   value: product.isActive,
-                  activeColor: context.colors.primary,
+                  activeThumbColor: context.colors.primary,
                   onChanged: (val) async {
                     await AdminProductService().updateProduct(product.id, {'isActive': val});
                   },

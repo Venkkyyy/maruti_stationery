@@ -109,7 +109,7 @@ class FCMService {
             'title': title,
             'body': body,
           },
-          if (data != null) 'data': data,
+          'data': ?data,
         }),
       );
 

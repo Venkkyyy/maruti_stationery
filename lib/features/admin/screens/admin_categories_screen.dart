@@ -185,7 +185,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) {
       final file = File(pickedFile.path);
       final dir = await getTemporaryDirectory();

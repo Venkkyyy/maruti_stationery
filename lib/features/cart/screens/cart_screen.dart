@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/wishlist_provider.dart';
 import '../../../providers/product_provider.dart';
@@ -97,7 +98,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, i) => _buildCartItem(items[i], cartNotifier),
                       ),
                       const SizedBox(height: 8),
@@ -186,7 +187,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     border: Border.all(color: context.colors.border),
                   ),
                   child: item.image.isNotEmpty 
-                      ? Image.network(item.image, fit: BoxFit.contain)
+                      ? CachedNetworkImage(
+                          imageUrl: item.image,
+                          fit: BoxFit.contain,
+                          memCacheWidth: 200,
+                          placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                          errorWidget: (context, url, error) => Icon(Icons.edit_rounded, color: context.colors.primary, size: 30),
+                        )
                       : Icon(Icons.edit_rounded, color: context.colors.primary, size: 30),
                 ),
                 const SizedBox(width: 16),
@@ -505,7 +512,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     );
                   },
                   loading: () => const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2))),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
               ],
             ),
@@ -673,7 +680,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         return _buildHorizontalProductSection('You Might Also Like', trendingProducts.take(6).toList());
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -685,7 +692,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         return _buildHorizontalProductSection('Your Wishlist', products);
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -709,7 +716,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               itemCount: products.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, i) {
                 return SizedBox(
                   width: 155,

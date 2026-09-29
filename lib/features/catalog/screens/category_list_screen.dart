@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../providers/categories_provider.dart';
 
 class CategoryListScreen extends ConsumerWidget {
@@ -120,8 +121,13 @@ class CategoryListScreen extends ConsumerWidget {
                         child: category.image.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(28),
-                                child: Image.network(category.image, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(Icons.category_rounded, color: context.colors.primary, size: 28)),
+                                child: CachedNetworkImage(
+                                  imageUrl: category.image, 
+                                  fit: BoxFit.cover,
+                                  memCacheWidth: 150, // Optimize memory for thumbnails
+                                  errorWidget: (_, _, _) => Icon(Icons.category_rounded, color: context.colors.primary, size: 28),
+                                  placeholder: (context, url) => Container(color: context.colors.primaryLight),
+                                ),
                               )
                             : Icon(
                                 Icons.category_rounded,

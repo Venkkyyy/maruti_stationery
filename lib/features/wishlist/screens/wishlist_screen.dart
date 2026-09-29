@@ -131,7 +131,7 @@ class _WishlistCard extends StatelessWidget {
           children: [
             Stack(
               children: [
-                Container(
+                SizedBox(
                   height: AppSizes.productCardImageHeight,
                   width: double.infinity,
                   child: ClipRRect(
@@ -141,7 +141,7 @@ class _WishlistCard extends StatelessWidget {
                     ),
                     child: product.primaryImage.isNotEmpty
                         ? Image.network(product.primaryImage, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(Icons.edit_rounded, size: 48, color: context.colors.border))
+                            errorBuilder: (_, _, _) => Icon(Icons.edit_rounded, size: 48, color: context.colors.border))
                         : Icon(Icons.edit_rounded, size: 48, color: context.colors.border),
                   ),
                 ),

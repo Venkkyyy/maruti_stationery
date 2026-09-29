@@ -159,7 +159,7 @@ class _AdminBroadcastScreenState extends State<AdminBroadcastScreen> {
               const SizedBox(height: 24),
 
               DropdownButtonFormField<String>(
-                value: _targetAudience,
+                initialValue: _targetAudience,
                 decoration: InputDecoration(
                   labelText: 'Target Audience',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
