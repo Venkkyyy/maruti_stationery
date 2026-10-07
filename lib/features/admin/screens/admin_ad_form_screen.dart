@@ -134,22 +134,29 @@ class _AdminAdFormScreenState extends State<AdminAdFormScreen> {
 
     try {
       // 1. Upload video if a new one is selected
+      String? finalVideoToken = widget.existingAd?.videoDeleteToken;
       if (_pickedVideoFile != null) {
-        finalVideoUrl = await _adminProductService.uploadVideo(_pickedVideoFile!);
+        final uploadData = await _adminProductService.uploadVideoWithToken(_pickedVideoFile!);
+        finalVideoUrl = uploadData['url']!;
+        finalVideoToken = uploadData['delete_token'];
       }
 
       String finalThumbnailUrl = _thumbnailUrlCtrl.text.trim();
+      String? finalThumbnailToken = widget.existingAd?.thumbnailDeleteToken;
       if (_pickedImageFile != null) {
-        final urls = await _adminProductService.uploadImages([_pickedImageFile!]);
-        if (urls.isNotEmpty) {
-          finalThumbnailUrl = urls.first;
+        final uploadData = await _adminProductService.uploadImagesWithTokens([_pickedImageFile!]);
+        if (uploadData.isNotEmpty) {
+          finalThumbnailUrl = uploadData.first['url']!;
+          finalThumbnailToken = uploadData.first['delete_token'];
         }
       }
 
       final ad = AdModel(
         id: widget.existingAd?.id ?? '',
         videoUrl: finalVideoUrl,
+        videoDeleteToken: finalVideoToken,
         thumbnailUrl: finalThumbnailUrl,
+        thumbnailDeleteToken: finalThumbnailToken,
         ctaType: _ctaType,
         ctaValue: _ctaValueCtrl.text.trim(),
         ctaLabel: _ctaLabelCtrl.text.trim(),

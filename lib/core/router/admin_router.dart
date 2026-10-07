@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,17 +13,21 @@ import '../../features/admin/screens/admin_product_categories_screen.dart';
 import '../../features/admin/screens/admin_product_list_screen.dart';
 import '../../features/admin/screens/admin_add_product_screen.dart';
 import '../../features/admin/screens/admin_coupons_screen.dart';
-import '../../features/admin/widgets/admin_scaffold.dart';
 import '../../features/admin/screens/admin_order_list_screen.dart';
 import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/admin/screens/admin_broadcast_screen.dart';
+import '../../features/admin/widgets/admin_scaffold.dart';
 import '../../features/admin/screens/admin_categories_screen.dart';
+import '../../features/admin/screens/admin_brands_screen.dart';
 import '../../features/admin/screens/admin_edit_product_screen.dart';
 import '../../features/admin/screens/admin_coupon_form_screen.dart';
 import '../../features/admin/screens/admin_banners_screen.dart';
 import '../../features/admin/screens/admin_banner_form_screen.dart';
 import '../../features/admin/screens/admin_ads_screen.dart';
 import '../../features/admin/screens/admin_ad_form_screen.dart';
+import '../../features/admin/screens/admin_users_screen.dart';
+import '../../features/admin/screens/admin_user_detail_screen.dart';
+import '../../features/admin/screens/admin_return_requests_screen.dart';
 
 // Shared screens still needed
 import '../../features/auth/screens/complete_profile_screen.dart';
@@ -90,6 +95,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(path: '/admin/categories', builder: (context, state) => const AdminCategoriesScreen()),
+          GoRoute(path: '/admin/brands', builder: (context, state) => const AdminBrandsScreen()),
           GoRoute(
             path: '/admin/settings',
             builder: (context, state) => const AdminSettingsScreen(),
@@ -131,6 +137,23 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 ),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/admin/users',
+            builder: (context, state) => const AdminUsersScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => AdminUserDetailScreen(
+                  userId: state.pathParameters['id']!,
+                  user: state.extra as UserModel?,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/admin/returns',
+            builder: (context, state) => const AdminReturnRequestsScreen(),
           ),
         ],
       ),

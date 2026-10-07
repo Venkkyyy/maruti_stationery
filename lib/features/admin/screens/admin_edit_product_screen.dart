@@ -9,6 +9,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../models/category_model.dart';
+import '../../../models/brand_model.dart';
 import '../../../services/admin_product_service.dart';
 import '../../../models/product_model.dart';
 
@@ -27,14 +28,19 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
   final _priceController = TextEditingController(); // In Rupees
   final _mrpController = TextEditingController(); // In Rupees
   final _stockController = TextEditingController();
-  final _brandController = TextEditingController();
+  final _highlightsController = TextEditingController();
+  final _variationsController = TextEditingController();
   
   String? _selectedCategory;
+  String? _selectedBrand;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isReturnable = false;
+  bool _isBestSeller = false;
   ProductModel? _product;
 
   List<CategoryModel> _categories = [];
+  List<BrandModel> _brands = [];
   
   List<String> _existingImages = [];
   final List<File> _newImages = [];
@@ -50,6 +56,9 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
       final catSnap = await FirebaseFirestore.instance.collection('categories').orderBy('order').get();
       _categories = catSnap.docs.map((d) => CategoryModel.fromFirestore(d)).toList();
 
+      final brandSnap = await FirebaseFirestore.instance.collection('brands').orderBy('name').get();
+      _brands = brandSnap.docs.map((d) => BrandModel.fromFirestore(d)).toList();
+
       final doc = await FirebaseFirestore.instance.collection('products').doc(widget.productId).get();
       if (doc.exists) {
         _product = ProductModel.fromFirestore(doc);
@@ -58,13 +67,23 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
         _priceController.text = (_product!.price / 100).toStringAsFixed(2).replaceAll(RegExp(r'\.00$'), '');
         _mrpController.text = (_product!.mrp / 100).toStringAsFixed(2).replaceAll(RegExp(r'\.00$'), '');
         _stockController.text = _product!.stock.toString();
-        _brandController.text = _product!.brand;
+        _isReturnable = _product!.isReturnable;
+        _isBestSeller = _product!.isBestSeller;
         _existingImages = List<String>.from(_product!.images);
+        
+        _highlightsController.text = _product!.highlights.join(', ');
+        _variationsController.text = _product!.variations.entries.map((e) => '${e.key}: ${e.value.join(', ')}').join('\n');
         
         if (_categories.any((c) => c.id == _product!.categoryId)) {
           _selectedCategory = _product!.categoryId;
         } else if (_categories.isNotEmpty) {
           _selectedCategory = _categories.first.id;
+        }
+
+        if (_product!.brandId != null && _brands.any((b) => b.id == _product!.brandId)) {
+          _selectedBrand = _product!.brandId;
+        } else if (_brands.isNotEmpty) {
+          _selectedBrand = _brands.first.id;
         }
       }
     } catch (e) {
@@ -81,7 +100,8 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
     _priceController.dispose();
     _mrpController.dispose();
     _stockController.dispose();
-    _brandController.dispose();
+    _highlightsController.dispose();
+    _variationsController.dispose();
     super.dispose();
   }
 
@@ -106,14 +126,39 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
           ? (double.parse(_mrpController.text.trim()) * 100).toInt() 
           : 0;
 
+      // Parse highlights
+      final highlights = _highlightsController.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+
+      // Parse variations
+      final variations = <String, List<String>>{};
+      final variationLines = _variationsController.text.split('\n');
+      for (final line in variationLines) {
+        if (line.contains(':')) {
+          final parts = line.split(':');
+          final key = parts[0].trim();
+          final vals = parts[1].split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+          if (key.isNotEmpty && vals.isNotEmpty) {
+            variations[key] = vals;
+          }
+        }
+      }
+
       final updates = {
         'name': _nameController.text.trim(),
         'description': _descController.text.trim(),
         'price': pricePaise,
         'mrp': mrpPaise,
         'categoryId': _selectedCategory,
-        'brand': _brandController.text.trim(),
+        'brand': _brands.firstWhere((b) => b.id == _selectedBrand, orElse: () => BrandModel(id: '', name: 'Unknown', logoUrl: '', createdAt: DateTime.now())).name,
+        'brandId': _selectedBrand,
         'stock': int.parse(_stockController.text.trim()),
+        'isReturnable': _isReturnable,
+        'highlights': highlights,
+        'variations': variations,
       };
 
       if (_newImages.isNotEmpty || _existingImages.length != _product!.images.length) {
@@ -242,11 +287,20 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
               validator: (v) => v!.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
-            AppTextField(
-              controller: _brandController,
-              label: 'Brand',
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-            ),
+            if (_brands.isNotEmpty)
+              DropdownButtonFormField<String>(
+                initialValue: _selectedBrand,
+                decoration: InputDecoration(
+                  labelText: 'Brand',
+                  filled: true,
+                  fillColor: context.colors.surfaceGrey,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: _brands.map((b) => DropdownMenuItem(value: b.id, child: Text(b.name))).toList(),
+                onChanged: (v) => setState(() => _selectedBrand = v),
+              ),
+            if (_brands.isEmpty)
+              const Text('Please add brands first in the Manage Brands section.', style: TextStyle(color: Colors.red)),
             const SizedBox(height: 16),
             if (_categories.isNotEmpty)
               DropdownButtonFormField<String>(
@@ -296,6 +350,37 @@ class _AdminEditProductScreenState extends State<AdminEditProductScreen> {
               label: 'Description',
               maxLines: 4,
               validator: (v) => v!.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _highlightsController,
+              label: 'Highlights (Comma-separated)',
+              hint: 'e.g. Eco friendly, 70 GSM paper',
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _variationsController,
+              label: 'Variations (Key: val1, val2 per line)',
+              hint: 'e.g.\nColor: Red, Blue\nSize: Small, Large',
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Returnable Product', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Allow customers to request returns for this product'),
+              value: _isReturnable,
+              onChanged: (val) => setState(() => _isReturnable = val),
+              activeColor: context.colors.primary,
+              contentPadding: EdgeInsets.zero,
+            ),
+            SwitchListTile(
+              title: const Text('Best Seller', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Display this product in the Best Sellers section'),
+              value: _isBestSeller,
+              onChanged: (val) => setState(() => _isBestSeller = val),
+              activeColor: context.colors.primary,
+              contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 32),
             AppButton(

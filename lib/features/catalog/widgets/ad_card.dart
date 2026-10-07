@@ -58,26 +58,7 @@ class _AdCardState extends ConsumerState<AdCard> {
     if (_isDisposed || _initStarted || widget.ad.videoUrl.isEmpty) return;
     _initStarted = true;
 
-    // Check connectivity before creating the controller
-    final wifiOnly = ref.read(adWifiOnlyProvider);
-    if (wifiOnly) {
-      try {
-        final results = await InternetAddress.lookup('example.com');
-        final interfaces = await NetworkInterface.list(
-          type: InternetAddressType.IPv4,
-        );
-        final isOnWifi = interfaces.any((iface) =>
-            iface.name.toLowerCase().contains('wlan') ||
-            iface.name.toLowerCase().contains('en0') ||
-            iface.name.toLowerCase().contains('wifi'));
-        if (!isOnWifi && results.isNotEmpty) {
-          if (mounted && !_isDisposed) setState(() => _failed = false);
-          return;
-        }
-      } catch (_) {
-        return;
-      }
-    }
+
 
     await _initController();
   }
@@ -88,7 +69,10 @@ class _AdCardState extends ConsumerState<AdCard> {
     try {
       final uri = Uri.tryParse(widget.ad.videoUrl);
       if (uri == null || !uri.hasScheme) return;
-      ctrl = VideoPlayerController.networkUrl(uri);
+      ctrl = VideoPlayerController.networkUrl(
+        uri,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       ctrl.setVolume(0);
       ctrl.setLooping(true);
       await ctrl.initialize();
@@ -208,6 +192,15 @@ class _AdCardState extends ConsumerState<AdCard> {
                         CachedNetworkImage(
                           imageUrl: widget.ad.thumbnailUrl,
                           fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: colors.surfaceGrey,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colors.primary.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
                           errorWidget: (context, url, error) =>
                               Container(color: colors.surfaceGrey),
                         )
@@ -318,7 +311,7 @@ class _AdCardState extends ConsumerState<AdCard> {
                 ),
               ),
 
-              // ── CTA bar — always shown when hasCta, even if video failed ──
+              // ── CTA bar — single centered button ──
               if (widget.ad.hasCta)
                 InkWell(
                   onTap: () => _onCtaTap(context),
@@ -333,37 +326,23 @@ class _AdCardState extends ConsumerState<AdCard> {
                         ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.ad.ctaLabel,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: colors.textPrimary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: colors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          widget.ad.ctaLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            widget.ad.ctaLabel,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -372,13 +351,6 @@ class _AdCardState extends ConsumerState<AdCard> {
         ),
       );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!constraints.hasBoundedHeight) {
-          return SizedBox(height: 280, child: card);
-        }
-        return card;
-      },
-    );
+    return card;
   }
 }

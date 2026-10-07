@@ -97,7 +97,7 @@ final class ReviewNotifierProvider
         argument: null,
         retry: null,
         name: r'reviewProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -110,7 +110,7 @@ final class ReviewNotifierProvider
   ReviewNotifier create() => ReviewNotifier();
 }
 
-String _$reviewNotifierHash() => r'2a2e5ac5c5240dcc59a65e21ebe8411cfb7c7c77';
+String _$reviewNotifierHash() => r'3ef33b7cf1c3da90771f06724c42d7d6f1869c85';
 
 abstract class _$ReviewNotifier extends $AsyncNotifier<void> {
   FutureOr<void> build();

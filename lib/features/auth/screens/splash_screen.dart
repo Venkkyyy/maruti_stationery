@@ -56,7 +56,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     });
 
     // Navigate after animation and profile check
-    Future.delayed(const Duration(milliseconds: 1500), () async {
+    Future.delayed(const Duration(milliseconds: 3000), () async {
       final user = FirebaseAuth.instance.currentUser;
       
       if (user != null) {
@@ -188,12 +188,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                isAdminMode ? 'Admin Panel' : 'Premium Writing Instruments',
+                                isAdminMode ? 'Admin Panel' : 'Ek Click, Stationery Aapke Ghar!',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  letterSpacing: 1.2,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],

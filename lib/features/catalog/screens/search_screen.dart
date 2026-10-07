@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart' as import_url_launcher;
@@ -14,7 +16,8 @@ import '../../../providers/product_provider.dart';
 
 /// Full-text search screen with live results.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  final String? initialQuery;
+  const SearchScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -38,6 +41,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       _recentSearches = prefs.getStringList('recent_searches') ?? [];
     });
   }
+
 
   void _saveRecentSearch(String query) async {
     if (query.trim().isEmpty) return;
@@ -79,7 +83,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final results = await _algoliaService.searchProducts(query: query);
         if (mounted) {
           setState(() {
-            _results = results;
+            _results = results.where((p) => p.isActive).toList();
             _isLoading = false;
           });
         }
@@ -98,6 +102,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _loadRecentSearches();
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _controller.text = widget.initialQuery!;
+      _query = widget.initialQuery!;
+      _onSearchChanged(_query);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -113,40 +122,87 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colors.background,
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: context.colors.surface,
+        backgroundColor: Colors.white.withValues(alpha: 0.8),
         elevation: 0,
-        titleSpacing: 0,
-        title: TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          onChanged: _onSearchChanged,
-          onSubmitted: (value) => _saveRecentSearch(value),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: 'Search products, brands, SKUs...',
-            hintStyle: TextStyle(color: context.colors.textHint, fontSize: 14),
-            border: InputBorder.none,
-            fillColor: Colors.transparent,
-            suffixIcon: _query.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.close_rounded,
-                        color: context.colors.textHint, size: 20),
-                    onPressed: () {
-                      _controller.clear();
-                      _onSearchChanged('');
-                    },
-                  )
-                : null,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.transparent),
           ),
-          style: TextStyle(
-            fontSize: 16,
-            color: context.colors.textPrimary,
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 20),
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: context.colors.primary.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              onChanged: _onSearchChanged,
+              onSubmitted: (value) => _saveRecentSearch(value),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'planner',
+                hintStyle: TextStyle(color: context.colors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                prefixIcon: Icon(Icons.search_rounded, color: context.colors.textSecondary, size: 20),
+                suffixIcon: Icon(Icons.access_time_rounded, color: context.colors.textHint, size: 20),
+              ),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: context.colors.textPrimary,
+              ),
+            ),
           ),
         ),
       ),
-      body: _query.isEmpty ? _buildDiscovery() : _buildResults(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFF8FAFC),
+              Color(0xFFEFF6FF),
+              Color(0xFFFFF1F2),
+              Color(0xFFF0FDF4),
+              Color(0xFFF8FAFC),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0.0, 0.25, 0.5, 0.75, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: _query.isEmpty ? _buildDiscovery() : _buildResults(),
+        ),
+      ),
     );
   }
 
@@ -264,24 +320,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Column(
       children: [
-        // Result count bar
-        Container(
-          color: context.colors.surface,
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.lg, vertical: 10),
+        // Chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             children: [
-              Text(
-                '${results.length} results for "$_query"',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: context.colors.textSecondary,
-                ),
-              ),
+              _FilterChip(label: 'All', isSelected: true),
+              const SizedBox(width: 8),
+              _FilterChip(label: 'Notebooks', isSelected: false),
+              const SizedBox(width: 8),
+              _FilterChip(label: 'Planners', isSelected: false),
+              const SizedBox(width: 8),
+              _FilterChip(label: 'Pens', isSelected: false),
+              const SizedBox(width: 8),
+              _FilterChip(label: 'Accessories', isSelected: false),
             ],
           ),
         ),
-        const Divider(height: 1),
         // Results grid
         Expanded(
           child: GridView.builder(
@@ -385,6 +441,32 @@ class _SearchChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  const _FilterChip({required this.label, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? context.colors.primary : context.colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isSelected ? context.colors.primary : context.colors.border.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          color: isSelected ? Colors.white : context.colors.textSecondary,
         ),
       ),
     );

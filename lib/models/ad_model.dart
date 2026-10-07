@@ -21,7 +21,9 @@ AdCtaType _parseCtaType(String? raw) {
 class AdModel {
   final String id;
   final String videoUrl;
+  final String? videoDeleteToken;
   final String thumbnailUrl;
+  final String? thumbnailDeleteToken;
   final AdCtaType ctaType;
   final String ctaValue;   // product ID / category ID / tag / URL
   final String ctaLabel;   // e.g. "Shop Now"
@@ -37,7 +39,9 @@ class AdModel {
   const AdModel({
     required this.id,
     required this.videoUrl,
+    this.videoDeleteToken,
     required this.thumbnailUrl,
+    this.thumbnailDeleteToken,
     this.ctaType = AdCtaType.none,
     this.ctaValue = '',
     this.ctaLabel = 'Shop Now',
@@ -58,7 +62,9 @@ class AdModel {
     return AdModel(
       id: doc.id,
       videoUrl: data['videoUrl'] as String? ?? '',
+      videoDeleteToken: data['videoDeleteToken'] as String?,
       thumbnailUrl: data['thumbnailUrl'] as String? ?? '',
+      thumbnailDeleteToken: data['thumbnailDeleteToken'] as String?,
       ctaType: _parseCtaType(data['ctaType'] as String?),
       ctaValue: data['ctaValue'] as String? ?? '',
       ctaLabel: data['ctaLabel'] as String? ?? 'Shop Now',
@@ -75,7 +81,9 @@ class AdModel {
 
   Map<String, dynamic> toFirestore() => {
     'videoUrl': videoUrl,
+    'videoDeleteToken': videoDeleteToken,
     'thumbnailUrl': thumbnailUrl,
+    'thumbnailDeleteToken': thumbnailDeleteToken,
     'ctaType': ctaType.name,
     'ctaValue': ctaValue,
     'ctaLabel': ctaLabel,

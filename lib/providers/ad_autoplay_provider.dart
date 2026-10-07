@@ -9,12 +9,12 @@ class AdAutoplayNotifier extends Notifier<bool> {
   bool build() {
     // Kick off async load; return safe default while loading
     _load();
-    return true; // default: Wi-Fi only
+    return false; // default: play on both WiFi and cellular
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    state = prefs.getBool(_kWifiOnlyKey) ?? true;
+    state = prefs.getBool(_kWifiOnlyKey) ?? false;
   }
 
   Future<void> toggle(bool value) async {

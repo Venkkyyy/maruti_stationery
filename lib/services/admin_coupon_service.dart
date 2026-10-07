@@ -43,7 +43,7 @@ class AdminCouponService {
         }
 
         tx.set(notifRef, {
-          'title': 'New Special Offer! 🎁',
+          'title': 'New Special Offer!',
           'body': 'Use code ${newCoupon.code.toUpperCase()} to $msg',
           'type': 'coupon',
           'createdAt': FieldValue.serverTimestamp(),

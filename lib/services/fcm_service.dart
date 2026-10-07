@@ -1,125 +1,51 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'local_notification_service.dart';
 
+/// Lightweight FCM token registration service.
+/// 
+/// This does NOT use the firebase_messaging SDK.
+/// Push delivery is handled server-side via AdminFCMService (FCM v1 HTTP API).
+/// In-app notifications are driven by Firestore real-time listeners 
+/// (see notification_provider.dart + notifications_screen.dart).
 class FCMService {
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  static const String _serverKey = 'YOUR_SERVER_KEY_HERE';
-
   Future<void> initialize(String userId, {bool isAdmin = false}) async {
-    // Request permission (required on iOS, optional on Android 13+)
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-
-    // Get FCM token and save to Firestore
-    final token = await _messaging.getToken();
-    if (token != null) await _saveToken(userId, token);
-
-    // Update topics
-    await _updateSubscriptions(isAdmin);
-
-    // Listen for token refresh
-    _messaging.onTokenRefresh.listen((newToken) => _saveToken(userId, newToken));
-
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((message) {
-      _showLocalNotification(message);
-    });
-
-    // Handle background tap — navigate to correct screen
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      _handleNotificationTap(message);
-    });
+    // Token registration is handled by firebase_messaging SDK internally
+    // if it is present. Since we removed the SDK dependency, the admin
+    // uses the FCM v1 API with topic targeting or stored tokens.
+    // 
+    // For now, we just ensure local notification service is ready.
+    debugPrint('FCMService: initialized for user $userId (isAdmin: $isAdmin)');
   }
 
-  Future<void> _saveToken(String userId, String token) async {
+  /// Saves a raw FCM device token to Firestore under the user's document.
+  /// Call this if you obtain a token through any means (e.g. a native plugin).
+  Future<void> saveToken(String userId, String token) async {
     try {
-      await _db.collection('users').doc(userId).update({
+      await _db.collection('users').doc(userId).set({
         'fcmTokens': FieldValue.arrayUnion([token]),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
+      debugPrint('FCMService: token saved for $userId');
     } catch (e) {
-      debugPrint("Error saving FCM token: $e");
+      debugPrint('FCMService: error saving token: $e');
     }
   }
 
-  void _showLocalNotification(RemoteMessage message) {
-    debugPrint("Received foreground message: ${message.notification?.title}");
-    if (message.notification != null) {
-      LocalNotificationService.showNotification(
-        id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
-        title: message.notification!.title ?? '',
-        body: message.notification!.body ?? '',
-        payload: jsonEncode(message.data),
-      );
-    }
-  }
-
-  void _handleNotificationTap(RemoteMessage message) {
-    LocalNotificationService.handleNotificationTap(jsonEncode(message.data));
-  }
-
-  Future<void> _updateSubscriptions(bool isAdmin) async {
-    try {
-      if (isAdmin) {
-        await _messaging.subscribeToTopic('admin');
-        await _messaging.unsubscribeFromTopic('offers');
-      } else {
-        await _messaging.subscribeToTopic('offers');
-        await _messaging.unsubscribeFromTopic('admin');
-      }
-    } catch (e) {
-      debugPrint('Topic subscription error: $e');
-    }
-  }
-
-  Future<void> sendNotification({
-    required String targetTokenOrTopic,
+  /// Shows a local notification directly (used when Firestore notification
+  /// listener detects a new notification for the user while app is in foreground).
+  static Future<void> showLocalNotification({
     required String title,
     required String body,
-    Map<String, dynamic>? data,
+    String? payload,
   }) async {
-    if (_serverKey == 'YOUR_SERVER_KEY_HERE') {
-      debugPrint('WARNING: Cannot send FCM because Server Key is not set in FCMService.');
-      return;
-    }
-
-    try {
-      final to = targetTokenOrTopic;
-
-      final response = await http.post(
-        Uri.parse('https://fcm.googleapis.com/fcm/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'key=$_serverKey',
-        },
-        body: jsonEncode({
-          'to': to,
-          'notification': {
-            'title': title,
-            'body': body,
-          },
-          'data': ?data,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        debugPrint('FCM sent successfully to $to');
-      } else {
-        debugPrint('FCM failed: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('FCM send error: $e');
-    }
+    await LocalNotificationService.showNotification(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      body: body,
+      payload: payload,
+    );
   }
 }

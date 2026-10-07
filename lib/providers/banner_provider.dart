@@ -7,14 +7,7 @@ const String backToSchoolBannerUrl =
 const String officeEssentialsBannerUrl =
     'https://res.cloudinary.com/eizhyg2w/image/upload/v1788061344/szdutekboywyhejbefsl.jpg';
 
-const Set<String> allowedBannerUrls = {
-  backToSchoolBannerUrl,
-  officeEssentialsBannerUrl,
-};
-
 /// Maps known banner URLs to their tag and title.
-/// This ensures banners always have the right tag even if the Firestore
-/// document was created before the tag field was introduced.
 const Map<String, Map<String, String>> _bannerTagMap = {
   backToSchoolBannerUrl: {
     'tag': 'back_to_school',
@@ -26,8 +19,6 @@ const Map<String, Map<String, String>> _bannerTagMap = {
   },
 };
 
-/// Applies the known tag/title for a banner based on its URL,
-/// overriding whatever (possibly null) value came from Firestore.
 BannerModel _applyKnownTag(BannerModel banner) {
   final meta = _bannerTagMap[banner.imageUrl.trim()];
   if (meta == null) return banner;
@@ -37,31 +28,14 @@ BannerModel _applyKnownTag(BannerModel banner) {
     isActive: banner.isActive,
     targetCategoryId: banner.targetCategoryId,
     targetProductId: banner.targetProductId,
-    tag: meta['tag'],
-    title: meta['title'],
+    tag: banner.tag ?? meta['tag'],
+    title: banner.title ?? meta['title'],
     createdAt: banner.createdAt,
   );
 }
 
-List<BannerModel> getProfessionalBanners() => [
-  BannerModel(
-    id: 'back_to_school_offer',
-    imageUrl: backToSchoolBannerUrl,
-    isActive: true,
-    tag: 'back_to_school',
-    title: 'Back to School',
-    createdAt: DateTime.now(),
-  ),
-  BannerModel(
-    id: 'office_essentials_offer',
-    imageUrl: officeEssentialsBannerUrl,
-    isActive: true,
-    tag: 'office_essentials',
-    title: 'Office Essentials',
-    createdAt: DateTime.now().subtract(const Duration(seconds: 1)),
-  ),
-];
-
+/// Real-time stream of ONLY active banners for customer app.
+/// Updates instantly when admin adds, toggles, or removes banners.
 final bannerProvider = StreamProvider<List<BannerModel>>((ref) {
   return FirebaseFirestore.instance
       .collection('banners')
@@ -70,36 +44,29 @@ final bannerProvider = StreamProvider<List<BannerModel>>((ref) {
       .map((snapshot) {
         final banners = snapshot.docs
             .map((doc) => BannerModel.fromMap(doc.data(), doc.id))
-            .where((b) => allowedBannerUrls.contains(b.imageUrl.trim()))
-            .map(_applyKnownTag) // ← inject tag from code
+            .where((b) => b.isActive && b.imageUrl.isNotEmpty)
+            .map(_applyKnownTag)
             .toList();
 
-        if (banners.isEmpty) {
-          return getProfessionalBanners();
-        }
-
-        // Sort client-side to ensure stable order
+        // Sort client-side by createdAt descending
         banners.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return banners;
       });
 });
 
+/// Real-time stream of ALL banners for admin management screen.
 final allBannersProvider = StreamProvider<List<BannerModel>>((ref) {
   return FirebaseFirestore.instance
       .collection('banners')
-      .orderBy('createdAt', descending: true)
       .snapshots()
       .map((snapshot) {
         final banners = snapshot.docs
             .map((doc) => BannerModel.fromMap(doc.data(), doc.id))
-            .where((b) => allowedBannerUrls.contains(b.imageUrl.trim()))
-            .map(_applyKnownTag) // ← inject tag from code
+            .where((b) => b.imageUrl.isNotEmpty)
+            .map(_applyKnownTag)
             .toList();
 
-        if (banners.isEmpty) {
-          return getProfessionalBanners();
-        }
-
+        banners.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return banners;
       });
 });

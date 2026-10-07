@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../providers/cart_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/review_provider.dart';
 import '../../../core/utils/formatters.dart';
@@ -79,11 +80,7 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
             ref.watch(watchProductProvider(widget.productId)).when(
               data: (product) {
                 if (product == null) return const SizedBox.shrink();
-                return _buildProductFeedbackCard(
-                  product.name, 
-                  AppFormatters.formatPrice(product.price),
-                  product.primaryImage,
-                );
+                return _buildProductFeedbackCard(product);
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => const SizedBox.shrink(),
@@ -178,62 +175,101 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
     );
   }
 
-  Widget _buildProductFeedbackCard(String title, String price, String imageUrl) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: context.colors.surfaceGrey,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: context.colors.border),
-              ),
-              child: imageUrl.isNotEmpty 
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CachedNetworkImage(
-                      imageUrl: imageUrl, 
-                      fit: BoxFit.cover,
-                      memCacheWidth: 150,
-                      placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
-                      errorWidget: (context, url, error) => Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
-                    )
+  Widget _buildProductFeedbackCard(dynamic product) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.colors.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: context.colors.surfaceGrey,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: product.primaryImage.isNotEmpty 
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: product.primaryImage, 
+                    fit: BoxFit.cover,
+                    memCacheWidth: 200,
+                    placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
+                    errorWidget: (context, url, error) => Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
                   )
-                : Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
+                )
+              : Icon(Icons.inventory_2_outlined, color: context.colors.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: context.colors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text(AppFormatters.formatPrice(product.price), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.colors.primary)),
+                const SizedBox(height: 8),
+                Row(
+                  children: List.generate(5, (index) => Icon(
+                    index < _mainRating ? Icons.star_rounded : Icons.star_border_rounded, 
+                    size: 16, 
+                    color: index < _mainRating ? Colors.amber : context.colors.border,
+                  )),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: context.colors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Text(price, style: TextStyle(fontSize: 12, color: context.colors.textSecondary)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Row(
-                        children: List.generate(5, (index) => Icon(
-                          index < _mainRating ? Icons.star_rounded : Icons.star_border_rounded, 
-                          size: 16, 
-                          color: index < _mainRating ? context.colors.primary : context.colors.border,
-                        )),
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            onPressed: () async {
+              try {
+                await ref.read(cartProvider.notifier).addItem(product, 1);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 18),
+                          SizedBox(width: 8),
+                          Text('${product.name} added to cart!'),
+                        ],
                       ),
-                      const Spacer(),
-                    ],
-                  ),
-                ],
-              ),
+                      backgroundColor: context.colors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString()), backgroundColor: context.colors.error),
+                  );
+                }
+              }
+            },
+            style: IconButton.styleFrom(
+              backgroundColor: context.colors.primaryLight,
+              foregroundColor: context.colors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Divider(height: 1, color: context.colors.divider),
-      ],
+            icon: const Icon(Icons.add_shopping_cart_rounded),
+          ),
+        ],
+      ),
     );
   }
 }

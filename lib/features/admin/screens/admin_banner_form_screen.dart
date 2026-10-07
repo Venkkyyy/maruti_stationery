@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../models/banner_model.dart';
@@ -24,6 +25,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
   final _adminBannerService = AdminBannerService();
 
   XFile? _imageFile;
+  final TextEditingController _urlController = TextEditingController();
   bool _isActive = true;
   bool _isLoading = false;
 
@@ -36,6 +38,7 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
     super.initState();
     if (widget.existingBanner != null) {
       _isActive = widget.existingBanner!.isActive;
+      _urlController.text = widget.existingBanner!.imageUrl;
       if (widget.existingBanner!.targetCategoryId != null) {
         _linkType = BannerLinkType.category;
         _selectedCategoryId = widget.existingBanner!.targetCategoryId;
@@ -44,6 +47,12 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
         _selectedProductId = widget.existingBanner!.targetProductId;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImage() async {
@@ -55,9 +64,10 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
   }
 
   Future<void> _saveBanner() async {
-    if (_imageFile == null && widget.existingBanner == null) {
+    final directUrl = _urlController.text.trim();
+    if (_imageFile == null && directUrl.isEmpty && widget.existingBanner == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an image')),
+        const SnackBar(content: Text('Please select an image or enter an image URL')),
       );
       return;
     }
@@ -69,17 +79,19 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
     try {
       if (widget.existingBanner == null) {
         await _adminBannerService.addBanner(
-          _imageFile!,
-          _isActive,
+          imageFile: _imageFile,
+          directImageUrl: directUrl.isNotEmpty ? directUrl : null,
+          isActive: _isActive,
           targetCategoryId: targetCategoryId,
           targetProductId: targetProductId,
         );
       } else {
         await _adminBannerService.updateBanner(
           widget.existingBanner!.id,
-          _imageFile,
-          widget.existingBanner!.imageUrl,
-          _isActive,
+          newImageFile: _imageFile,
+          newImageUrl: directUrl.isNotEmpty ? directUrl : null,
+          existingImageUrl: widget.existingBanner!.imageUrl,
+          isActive: _isActive,
           targetCategoryId: targetCategoryId,
           targetProductId: targetProductId,
         );
@@ -88,7 +100,10 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving banner: $e')),
+          SnackBar(
+            content: Text('Error saving banner: $e'),
+            backgroundColor: context.colors.error,
+          ),
         );
       }
     } finally {
@@ -128,17 +143,25 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
                 child: _imageFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(_imageFile!.path),
-                          fit: BoxFit.cover,
-                        ),
+                        child: kIsWeb
+                            ? Image.network(
+                                _imageFile!.path,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(_imageFile!.path),
+                                fit: BoxFit.cover,
+                              ),
                       )
-                    : (widget.existingBanner != null && widget.existingBanner!.imageUrl.isNotEmpty)
+                    : (_urlController.text.trim().isNotEmpty)
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
-                              widget.existingBanner!.imageUrl,
+                              _urlController.text.trim(),
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Text('Invalid image URL', style: TextStyle(color: Colors.red)),
+                              ),
                             ),
                           )
                         : Column(
@@ -147,16 +170,27 @@ class _AdminBannerFormScreenState extends ConsumerState<AdminBannerFormScreen> {
                               Icon(Icons.add_photo_alternate_outlined,
                                   size: 48, color: context.colors.textSecondary),
                               const SizedBox(height: 8),
-                              Text('Tap to select image',
+                              Text('Tap to select image from gallery',
                                   style: TextStyle(color: context.colors.textSecondary)),
                             ],
                           ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _urlController,
+              decoration: InputDecoration(
+                labelText: 'Or Paste Image URL (Optional)',
+                hintText: 'https://example.com/banner.jpg',
+                prefixIcon: const Icon(Icons.link_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 20),
             SwitchListTile(
               title: const Text('Active Banner'),
-              subtitle: const Text('Show this banner on the home screen'),
+              subtitle: const Text('Show this banner on the customer home screen'),
               value: _isActive,
               onChanged: (val) => setState(() => _isActive = val),
               contentPadding: EdgeInsets.zero,

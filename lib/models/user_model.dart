@@ -6,6 +6,7 @@ class UserModel {
   final String phone;
   final String? email;
   final bool isAdmin;
+  final bool isDeliveryPartner;
   final int loyaltyPoints;
   final DateTime createdAt;
 
@@ -15,6 +16,7 @@ class UserModel {
     required this.phone,
     this.email,
     this.isAdmin = false,
+    this.isDeliveryPartner = false,
     this.loyaltyPoints = 0,
     required this.createdAt,
   });
@@ -27,8 +29,9 @@ class UserModel {
       phone: data['phone'] ?? '',
       email: data['email'],
       isAdmin: data['isAdmin'] ?? false,
+      isDeliveryPartner: data['isDeliveryPartner'] ?? false,
       loyaltyPoints: (data['loyaltyPoints'] as num?)?.toInt() ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -38,6 +41,7 @@ class UserModel {
       'phone': phone,
       'email': email,
       'isAdmin': isAdmin,
+      'isDeliveryPartner': isDeliveryPartner,
       'loyaltyPoints': loyaltyPoints,
       'createdAt': Timestamp.fromDate(createdAt),
     };

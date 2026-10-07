@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maruti_stationery/core/constants/app_colors.dart';
 import '../../../providers/order_provider.dart';
 import '../../../models/order_model.dart';
+import '../../../models/return_request_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../services/order_service.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -46,7 +49,7 @@ class OrderDetailScreen extends ConsumerWidget {
                     children: [
                       Text(order.statusLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
                       const SizedBox(height: 4),
-                      Text('Order #${order.id.substring(0, 8).toUpperCase()}', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
+                      Text('Order #${order.id.toUpperCase()}', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
                       const SizedBox(height: 4),
                       Text('Placed on ${DateFormat('MMM dd, yyyy - hh:mm a').format(order.createdAt)}', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
                     ],
@@ -73,6 +76,27 @@ class OrderDetailScreen extends ConsumerWidget {
                     _buildTrackingStep(
                       title: 'Cancelled',
                       date: 'Order has been cancelled.',
+                      isActive: true,
+                      isCompleted: true,
+                      isLast: true,
+                    ),
+                  ] else if (order.status == OrderStatus.returned) ...[
+                    _buildTrackingStep(
+                      title: 'Order Placed',
+                      date: DateFormat('EEE, MMM dd - hh:mm a').format(order.createdAt),
+                      isActive: true,
+                      isCompleted: true,
+                      isFirst: true,
+                    ),
+                    _buildTrackingStep(
+                      title: 'Delivered',
+                      date: 'Package was delivered',
+                      isActive: true,
+                      isCompleted: true,
+                    ),
+                    _buildTrackingStep(
+                      title: 'Returned',
+                      date: 'Return accepted and processed.',
                       isActive: true,
                       isCompleted: true,
                       isLast: true,
@@ -115,6 +139,55 @@ class OrderDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
+
+            if (order.deliveryCode != null && order.status != OrderStatus.delivered && order.status != OrderStatus.cancelled && order.status != OrderStatus.returned) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [context.colors.primary.withValues(alpha: 0.1), context.colors.primary.withValues(alpha: 0.05)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.colors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Delivery Verification Code',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      order.deliveryCode!,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 8,
+                        color: context.colors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Share this code with the delivery partner to receive your order.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+
             Container(
               color: context.colors.surface,
               padding: const EdgeInsets.all(16),
@@ -166,7 +239,20 @@ class OrderDetailScreen extends ConsumerWidget {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () => context.push('/profile/help'),
+                      onPressed: () async {
+                        final Uri emailUri = Uri(
+                          scheme: 'mailto',
+                          path: 'support@marutistationery.com',
+                          query: 'subject=Support for Order #${order.id}',
+                        );
+                        if (await canLaunchUrl(emailUri)) {
+                          await launchUrl(emailUri);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open email client')));
+                          }
+                        }
+                      },
                       icon: const Icon(Icons.support_agent_rounded),
                       label: const Text('Contact Support', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
@@ -179,7 +265,16 @@ class OrderDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Center(
                     child: TextButton.icon(
-                      onPressed: () => context.push('/profile/help'),
+                      onPressed: () async {
+                        final Uri webUri = Uri.parse('https://marutistationery.com/help');
+                        if (await canLaunchUrl(webUri)) {
+                          await launchUrl(webUri);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Help center is currently unavailable.')));
+                          }
+                        }
+                      },
                       icon: Icon(Icons.help_outline, size: 16, color: context.colors.textSecondary),
                       label: Text('Help Center', style: TextStyle(color: context.colors.textSecondary)),
                     ),
@@ -234,6 +329,53 @@ class OrderDetailScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  if (order.status == OrderStatus.delivered) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/orders/${order.id}/return'),
+                        icon: Icon(Icons.assignment_return_rounded, color: context.colors.primary),
+                        label: Text('Return Items', style: TextStyle(color: context.colors.primary, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: context.colors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (order.status == OrderStatus.returned) ...[
+                    const SizedBox(height: 16),
+                    FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance.collection('return_requests').where('orderId', isEqualTo: order.id).get(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox.shrink();
+                        final reqDoc = snapshot.data!.docs.first;
+                        final returnReq = ReturnRequestModel.fromFirestore(reqDoc);
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('RETURN DETAILS', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 13)),
+                              const SizedBox(height: 8),
+                              Text('Reason: ${returnReq.reason}'),
+                              const SizedBox(height: 4),
+                              Text('Refund: ₹${(returnReq.totalRefundAmount / 100).toStringAsFixed(2)}'),
+                              const SizedBox(height: 4),
+                              Text('Status: ${returnReq.status.name.toUpperCase()}'),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -259,13 +401,33 @@ class OrderDetailScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Status', style: TextStyle(fontSize: 14)),
-                      Text(
-                        order.paymentStatus.name.toUpperCase(), 
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold, 
-                          fontSize: 14,
-                          color: order.paymentStatus == PaymentStatus.paid ? context.colors.success : Colors.orange,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          String displayStatus = order.paymentStatus.name.toUpperCase();
+                          Color displayColor = order.paymentStatus == PaymentStatus.paid ? context.colors.success : Colors.orange;
+                          
+                          if (order.paymentMethod != PaymentMethod.cod) {
+                            displayStatus = 'COMPLETED';
+                            displayColor = context.colors.success;
+                          } else {
+                            if (order.status == OrderStatus.delivered) {
+                              displayStatus = 'COMPLETED';
+                              displayColor = context.colors.success;
+                            } else {
+                              displayStatus = 'PENDING (COD)';
+                              displayColor = Colors.orange;
+                            }
+                          }
+                          
+                          return Text(
+                            displayStatus, 
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 14,
+                              color: displayColor,
+                            ),
+                          );
+                        }
                       ),
                     ],
                   ),

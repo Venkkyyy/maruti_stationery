@@ -2,6 +2,7 @@ import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../providers/review_provider.dart';
 import '../../../models/review_model.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -267,12 +268,17 @@ class _FilterButton extends StatelessWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
+class _ReviewCard extends ConsumerWidget {
   final ReviewModel review;
   const _ReviewCard({required this.review});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isAuthor = user?.uid == review.userId;
+    final isLiked = user != null && review.likedBy.contains(user.uid);
+    final isDisliked = user != null && review.dislikedBy.contains(user.uid);
+    
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -323,6 +329,26 @@ class _ReviewCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isAuthor)
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, color: context.colors.error, size: 20),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: const Text('Delete Review'),
+                        content: const Text('Are you sure you want to delete your review?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(c, true), child: Text('Delete', style: TextStyle(color: context.colors.error))),
+                        ],
+                      )
+                    );
+                    if (confirm == true) {
+                      await ref.read(reviewProvider.notifier).deleteReview(review.id, review.productId);
+                    }
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -331,13 +357,46 @@ class _ReviewCard extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: context.colors.textSecondary, height: 1.5),
           ),
           const SizedBox(height: 12),
-          // Thumbs up
+          // Actions
           Row(
             children: [
-              Icon(Icons.thumb_up_outlined, size: 14, color: context.colors.textHint),
-              SizedBox(width: 6),
-              Text('Helpful (12)',
-                  style: TextStyle(fontSize: 12, color: context.colors.textHint)),
+              // Like button
+              GestureDetector(
+                onTap: () {
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login first.')));
+                    return;
+                  }
+                  ref.read(reviewProvider.notifier).toggleLike(review.id, review.productId, true);
+                },
+                child: Row(
+                  children: [
+                    Icon(isLiked ? Icons.thumb_up : Icons.thumb_up_outlined, size: 16, color: isLiked ? context.colors.primary : context.colors.textHint),
+                    const SizedBox(width: 6),
+                    Text(review.likedBy.length.toString(),
+                        style: TextStyle(fontSize: 12, color: isLiked ? context.colors.primary : context.colors.textHint, fontWeight: isLiked ? FontWeight.bold : FontWeight.normal)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Dislike button
+              GestureDetector(
+                onTap: () {
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login first.')));
+                    return;
+                  }
+                  ref.read(reviewProvider.notifier).toggleLike(review.id, review.productId, false);
+                },
+                child: Row(
+                  children: [
+                    Icon(isDisliked ? Icons.thumb_down : Icons.thumb_down_outlined, size: 16, color: isDisliked ? context.colors.primary : context.colors.textHint),
+                    const SizedBox(width: 6),
+                    Text(review.dislikedBy.length.toString(),
+                        style: TextStyle(fontSize: 12, color: isDisliked ? context.colors.primary : context.colors.textHint, fontWeight: isDisliked ? FontWeight.bold : FontWeight.normal)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],

@@ -7,6 +7,7 @@ import '../../../providers/order_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/utils/formatters.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -17,7 +18,7 @@ class OrderListScreen extends ConsumerStatefulWidget {
 
 class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   int _selectedFilter = 0;
-  final List<String> _filters = ['All Orders', 'Processing', 'Shipped', 'Delivered'];
+  final List<String> _filters = ['All Orders', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
 
   @override
   Widget build(BuildContext context) {
@@ -115,21 +116,22 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                       separatorBuilder: (_, _) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final order = filteredOrders[index];
-                        final firstItem = order.items.isNotEmpty ? order.items.first : null;
-                        
-                        return _buildOrderCard(
-                          orderId: order.id,
-                          date: DateFormat('MMM dd, yyyy').format(order.createdAt),
-                          status: order.statusLabel, // e.g. 'Processing'
-                          title: firstItem?.name ?? 'Order Item',
-                          details: 'Qty: ${firstItem?.qty ?? 0}',
-                          itemCount: order.items.length,
-                          price: AppFormatters.formatPrice(order.total),
-                          pointsEarned: order.pointsEarned,
-                          buttonText: 'View Details',
-                          buttonOutlined: true,
-                          onTap: () => context.push('/orders/${order.id}'),
-                        );
+                          final firstItem = order.items.isNotEmpty ? order.items.first : null;
+                          
+                          return _buildOrderCard(
+                            orderId: order.id,
+                            date: DateFormat('MMM dd, yyyy').format(order.createdAt),
+                            status: order.statusLabel,
+                            title: firstItem?.name ?? 'Order Item',
+                            details: 'Qty: ${firstItem?.qty ?? 0}',
+                            itemCount: order.items.length,
+                            price: AppFormatters.formatPrice(order.total),
+                            pointsEarned: order.pointsEarned,
+                            imageUrl: firstItem?.image,
+                            buttonText: 'View Details',
+                            buttonOutlined: true,
+                            onTap: () => context.push('/orders/${order.id}'),
+                          );
                       },
                     );
                   },
@@ -153,6 +155,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
     required int itemCount,
     required String price,
     int pointsEarned = 0,
+    String? imageUrl,
     required String buttonText,
     bool buttonOutlined = false,
     required VoidCallback onTap,
@@ -204,11 +207,18 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
               Container(
                 width: 60,
                 height: 60,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: context.colors.surfaceGrey,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.auto_stories, color: context.colors.primary),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl, 
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => Icon(Icons.auto_stories, color: context.colors.primary),
+                      )
+                    : Icon(Icons.auto_stories, color: context.colors.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -241,7 +251,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                     border: Border.all(color: const Color(0xFFD4A017).withValues(alpha: 0.4)),
                   ),
                   child: Text(
-                    '⭐ +$pointsEarned pts',
+                    '+$pointsEarned pts',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

@@ -33,6 +33,7 @@ import '../../features/profile/screens/settings_screen.dart';
 import '../../features/profile/screens/manage_address_screen.dart';
 import '../../features/profile/screens/manage_payment_methods_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
+import '../../features/orders/screens/return_order_screen.dart';
 import '../../shared/widgets/not_found_screen.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
@@ -94,6 +95,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: ':id',
                 builder: (context, state) =>
                     OrderDetailScreen(orderId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'return',
+                    builder: (context, state) =>
+                        ReturnOrderScreen(orderId: state.pathParameters['id']!),
+                  ),
+                ],
               ),
             ],
           ),
@@ -129,7 +137,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/search',
-            builder: (context, state) => const SearchScreen(),
+            builder: (context, state) => SearchScreen(
+              initialQuery: state.uri.queryParameters['q'],
+            ),
           ),
           GoRoute(
             path: '/cart',

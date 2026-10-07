@@ -81,6 +81,13 @@ class OrderService {
         });
       }
 
+      if (order.pointsUsed > 0) {
+        final userRef = _db.collection('users').doc(order.userId);
+        transaction.update(userRef, {
+          'loyaltyPoints': FieldValue.increment(-order.pointsUsed),
+        });
+      }
+
       // Write admin notification for new order
       final adminNotifRef = _db.collection('admin_notifications').doc();
       transaction.set(adminNotifRef, {
@@ -110,10 +117,13 @@ class OrderService {
 
     // Send push notification to admin topic
     try {
+      final productNames = order.items.take(2).map((item) => item.name).join(', ') + 
+          (order.items.length > 2 ? ' and ${order.items.length - 2} more' : '');
+          
       await AdminFCMService.sendNotification(
         targetTokenOrTopic: '/topics/admin',
         title: 'New Order Received!',
-        body: 'Order #${order.id.substring(0, 8).toUpperCase()} for ${AppFormatters.formatPrice(order.total)}',
+        body: 'Order #${order.id.toUpperCase()} for $productNames',
         data: {
           'type': 'order',
           'orderId': order.id,
@@ -162,7 +172,7 @@ class OrderService {
       await AdminFCMService.sendNotification(
         targetTokenOrTopic: '/topics/admin',
         title: 'Order Cancelled',
-        body: 'Order #${orderId.substring(0, 8).toUpperCase()} was cancelled by the customer.',
+        body: 'Order #${orderId.toUpperCase()} was cancelled by the customer.',
         data: {
           'type': 'order',
           'orderId': orderId,

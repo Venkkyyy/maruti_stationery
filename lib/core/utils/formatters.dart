@@ -90,6 +90,6 @@ class AppFormatters {
 
   /// "ORD-2026-783421" → "ORD-783421"
   static String formatOrderId(String orderId) {
-    return orderId.length > 10 ? orderId.substring(orderId.length - 10) : orderId;
+    return orderId;
   }
 }

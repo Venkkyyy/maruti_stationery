@@ -48,4 +48,4 @@ final class CategoriesProvider
   }
 }
 
-String _$categoriesHash() => r'50696ea56b79e1de57680662936e809dd043a381';
+String _$categoriesHash() => r'f787a119d6c0aaab63874ed1078aafb264951fa1';

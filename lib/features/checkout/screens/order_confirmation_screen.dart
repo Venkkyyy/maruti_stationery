@@ -94,12 +94,20 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+          onPressed: () => context.go('/home'),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
             children: [
-              const Spacer(flex: 2),
+              const Spacer(flex: 1),
 
               // Animated success icon
               ScaleTransition(
@@ -110,13 +118,13 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
                     width: 110,
                     height: 110,
                     decoration: BoxDecoration(
-                      color: context.colors.success.withValues(alpha: 0.1),
+                      color: context.colors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.check_rounded,
+                      Icons.inventory_2_rounded,
                       size: 60,
-                      color: context.colors.success,
+                      color: context.colors.primary,
                     ),
                   ),
                 ),
@@ -132,19 +140,19 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
                   child: Column(
                     children: [
                       Text(
-                        'Order Placed! 🎉',
+                        'Your order is on the way!',
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize: 24,
                           fontWeight: FontWeight.w800,
                           color: context.colors.textPrimary,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
-                        'Thank you for shopping with Maruti Stationery.\nYour premium items are on their way!',
+                        "We've received your order and it's being packed with care.",
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           color: context.colors.textSecondary,
                           height: 1.5,
                         ),
@@ -155,32 +163,45 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
                       // Order ID card
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         decoration: BoxDecoration(
-                          color: context.colors.primaryLight,
-                          borderRadius: BorderRadius.circular(12),
+                          color: context.colors.surface,
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: context.colors.primary.withValues(alpha: 0.2)),
+                              color: context.colors.border),
                         ),
                         child: Column(
                           children: [
                             Text(
-                              'ORDER ID',
+                              'Order #${widget.orderId.toUpperCase()}',
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: context.colors.textSecondary,
-                                letterSpacing: 1.2,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.orderId,
+                              'Estimated Delivery',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: context.colors.primary,
-                                letterSpacing: 1,
+                                fontSize: 12,
+                                color: context.colors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              () {
+                                final now = DateTime.now();
+                                final start = now.add(const Duration(days: 3));
+                                final end = now.add(const Duration(days: 5));
+                                final fmt = DateFormat('d');
+                                final monthFmt = DateFormat('MMM, yyyy');
+                                return '${fmt.format(start)} - ${fmt.format(end)} ${monthFmt.format(end)}';
+                              }(),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: context.colors.textPrimary,
                               ),
                             ),
                           ],
@@ -239,45 +260,7 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
                           ),
                         ),
 
-                      const SizedBox(height: 12),
 
-                      // Estimated delivery
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: context.colors.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: context.colors.border),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.local_shipping_outlined,
-                                color: context.colors.primary, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Estimated Delivery: ',
-                              style: TextStyle(
-                                  color: context.colors.textSecondary, fontSize: 13),
-                            ),
-                            Text(
-                              () {
-                                final now = DateTime.now();
-                                final start = now.add(const Duration(days: 3));
-                                final end = now.add(const Duration(days: 5));
-                                final fmt = DateFormat('MMM d');
-                                return '${fmt.format(start)} – ${fmt.format(end)}, ${end.year}';
-                              }(),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: context.colors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -292,45 +275,29 @@ class _OrderConfirmationScreenState extends ConsumerState<OrderConfirmationScree
                   children: [
                     SizedBox(
                       width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.track_changes_rounded, size: 20),
-                        label: const Text('Track Order'),
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.colors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
                         onPressed: () => context.go('/orders'),
+                        child: const Text('View Order Details', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 54,
+                      height: 48,
                       child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.colors.primary,
+                          side: BorderSide(color: context.colors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
                         onPressed: () => context.go('/home'),
-                        child: const Text('Continue Shopping'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.share_rounded, size: 20),
-                        label: const Text('Share Receipt via Email'),
-                        onPressed: () async {
-                          final Uri emailLaunchUri = Uri(
-                            scheme: 'mailto',
-                            path: '',
-                            query: 'subject=Order Receipt - Maruti Stationery&body=Here is the receipt for my order! Order ID: ${widget.orderId}',
-                          );
-                          if (await canLaunchUrl(emailLaunchUri)) {
-                            await launchUrl(emailLaunchUri);
-                          } else {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Could not launch email app.')),
-                              );
-                            }
-                          }
-                        },
+                        child: const Text('Continue Shopping', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],

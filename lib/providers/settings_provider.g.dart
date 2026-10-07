@@ -89,3 +89,45 @@ final class WatchLoyaltyRuleProvider
 }
 
 String _$watchLoyaltyRuleHash() => r'2e8bf1d7e008fc6b122a19de22d661056c29c8dc';
+
+@ProviderFor(watchDeliverySettings)
+final watchDeliverySettingsProvider = WatchDeliverySettingsProvider._();
+
+final class WatchDeliverySettingsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DeliverySettingsModel>,
+          DeliverySettingsModel,
+          Stream<DeliverySettingsModel>
+        >
+    with
+        $FutureModifier<DeliverySettingsModel>,
+        $StreamProvider<DeliverySettingsModel> {
+  WatchDeliverySettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchDeliverySettingsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchDeliverySettingsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<DeliverySettingsModel> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<DeliverySettingsModel> create(Ref ref) {
+    return watchDeliverySettings(ref);
+  }
+}
+
+String _$watchDeliverySettingsHash() =>
+    r'debc09ed4e6e5a0f28f277d42e2b400b77a7e340';

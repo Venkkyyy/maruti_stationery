@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/product_model.dart';
+import 'algolia_admin_service.dart' as maruti_algolia;
 
 class AdminProductService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -24,12 +25,26 @@ class AdminProductService {
     );
 
     await _db.collection('products').doc(newProduct.id).set(newProduct.toFirestore());
+    
+    // Automatically sync to Algolia
+    await maruti_algolia.AlgoliaAdminService().syncProduct(newProduct);
   }
 
   // 2. UPDATE Product (Price, Stock, Discount, etc.)
   Future<void> updateProduct(String productId, Map<String, dynamic> updates) async {
     updates['updatedAt'] = FieldValue.serverTimestamp();
     await _db.collection('products').doc(productId).update(updates);
+    
+    // Automatically sync to Algolia
+    try {
+      final doc = await _db.collection('products').doc(productId).get();
+      if (doc.exists) {
+        final product = ProductModel.fromFirestore(doc);
+        await maruti_algolia.AlgoliaAdminService().syncProduct(product);
+      }
+    } catch (e) {
+      debugPrint('Algolia auto-sync failed for update: \$e');
+    }
   }
 
   // 3. DELETE Product — also deletes images from Cloudinary using stored delete_tokens
@@ -96,6 +111,11 @@ class AdminProductService {
 
   /// Uploads a single video file to Cloudinary and returns its secure URL.
   Future<String> uploadVideo(File file) async {
+    final uploadData = await uploadVideoWithToken(file);
+    return uploadData['url']!;
+  }
+
+  Future<Map<String, String>> uploadVideoWithToken(File file) async {
     final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/video/upload');
     final request = http.MultipartRequest('POST', url)
       ..fields['upload_preset'] = _cloudinaryUploadPreset
@@ -105,7 +125,10 @@ class AdminProductService {
     if (response.statusCode == 200) {
       final responseData = await response.stream.bytesToString();
       final json = jsonDecode(responseData);
-      return json['secure_url'] as String;
+      return {
+        'url': json['secure_url'] as String,
+        'delete_token': (json['delete_token'] as String?) ?? '',
+      };
     } else {
       throw Exception('Failed to upload video to Cloudinary: ${response.statusCode}');
     }

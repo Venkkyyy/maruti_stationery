@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,8 @@ import '../../../models/order_model.dart';
 import '../../../providers/order_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/address_provider.dart';
+import '../../../providers/settings_provider.dart';
+import '../../../providers/user_provider.dart';
 import '../../../services/local_notification_service.dart';
 class PaymentScreen extends ConsumerStatefulWidget {
   final String? selectedAddressId;
@@ -20,16 +23,42 @@ class PaymentScreen extends ConsumerStatefulWidget {
 
 class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   String _selectedPayment = 'cod';
+  bool _useLoyaltyPoints = false;
 
   @override
   Widget build(BuildContext context) {
     final cartNotifier = ref.watch(cartProvider.notifier);
     final cartItems = ref.watch(cartProvider).value ?? [];
     final appliedCoupon = ref.watch(appliedCouponProvider);
+    final deliverySettings = ref.watch(watchDeliverySettingsProvider).value ?? const DeliverySettingsModel();
+    
     final subtotal = cartNotifier.subtotal;
-    final discount = appliedCoupon?.calculateDiscount(subtotal) ?? 0;
-    final deliveryCharge = 0; // Or whatever your delivery logic is
-    final totalAmount = (subtotal + deliveryCharge - discount).clamp(0, double.maxFinite).toInt();
+    
+    final isFreeDeliveryCoupon = appliedCoupon?.discountType == 'free_delivery';
+    final isFreeDelivery = isFreeDeliveryCoupon || subtotal >= deliverySettings.freeThreshold;
+    final deliveryCharge = isFreeDelivery ? 0 : deliverySettings.fee;
+    
+    final discount = isFreeDeliveryCoupon ? 0 : (appliedCoupon?.calculateDiscount(subtotal) ?? 0);
+    final totalBeforePoints = (subtotal + deliveryCharge - discount).clamp(0, double.maxFinite).toInt();
+
+    final userModel = ref.watch(currentUserModelProvider).value;
+    final loyaltyRule = ref.watch(watchLoyaltyRuleProvider).value ?? const LoyaltyRuleModel();
+    
+    final int availablePoints = userModel?.loyaltyPoints ?? 0;
+    int loyaltyDiscountPaise = 0;
+    int pointsToDeduct = 0;
+    if (_useLoyaltyPoints && availablePoints >= loyaltyRule.pointsToRupeeRatio) {
+      final maxRupeesOff = availablePoints ~/ loyaltyRule.pointsToRupeeRatio;
+      loyaltyDiscountPaise = maxRupeesOff * 100;
+      
+      if (loyaltyDiscountPaise > totalBeforePoints) {
+        loyaltyDiscountPaise = totalBeforePoints;
+      }
+      pointsToDeduct = (loyaltyDiscountPaise ~/ 100) * loyaltyRule.pointsToRupeeRatio;
+    }
+    
+    final totalAmount = totalBeforePoints - loyaltyDiscountPaise;
+
     final addresses = ref.watch(addressProvider).value ?? [];
     // Use the address selected in the address screen; fall back to first
     final selectedAddress = widget.selectedAddressId != null 
@@ -48,94 +77,133 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/cart');
             }
           },
         ),
-        title: Text('Maruti Stationery', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.primary, fontSize: 18)),
-        actions: [
-          Row(
-            children: [
-              Icon(Icons.lock_rounded, size: 14, color: context.colors.success),
-              const SizedBox(width: 4),
-              Text('Secure', style: TextStyle(color: context.colors.success, fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(width: 16),
-            ],
-          )
-        ],
+        title: Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.textPrimary, fontSize: 18)),
       ),
       body: Column(
         children: [
+          _CheckoutStepper(step: 2),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTotalHeader(totalAmount, cartItems, appliedCoupon),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Select Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                        const SizedBox(height: 16),
-                        
-                        Text('UPI', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: context.colors.surface,
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _selectedPayment.contains('pay') ? context.colors.primary : context.colors.border),
+                            border: Border.all(color: context.colors.border),
                           ),
                           child: Column(
                             children: [
-                              _buildPaymentOption('gpay', 'Google Pay', Icons.payment),
+                              _buildPaymentOption('upi', 'UPI (PhonePe, GPay, Paytm)', null),
                               Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('phonepe', 'PhonePe', Icons.account_balance_wallet),
+                              _buildPaymentOption('card', 'Credit / Debit Card', Icons.credit_card, subtitle: '**** 4582                               VISA'),
                               Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('paytm', 'Paytm', Icons.qr_code),
+                              _buildPaymentOption('netbanking', 'Net Banking', Icons.account_balance),
+                              Divider(height: 1, color: context.colors.divider),
+                              _buildPaymentOption('cod', 'Cash on Delivery', Icons.money),
                             ],
                           ),
                         ),
-                        
-                        const SizedBox(height: 24),
-                        Text('CARDS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _selectedPayment == 'card' ? context.colors.primary : context.colors.border),
+                        if (availablePoints >= loyaltyRule.pointsToRupeeRatio) ...[
+                          const SizedBox(height: 24),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: context.colors.primary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: context.colors.primary.withValues(alpha: 0.2)),
+                            ),
+                            child: CheckboxListTile(
+                              value: _useLoyaltyPoints,
+                              activeColor: context.colors.primary,
+                              onChanged: (val) {
+                                setState(() {
+                                  _useLoyaltyPoints = val ?? false;
+                                });
+                              },
+                              title: Row(
+                                children: [
+                                  Icon(Icons.stars_rounded, color: context.colors.primary, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Use Loyalty Points',
+                                    style: TextStyle(fontWeight: FontWeight.w600, color: context.colors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Text(
+                                'You have $availablePoints points.\n${loyaltyRule.pointsToRupeeRatio} Points = ₹1 off.',
+                                style: TextStyle(fontSize: 12, color: context.colors.textSecondary),
+                              ),
+                              secondary: _useLoyaltyPoints && loyaltyDiscountPaise > 0
+                                  ? Text(
+                                      '- ${AppFormatters.formatPrice(loyaltyDiscountPaise)}',
+                                      style: TextStyle(
+                                        color: context.colors.success,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
+                            ),
                           ),
-                          child: _buildPaymentOption('card', 'Credit / Debit Card', Icons.credit_card, subtitle: 'Visa, Mastercard, RuPay & more'),
-                        ),
-
-                        const SizedBox(height: 24),
-                        Text('OTHER OPTIONS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.colors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: ['netbanking', 'cod'].contains(_selectedPayment) ? context.colors.primary : context.colors.border),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildPaymentOption('netbanking', 'Netbanking', Icons.account_balance),
-                              Divider(height: 1, color: context.colors.divider),
-                              _buildPaymentOption('cod', 'Cash on Delivery', Icons.money, subtitle: 'Pay at your doorstep'),
-                            ],
-                          ),
-                        ),
-                        
+                        ],
                         const SizedBox(height: 32),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: context.colors.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: context.colors.border.withValues(alpha: 0.5)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Price Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: context.colors.textPrimary)),
+                              const SizedBox(height: 16),
+                              _priceRow('Subtotal', AppFormatters.formatPrice(subtotal)),
+                              if (discount > 0) ...[
+                                const SizedBox(height: 12),
+                                _priceRow('Coupon Discount', '- ${AppFormatters.formatPrice(discount)}', isGreen: true),
+                              ],
+                              if (_useLoyaltyPoints && loyaltyDiscountPaise > 0) ...[
+                                const SizedBox(height: 12),
+                                _priceRow('Loyalty Points Discount', '- ${AppFormatters.formatPrice(loyaltyDiscountPaise)}', isGreen: true),
+                              ],
+                              const SizedBox(height: 12),
+                              _priceRow(
+                                'Shipping', 
+                                isFreeDelivery ? 'FREE' : AppFormatters.formatPrice(deliveryCharge), 
+                                isGreen: isFreeDelivery,
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: context.colors.border.withValues(alpha: 0.3)),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
+                                  Text(AppFormatters.formatPrice(totalAmount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: context.colors.textPrimary)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.security, size: 16, color: context.colors.success),
+                            Icon(Icons.lock_rounded, size: 14, color: context.colors.textSecondary),
                             const SizedBox(width: 4),
-                            Text('100% Secure Checkout   |   Powered by Razorpay', style: TextStyle(fontSize: 11, color: context.colors.textSecondary)),
+                            Text('100% secure payments powered by Razorpay', style: TextStyle(fontSize: 11, color: context.colors.textSecondary)),
                           ],
                         ),
                         const SizedBox(height: 100),
@@ -157,8 +225,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         child: SafeArea(
           child: SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 48,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.colors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              ),
               onPressed: () async {
                 if (cartItems.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -178,9 +251,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   return;
                 }
                 
+                final now = DateTime.now();
+                final datePart = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+                final randomPart = const Uuid().v4().substring(0, 5).toUpperCase();
+                final customOrderId = 'MARUTI$datePart${randomPart}ST';
+
                 // Construct OrderModel
                 final order = OrderModel(
-                  id: const Uuid().v4(),
+                  id: customOrderId,
                   userId: userId,
                   status: OrderStatus.placed,
                   items: cartItems.map((item) => OrderItem(
@@ -190,11 +268,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     price: item.price,
                     qty: item.qty,
                     unit: 'piece',
+                    selectedVariations: item.selectedVariations,
                   )).toList(),
                   address: selectedAddress,
                   subtotal: subtotal,
                   deliveryCharge: deliveryCharge,
-                  discount: discount,
+                  discount: discount + loyaltyDiscountPaise,
                   total: totalAmount,
                   paymentMethod: PaymentMethod.values.firstWhere(
                     (e) => e.name == _selectedPayment,
@@ -203,6 +282,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   // All methods pending until Razorpay is integrated
                   paymentStatus: PaymentStatus.pending,
                   idempotencyKey: const Uuid().v4(),
+                  pointsUsed: pointsToDeduct,
+                  deliveryCode: (Random().nextInt(900000) + 100000).toString(),
                   createdAt: DateTime.now(),
                 );
                 
@@ -221,11 +302,15 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   await cartNotifier.clearCart();
                   ref.read(appliedCouponProvider.notifier).removeCoupon();
                   
+                  // Extract product names
+                  final productNames = cartItems.take(2).map((item) => item.name).join(', ') + 
+                      (cartItems.length > 2 ? ' and ${cartItems.length - 2} more' : '');
+                  
                   // Trigger local notification
                   LocalNotificationService.showNotification(
                     id: 0,
                     title: 'Order Placed Successfully! 🎉',
-                    body: 'Your order of ₹${(totalAmount / 100).toStringAsFixed(2)} has been placed.',
+                    body: 'Your order for $productNames has been placed.',
                   );
                   
                   // Pop loading dialog
@@ -244,12 +329,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.colors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('Pay Now ${AppFormatters.formatPrice(totalAmount)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('Continue to Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
@@ -257,90 +337,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     );
   }
 
-  Widget _buildTotalHeader(int totalAmount, List<dynamic> cartItems, dynamic appliedCoupon) {
-    final subtotal = cartItems.fold<int>(0, (acc, item) => acc + (item.price * item.qty) as int);
-    return Container(
-      color: context.colors.surface,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Total Amount to Pay', style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
-              const SizedBox(height: 4),
-              Text(AppFormatters.formatPrice(totalAmount), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: context.colors.primary)),
-            ],
-          ),
-          GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: context.colors.surface,
-                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                builder: (context) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Price Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.colors.textPrimary)),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Price (${cartItems.length} items)', style: TextStyle(color: context.colors.textSecondary)),
-                            Text(AppFormatters.formatPrice(cartItems.fold<int>(0, (acc, item) => acc + (item.price * item.qty) as int))),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Delivery Charges', style: TextStyle(color: context.colors.textSecondary)),
-                            Text('FREE', style: TextStyle(color: context.colors.success)),
-                          ],
-                        ),
-                        if (appliedCoupon != null) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Coupon Discount', style: TextStyle(color: context.colors.textSecondary)),
-                              Text('-${AppFormatters.formatPrice(appliedCoupon.calculateDiscount(subtotal))}', style: TextStyle(color: context.colors.success)),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Amount Payable', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
-                            Text(AppFormatters.formatPrice(totalAmount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: context.colors.textPrimary)),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-            child: Text('View Details ?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentOption(String id, String title, IconData icon, {String? subtitle}) {
+  Widget _buildPaymentOption(String id, String title, IconData? icon, {String? subtitle}) {
     return ListTile(
-      leading: Icon(icon, color: _selectedPayment == id ? context.colors.primary : context.colors.textSecondary),
+      leading: icon != null ? Icon(icon, color: _selectedPayment == id ? context.colors.primary : context.colors.textSecondary) : null,
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
       subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
       trailing: Radio<String>(
@@ -358,6 +357,119 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           _selectedPayment = id;
         });
       },
+    );
+  }
+
+  Widget _priceRow(String label, String value, {bool isGreen = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: context.colors.textSecondary, fontSize: 14)),
+        Text(
+          value, 
+          style: TextStyle(
+            color: isGreen ? context.colors.success : context.colors.textPrimary,
+            fontSize: 14,
+            fontWeight: isGreen ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Checkout Stepper (shared) ──────────────────────────────────────────────
+
+class _CheckoutStepper extends StatelessWidget {
+  final int step; // 1=Address, 2=Payment, 3=Confirm
+
+  const _CheckoutStepper({required this.step});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: context.colors.surface,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      child: Row(
+        children: [
+          _StepDot(number: 1, label: 'Address', isActive: step >= 1, isDone: step > 1),
+          _StepLine(isActive: step > 1),
+          _StepDot(number: 2, label: 'Payment', isActive: step >= 2, isDone: step > 2),
+          _StepLine(isActive: step > 2),
+          _StepDot(number: 3, label: 'Review', isActive: step >= 3, isDone: step > 3),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepDot extends StatelessWidget {
+  final int number;
+  final String label;
+  final bool isActive;
+  final bool isDone;
+
+  const _StepDot({
+    required this.number,
+    required this.label,
+    required this.isActive,
+    required this.isDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isActive ? context.colors.primary : context.colors.surfaceGrey,
+            border: Border.all(
+              color: isActive ? context.colors.primary : context.colors.border,
+            ),
+          ),
+          child: Center(
+            child: isDone
+                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                : Text(
+                    '$number',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isActive ? Colors.white : context.colors.textHint,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: isActive ? context.colors.primary : context.colors.textHint,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepLine extends StatelessWidget {
+  final bool isActive;
+  const _StepLine({required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        margin: const EdgeInsets.only(bottom: 16, left: 4, right: 4),
+        color: isActive ? context.colors.primary : context.colors.border,
+      ),
     );
   }
 }

@@ -5,8 +5,15 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  String _revenueFilter = 'All Time';
 
   @override
   Widget build(BuildContext context) {
@@ -40,13 +47,32 @@ class AdminDashboardScreen extends StatelessWidget {
           
           // Total Revenue Card
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('orders').where('status', isNotEqualTo: 'cancelled').snapshots(),
+            stream: FirebaseFirestore.instance.collection('orders').where('status', whereIn: ['placed', 'confirmed', 'packed', 'shipped', 'delivered']).snapshots(),
             builder: (context, snapshot) {
               int totalRevenue = 0;
               if (snapshot.hasData) {
+                final now = DateTime.now();
                 for (var doc in snapshot.data!.docs) {
                   final data = doc.data() as Map<String, dynamic>;
-                  totalRevenue += (data['total'] as num?)?.toInt() ?? 0;
+                  final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? now;
+                  
+                  bool include = false;
+                  if (_revenueFilter == 'Today') {
+                    include = createdAt.year == now.year && createdAt.month == now.month && createdAt.day == now.day;
+                  } else if (_revenueFilter == 'This Week') {
+                    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                    include = createdAt.isAfter(startOfWeek) || (createdAt.year == startOfWeek.year && createdAt.month == startOfWeek.month && createdAt.day == startOfWeek.day);
+                  } else if (_revenueFilter == 'This Month') {
+                    include = createdAt.year == now.year && createdAt.month == now.month;
+                  } else if (_revenueFilter == 'This Year') {
+                    include = createdAt.year == now.year;
+                  } else {
+                    include = true; // All Time
+                  }
+
+                  if (include) {
+                    totalRevenue += (data['total'] as num?)?.toInt() ?? 0;
+                  }
                 }
               }
               return Container(
@@ -77,6 +103,19 @@ class AdminDashboardScreen extends StatelessWidget {
                             color: context.colors.textSecondary,
                             letterSpacing: 1.2,
                           ),
+                        ),
+                        DropdownButton<String>(
+                          value: _revenueFilter,
+                          items: ['Today', 'This Week', 'This Month', 'This Year', 'All Time']
+                              .map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 12))))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _revenueFilter = val);
+                            }
+                          },
+                          underline: const SizedBox(),
+                          isDense: true,
                         ),
                         Container(
                           padding: const EdgeInsets.all(8),
@@ -212,7 +251,36 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(child: const SizedBox()),
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Customers',
+                  icon: Icons.people_alt_rounded,
+                  onTap: () => context.push('/admin/users'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Return Requests',
+                  icon: Icons.assignment_return_rounded,
+                  onTap: () => context.push('/admin/returns'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActionCard(
+                  context,
+                  title: 'Brands',
+                  icon: Icons.branding_watermark_rounded,
+                  onTap: () => context.push('/admin/brands'),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -270,7 +338,7 @@ class AdminDashboardScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _buildRecentOrderTile(
                       context,
-                      orderId: doc.id.substring(0, 8).toUpperCase(),
+                      orderId: doc.id.toUpperCase(),
                       customer: data['address']?['name'] ?? 'Unknown Customer',
                       amount: (data['total'] as num?)?.toInt() ?? 0,
                       items: itemsString,

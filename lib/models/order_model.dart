@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'address_model.dart';
 
-enum OrderStatus { placed, confirmed, packed, shipped, delivered, cancelled }
+enum OrderStatus { placed, confirmed, packed, shipped, delivered, cancelled, returned }
 enum PaymentMethod { upi, card, netbanking, cod }
 enum PaymentStatus { pending, paid, failed, refunded }
 
@@ -21,6 +21,10 @@ class OrderModel {
   final String? razorpayPaymentId;
   final String idempotencyKey;  // CRITICAL for duplicate prevention
   final int pointsEarned;       // loyalty points credited on this order
+  final int pointsUsed;         // loyalty points redeemed on this order
+  final String? deliveryCode;   // 6 digit code for driver verification
+  final String? deliveryPartnerId; // ID of the assigned delivery partner
+  final DateTime? deliveredAt;     // When the order was actually delivered
   final DateTime createdAt;
 
   const OrderModel({
@@ -39,6 +43,10 @@ class OrderModel {
     this.razorpayPaymentId,
     required this.idempotencyKey,
     this.pointsEarned = 0,
+    this.pointsUsed = 0,
+    this.deliveryCode,
+    this.deliveryPartnerId,
+    this.deliveredAt,
     required this.createdAt,
   });
 
@@ -55,6 +63,7 @@ class OrderModel {
       OrderStatus.shipped => 'Shipped',
       OrderStatus.delivered => 'Delivered',
       OrderStatus.cancelled => 'Cancelled',
+      OrderStatus.returned => 'Returned',
     };
   }
 
@@ -87,6 +96,10 @@ class OrderModel {
       razorpayPaymentId: data['razorpayPaymentId'],
       idempotencyKey: data['idempotencyKey'] ?? '',
       pointsEarned: (data['pointsEarned'] as num?)?.toInt() ?? 0,
+      pointsUsed: (data['pointsUsed'] as num?)?.toInt() ?? 0,
+      deliveryCode: data['deliveryCode'],
+      deliveryPartnerId: data['deliveryPartnerId'],
+      deliveredAt: (data['deliveredAt'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -106,6 +119,10 @@ class OrderModel {
     'razorpayPaymentId': razorpayPaymentId,
     'idempotencyKey': idempotencyKey,
     'pointsEarned': pointsEarned,
+    'pointsUsed': pointsUsed,
+    'deliveryCode': deliveryCode,
+    'deliveryPartnerId': deliveryPartnerId,
+    'deliveredAt': deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,
     'createdAt': Timestamp.fromDate(createdAt),
     'updatedAt': FieldValue.serverTimestamp(),
   };
@@ -118,6 +135,7 @@ class OrderItem {
   final int price;    // snapshot at order time — product price may change later
   final int qty;
   final String unit;
+  final Map<String, String> selectedVariations;
 
   const OrderItem({
     required this.productId,
@@ -126,6 +144,7 @@ class OrderItem {
     required this.price,
     required this.qty,
     required this.unit,
+    this.selectedVariations = const {},
   });
 
   int get total => price * qty;
@@ -138,6 +157,9 @@ class OrderItem {
       price: (map['price'] as num).toInt(),
       qty: (map['qty'] as num).toInt(),
       unit: map['unit'] ?? 'piece',
+      selectedVariations: map['selectedVariations'] != null
+          ? Map<String, String>.from(map['selectedVariations'])
+          : {},
     );
   }
 
@@ -149,6 +171,7 @@ class OrderItem {
       'price': price,
       'qty': qty,
       'unit': unit,
+      'selectedVariations': selectedVariations,
     };
   }
 }

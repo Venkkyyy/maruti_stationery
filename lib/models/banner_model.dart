@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class BannerModel {
   final String id;
   final String imageUrl;
+  final String? imageDeleteToken;
   final bool isActive;
   final String? targetCategoryId;
   final String? targetProductId;
@@ -15,6 +16,7 @@ class BannerModel {
   BannerModel({
     required this.id,
     required this.imageUrl,
+    this.imageDeleteToken,
     this.isActive = true,
     this.targetCategoryId,
     this.targetProductId,
@@ -27,6 +29,7 @@ class BannerModel {
     return BannerModel(
       id: documentId,
       imageUrl: map['imageUrl'] as String? ?? '',
+      imageDeleteToken: map['imageDeleteToken'] as String?,
       isActive: map['isActive'] as bool? ?? true,
       targetCategoryId: map['targetCategoryId'] as String?,
       targetProductId: map['targetProductId'] as String?,
@@ -41,6 +44,7 @@ class BannerModel {
   Map<String, dynamic> toMap() {
     return {
       'imageUrl': imageUrl,
+      'imageDeleteToken': imageDeleteToken,
       'isActive': isActive,
       'targetCategoryId': targetCategoryId,
       'targetProductId': targetProductId,

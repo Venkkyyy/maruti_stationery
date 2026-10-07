@@ -30,7 +30,7 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Delivery Address',
+          'Checkout',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -47,14 +47,29 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text(
-                  'Saved Addresses',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textSecondary,
-                    letterSpacing: 0.5,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Shipping Address',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push('/checkout/address/add'),
+                      child: Text(
+                        'Add New Address',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 addressesAsync.when(
@@ -99,26 +114,24 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
                 GestureDetector(
                   onTap: () => context.push('/checkout/address/add'),
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: context.colors.surface,
+                      color: Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: context.colors.primary.withValues(alpha: 0.4),
-                        style: BorderStyle.solid,
+                        color: context.colors.border,
+                        width: 1,
                       ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_rounded, color: context.colors.primary),
-                        SizedBox(width: 8),
                         Text(
-                          'Add New Address',
+                          '+ Add New Address',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: context.colors.primary,
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ],
@@ -131,18 +144,20 @@ class _AddressScreenState extends ConsumerState<AddressScreen> {
 
           // Continue button
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            decoration: BoxDecoration(
-              color: context.colors.surface,
-              border: Border(top: BorderSide(color: context.colors.border)),
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
             child: SizedBox(
-              height: 54,
+              width: double.infinity,
+              height: 48,
               child: ElevatedButton(
                 onPressed: _selectedAddressId == null
                     ? null
                     : () => context.push('/checkout/payment', extra: _selectedAddressId),
-                child: const Text('Continue to Payment'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.colors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+                child: const Text('Continue to Payment', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -284,7 +299,7 @@ class _CheckoutStepper extends StatelessWidget {
           _StepLine(isActive: step > 1),
           _StepDot(number: 2, label: 'Payment', isActive: step >= 2, isDone: step > 2),
           _StepLine(isActive: step > 2),
-          _StepDot(number: 3, label: 'Confirm', isActive: step >= 3, isDone: step > 3),
+          _StepDot(number: 3, label: 'Review', isActive: step >= 3, isDone: step > 3),
         ],
       ),
     );

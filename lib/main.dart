@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/router/app_router.dart';
 
 import 'firebase_options.dart';
@@ -17,13 +16,6 @@ import 'providers/auth_provider.dart';
 // Run with: flutter run --release --flavor customer
 // ─────────────────────────────────────────────────────────────────────────────
 
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  }
-  debugPrint("Handling a background message: ${message.messageId}");
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +44,6 @@ void main() async {
 
   try {
     await LocalNotificationService.initialize();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint("Notifications init failed: $e");
   }
@@ -69,6 +60,14 @@ class MarutiApp extends ConsumerWidget {
 
     ref.listen(authStateProvider, (prev, next) {
       final user = next.value;
+      if (user != null) {
+        FCMService().initialize(user.uid, isAdmin: false);
+      }
+    });
+
+    // Fire immediately equivalent (only runs if user is already logged in on startup)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authStateProvider).value;
       if (user != null) {
         FCMService().initialize(user.uid, isAdmin: false);
       }

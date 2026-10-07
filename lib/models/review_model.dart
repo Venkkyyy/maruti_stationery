@@ -8,6 +8,8 @@ class ReviewModel {
   final int rating;
   final String text;
   final DateTime createdAt;
+  final List<String> likedBy;
+  final List<String> dislikedBy;
 
   const ReviewModel({
     required this.id,
@@ -17,6 +19,8 @@ class ReviewModel {
     required this.rating,
     required this.text,
     required this.createdAt,
+    this.likedBy = const [],
+    this.dislikedBy = const [],
   });
 
   factory ReviewModel.fromFirestore(DocumentSnapshot doc) {
@@ -29,6 +33,8 @@ class ReviewModel {
       rating: (data['rating'] as num?)?.toInt() ?? 0,
       text: data['text'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likedBy: List<String>.from(data['likedBy'] ?? []),
+      dislikedBy: List<String>.from(data['dislikedBy'] ?? []),
     );
   }
 
@@ -40,6 +46,8 @@ class ReviewModel {
       'rating': rating,
       'text': text,
       'createdAt': Timestamp.fromDate(createdAt),
+      'likedBy': likedBy,
+      'dislikedBy': dislikedBy,
     };
   }
 }

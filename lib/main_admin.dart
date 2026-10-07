@@ -81,6 +81,14 @@ class MarutiAdminApp extends ConsumerWidget {
       }
     });
 
+    // Fire immediately equivalent (only runs if user is already logged in on startup)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        FCMService().initialize(user.uid, isAdmin: true);
+      }
+    });
+
     return MaterialApp.router(
       title: 'Maruti Admin',
       debugShowCheckedModeBanner: false,

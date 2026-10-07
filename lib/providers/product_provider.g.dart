@@ -258,7 +258,7 @@ final class GetProductsByCategoryProvider
 }
 
 String _$getProductsByCategoryHash() =>
-    r'c8756b3879cf7d59fd1d8674957ab7d18d151287';
+    r'9a5a7824d2b944edc8992a4a4409d3d7f82cccd4';
 
 final class GetProductsByCategoryFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<ProductModel>>, String> {
@@ -335,7 +335,7 @@ final class GetNewArrivalsProvider
   }
 }
 
-String _$getNewArrivalsHash() => r'72afeba5cd066d5ce4477708c2df2fe6c12d3e6e';
+String _$getNewArrivalsHash() => r'b9b1c8c8472431a7416e708696c2250d6b001b68';
 
 final class GetNewArrivalsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<ProductModel>>, int> {
@@ -413,7 +413,7 @@ final class GetRelatedProductsProvider
 }
 
 String _$getRelatedProductsHash() =>
-    r'156ff2257201405500ecf56c807ee8fc2ac22830';
+    r'53385fb320c60c7cf16ebc9bf745f0e7069b480a';
 
 final class GetRelatedProductsFamily extends $Family
     with

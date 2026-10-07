@@ -159,7 +159,7 @@ final class CartStreamProvider
   }
 }
 
-String _$cartStreamHash() => r'ddc06179ac4f18695b9c589e699a522b5fb7b350';
+String _$cartStreamHash() => r'ffa1e27c86573c7e8f6a219a6a89252a2cf8b97d';
 
 final class CartStreamFamily extends $Family
     with $FunctionalFamilyOverride<Stream<List<CartItemModel>>, String> {
@@ -203,7 +203,7 @@ final class CartNotifierProvider
   CartNotifier create() => CartNotifier();
 }
 
-String _$cartNotifierHash() => r'f0669f797f79d6402087d19464d74258a041dbe4';
+String _$cartNotifierHash() => r'4048461529b855446e0e6e1b98d88947d304d938';
 
 abstract class _$CartNotifier extends $AsyncNotifier<List<CartItemModel>> {
   FutureOr<List<CartItemModel>> build();

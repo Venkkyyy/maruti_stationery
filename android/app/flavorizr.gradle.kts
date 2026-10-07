@@ -16,6 +16,11 @@ android.apply {
             applicationId = "com.example.maruti_stationery.admin"
             resValue(type = "string", name = "app_name", value = "Maruti Admin")
         }
+        create("delivery") {
+            dimension = "flavor-type"
+            applicationId = "com.example.maruti_stationery.delivery"
+            resValue(type = "string", name = "app_name", value = "Maruti Delivery")
+        }
     }
 
     buildFeatures.resValues = true

@@ -64,7 +64,7 @@ Stream<List<CartItemModel>> cartStream(Ref ref, String userId) {
       .collection('items')
       .snapshots()
       .map((snapshot) => snapshot.docs
-          .map((doc) => CartItemModel.fromMap(doc.data()))
+          .map((doc) => CartItemModel.fromMap(doc.id, doc.data()))
           .toList());
 }
 
@@ -98,16 +98,20 @@ class CartNotifier extends _$CartNotifier {
     }
   }
 
-  Future<void> addItem(ProductModel product, int qty) async {
+  Future<void> addItem(ProductModel product, int qty, {Map<String, String> selectedVariations = const {}}) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw const AppException('Please login to add to cart');
     
     // Check stock before adding
     if (product.stock < qty) throw AppException('Only ${product.stock} items in stock');
     
+    final cartItemId = selectedVariations.isEmpty 
+        ? product.id 
+        : '${product.id}_${selectedVariations.values.join('_')}';
+
     final docRef = FirebaseFirestore.instance
         .collection('carts').doc(userId)
-        .collection('items').doc(product.id);
+        .collection('items').doc(cartItemId);
     
     final existing = await docRef.get();
     
@@ -128,33 +132,34 @@ class CartNotifier extends _$CartNotifier {
         'price': product.price,
         'qty': qty,
         'stock': product.stock,
+        'selectedVariations': selectedVariations,
         'addedAt': FieldValue.serverTimestamp(),
       });
     }
   }
 
-  Future<void> updateQty(String productId, int newQty) async {
+  Future<void> updateQty(String cartItemId, int newQty) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
     
     if (newQty <= 0) {
-      await removeItem(productId);
+      await removeItem(cartItemId);
       return;
     }
     
     await FirebaseFirestore.instance
         .collection('carts').doc(userId)
-        .collection('items').doc(productId)
+        .collection('items').doc(cartItemId)
         .update({'qty': newQty});
   }
 
-  Future<void> removeItem(String productId) async {
+  Future<void> removeItem(String cartItemId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
     
     await FirebaseFirestore.instance
         .collection('carts').doc(userId)
-        .collection('items').doc(productId)
+        .collection('items').doc(cartItemId)
         .delete();
   }
 

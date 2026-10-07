@@ -28,7 +28,21 @@ class LocalNotificationService {
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _notificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    await androidImplementation?.requestNotificationsPermission();
+            
+    if (androidImplementation != null) {
+      await androidImplementation.requestNotificationsPermission();
+      
+      // Create the channel explicitly for FCM background notifications
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'maruti_stationery_channel_v2', // id
+        'Orders & Updates (High Priority)', // name
+        description: 'Important notifications regarding orders and updates',
+        importance: Importance.max,
+        playSound: true,
+      );
+      
+      await androidImplementation.createNotificationChannel(channel);
+    }
   }
 
   static Future<void> showNotification({

@@ -9,21 +9,19 @@ import '../../catalog/widgets/product_card.dart';
 /// Fetches ALL active products then filters client-side by [tag].
 /// This avoids needing a Firestore composite index for array-contains queries.
 final _bannerProductsProvider =
-    FutureProvider.family<List<ProductModel>, String>((ref, tag) async {
-  final snap = await FirebaseFirestore.instance
+    StreamProvider.family<List<ProductModel>, String>((ref, tag) {
+  return FirebaseFirestore.instance
       .collection('products')
       .where('isActive', isEqualTo: true)
-      .get();
-
-  final all = snap.docs.map(ProductModel.fromFirestore).toList();
-
-  // Filter: product tags list contains the banner tag (case-insensitive)
-  final tagLower = tag.toLowerCase();
-  final filtered = all
-      .where((p) => p.tags.any((t) => t.toLowerCase() == tagLower))
-      .toList();
-
-  return filtered;
+      .snapshots()
+      .map((snap) {
+        final all = snap.docs.map(ProductModel.fromFirestore).toList();
+        final tagLower = tag.toLowerCase();
+        final filtered = all
+            .where((p) => p.isActive && p.tags.any((t) => t.toLowerCase() == tagLower))
+            .toList();
+        return filtered;
+      });
 });
 
 class BannerProductsScreen extends ConsumerWidget {
