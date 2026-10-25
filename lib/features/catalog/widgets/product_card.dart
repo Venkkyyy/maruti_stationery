@@ -41,6 +41,7 @@ class ProductCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: context.colors.surface,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.colors.border),
           boxShadow: [
             BoxShadow(
               color: isDark
@@ -158,16 +159,31 @@ class ProductCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Product Name
-                      Text(
-                        p.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: context.colors.textPrimary,
-                        ),
+                      // Product Name & Variant
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            (p.brandId?.isNotEmpty == true) ? p.brandId! : 'Standard',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: context.colors.textHint,
+                            ),
+                          ),
+                        ],
                       ),
                       
                       const Spacer(),
@@ -195,12 +211,19 @@ class ProductCard extends ConsumerWidget {
                               ),
                             ),
                             const Spacer(),
-                            Text(
-                              '${(((p.mrp - p.price) / p.mrp) * 100).toInt()}% OFF',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: context.colors.success, // #DDF4D7
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${(((p.mrp - p.price) / p.mrp) * 100).toInt()}% OFF',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colors.primary, // Make text pop on the light green
+                                ),
                               ),
                             ),
                           ],
@@ -258,15 +281,11 @@ class ProductCard extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E88E5), Color(0xFF1565C0)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: context.colors.primary,
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+                color: context.colors.primary.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -291,15 +310,11 @@ class ProductCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E88E5), Color(0xFF1565C0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: context.colors.primary,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+            color: context.colors.primary.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

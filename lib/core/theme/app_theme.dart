@@ -75,20 +75,20 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 class AppTheme {
   // ── Light Colors ─────────────────────────────────────────────────────────
   static const AppThemeColors _lightColors = AppThemeColors(
-    primary: Color(0xFF1B2D6E),
-    primaryLight: Color(0xFFEEF1F9),
-    secondary: Color(0xFFEEF1F9),
-    background: Color(0xFFF8F9FA),
-    surface: Color(0xFFFFFFFF),
+    primary: Color(0xFFF45B0B),        // Primary buttons
+    primaryLight: Color(0xFFFFF0DD),   // Selected category
+    secondary: Color(0xFFFFF0DD),      // Selected category
+    background: Color(0xFFFFF8EF),     // App background
+    surface: Color(0xFFFFFFFF),        // Product cards
     surfaceGrey: Color(0xFFF1F3F4),
-    textPrimary: Color(0xFF202124),
-    textSecondary: Color(0xFF5F6368),
+    textPrimary: Color(0xFF183153),    // Headings
+    textSecondary: Color(0xFF6B7280),  // Product descriptions
     textHint: Color(0xFF9AA0A6),
-    border: Color(0xFFE8EAED),
-    divider: Color(0xFFF1F3F4),
+    border: Color(0xFFF2D5B8),         // Borders
+    divider: Color(0xFFF2D5B8),        // Borders
     error: Color(0xFFEA4335),
     errorLight: Color(0xFFFCE8E6),
-    success: Color(0xFF34A853),
+    success: Color(0xFFDDF4D7),        // Discount badges
     warning: Color(0xFFFBBC05),
   );
 
