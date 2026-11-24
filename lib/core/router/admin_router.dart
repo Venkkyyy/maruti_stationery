@@ -39,6 +39,11 @@ import '../../features/admin/screens/admin_stock_history_screen.dart';
 import '../../features/admin/screens/admin_financial_reports_screen.dart';
 import '../../features/admin/screens/admin_cms_screen.dart';
 import '../../features/admin/screens/admin_home_layout_screen.dart';
+import '../../features/admin/screens/admin_storefront_screen.dart';
+import '../../features/admin/screens/admin_collections_screen.dart';
+import '../../features/admin/screens/admin_storefront_preview_screen.dart';
+import '../../features/admin/screens/admin_storefront_history_screen.dart';
+import '../../features/admin/screens/admin_campaigns_screen.dart';
 
 // Shared screens still needed
 import '../../features/auth/screens/complete_profile_screen.dart';
@@ -197,6 +202,28 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/admin/financial-reports', builder: (context, state) => const AdminFinancialReportsScreen()),
           GoRoute(path: '/admin/cms', builder: (context, state) => const AdminCmsScreen()),
           GoRoute(path: '/admin/home-layout', builder: (context, state) => const AdminHomeLayoutScreen()),
+          GoRoute(
+            path: '/admin/storefront',
+            builder: (context, state) => const AdminStorefrontScreen(),
+            routes: [
+              GoRoute(
+                path: 'collections',
+                builder: (context, state) => const AdminCollectionsScreen(),
+              ),
+              GoRoute(
+                path: 'preview',
+                builder: (context, state) => const AdminStorefrontPreviewScreen(),
+              ),
+              GoRoute(
+                path: 'history',
+                builder: (context, state) => const AdminStorefrontHistoryScreen(),
+              ),
+              GoRoute(
+                path: 'campaigns',
+                builder: (context, state) => const AdminCampaignsScreen(),
+              ),
+            ],
+          ),
         ],
       ),
     ],

@@ -250,10 +250,10 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.dashboard_customize_rounded, color: context.colors.primary),
-            title: Text('Customer Home Screen Layout', style: TextStyle(color: context.colors.textPrimary)),
-            subtitle: Text('Re-order sections, add product showcases, and customize layout', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            title: Text('Storefront & Server-Driven UI', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Manage dynamic sections, collections, versions, and live previews', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/admin/home-layout'),
+            onTap: () => context.push('/admin/storefront'),
           ),
           const Divider(),
           ListTile(

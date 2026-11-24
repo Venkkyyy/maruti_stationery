@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -68,23 +69,50 @@ Stream<List<CartItemModel>> cartStream(Ref ref, String userId) {
           .toList());
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class CartNotifier extends _$CartNotifier {
+  StreamSubscription<List<CartItemModel>>? _cartSub;
+
   @override
   Future<List<CartItemModel>> build() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return [];
-    
-    // Watch real-time cart changes
-    ref.listen(cartStreamProvider(userId), (_, next) {
-      next.whenData((items) {
-        state = AsyncData(items);
-        // Auto-remove applied coupon if subtotal drops below its minimum
-        _validateCouponForItems(items);
-      });
+
+    _cartSub?.cancel();
+
+    // Safely subscribe to real-time cart updates without mutating state during build
+    _cartSub = FirebaseFirestore.instance
+        .collection('carts')
+        .doc(userId)
+        .collection('items')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CartItemModel.fromMap(doc.id, doc.data()))
+            .toList())
+        .listen((items) {
+          state = AsyncData(items);
+          _validateCouponForItems(items);
+        }, onError: (err, stack) {
+          state = AsyncError(err, stack);
+        });
+
+    ref.onDispose(() {
+      _cartSub?.cancel();
+      _cartSub = null;
     });
-    
-    return ref.read(cartStreamProvider(userId).future);
+
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('carts')
+          .doc(userId)
+          .collection('items')
+          .get();
+      return snap.docs
+          .map((doc) => CartItemModel.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Checks the currently applied coupon against a given list of cart items.

@@ -29,6 +29,7 @@ import '../../features/profile/screens/about_screen.dart';
 import '../../features/checkout/screens/add_address_screen.dart';
 import '../../features/cart/screens/offers_screen.dart';
 import '../../features/profile/screens/settings_screen.dart';
+import '../../features/profile/screens/privacy_center_screen.dart';
 import '../../features/profile/screens/manage_address_screen.dart';
 import '../../features/profile/screens/manage_payment_methods_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
@@ -165,6 +166,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/profile/privacy',
+        builder: (context, state) => const PrivacyCenterScreen(),
       ),
       GoRoute(
         path: '/profile/support',

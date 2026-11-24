@@ -25,6 +25,12 @@ import '../../../providers/coupon_provider.dart';
 import '../../../models/home_section_model.dart';
 import '../../../providers/home_layout_provider.dart';
 import '../../../shared/widgets/animated_search_hint.dart';
+import '../../../models/storefront_section_model.dart';
+import '../../../providers/storefront_provider.dart';
+import '../../../providers/brand_provider.dart';
+import '../../../models/brand_model.dart';
+import '../../../models/product_collection_model.dart';
+import '../../../shared/sdui/storefront_section_renderer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -59,12 +65,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    final bannersAsync = ref.watch(bannerProvider);
-    final categoriesAsync = ref.watch(activeCategoriesStreamProvider);
-    final allProductsAsync = ref.watch(activeProductsStreamProvider('all'));
-    final adsAsync = ref.watch(activeAdsProvider);
-    final homeLayoutAsync = ref.watch(homeLayoutStreamProvider);
-    final configuredSections = homeLayoutAsync.value ?? HomeSectionModel.defaultSections;
+    final storefrontAsync = ref.watch(publishedStorefrontStreamProvider('home'));
+    final collections = ref.watch(productCollectionsStreamProvider).value ?? [];
+    final brands = ref.watch(watchBrandsProvider).value ?? [];
+    final banners = ref.watch(bannerProvider).value ?? [];
+    final categories = ref.watch(activeCategoriesStreamProvider).value ?? [];
+    final allProducts = ref.watch(activeProductsStreamProvider('all')).value ?? [];
+    final ads = ref.watch(activeAdsProvider).value ?? [];
+    final sections = storefrontAsync.value?.sections ?? StorefrontSectionModel.defaultSections;
 
     final authState = ref.watch(authStateProvider);
     final currentUser = authState.value;
@@ -80,12 +88,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () async {
+            ref.invalidate(publishedStorefrontStreamProvider('home'));
+            ref.invalidate(productCollectionsStreamProvider);
+            ref.invalidate(watchBrandsProvider);
             ref.invalidate(bannerProvider);
             ref.invalidate(activeCategoriesStreamProvider);
             ref.invalidate(activeProductsStreamProvider('all'));
             ref.invalidate(activeAdsProvider);
             ref.invalidate(addressProvider);
-            ref.invalidate(homeLayoutStreamProvider);
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -100,14 +110,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
 
-              // ── DYNAMIC CMS HOME SECTIONS (Admin Configured Order) ─────
+              // ── DYNAMIC SERVER-DRIVEN UI SECTIONS ─────────────────────────
               ..._buildDynamicSections(
                 context: context,
-                sections: configuredSections,
-                categoriesAsync: categoriesAsync,
-                bannersAsync: bannersAsync,
-                allProductsAsync: allProductsAsync,
-                adsAsync: adsAsync,
+                sections: sections,
+                categories: categories,
+                banners: banners,
+                allProducts: allProducts,
+                ads: ads,
+                brands: brands,
+                collections: collections,
                 currentUser: currentUser,
               ),
 
@@ -120,176 +132,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Dynamic Section Builder (Executes in Admin Configured Order)
+  // Server-Driven UI Dynamic Section Builder
   // ─────────────────────────────────────────────────────────────────────────
   List<Widget> _buildDynamicSections({
     required BuildContext context,
-    required List<HomeSectionModel> sections,
-    required AsyncValue<List<CategoryModel>> categoriesAsync,
-    required AsyncValue<List<BannerModel>> bannersAsync,
-    required AsyncValue<List<ProductModel>> allProductsAsync,
-    required AsyncValue<List<AdModel>> adsAsync,
+    required List<StorefrontSectionModel> sections,
+    required List<CategoryModel> categories,
+    required List<BannerModel> banners,
+    required List<ProductModel> allProducts,
+    required List<AdModel> ads,
+    required List<BrandModel> brands,
+    required List<ProductCollectionModel> collections,
     required dynamic currentUser,
   }) {
     final List<Widget> slivers = [];
 
     for (final section in sections) {
-      if (!section.isEnabled) continue;
+      if (!section.isEnabled || !section.isCurrentlyScheduledActive) continue;
 
-      switch (section.type) {
-        case 'categories':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 18)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: categoriesAsync.when(
-                data: (categories) => _ReferenceCategoryPills(
-                  categories: categories,
-                  selectedId: _selectedCategoryId,
-                  onSelect: (catId) {
-                    setState(() => _selectedCategoryId = catId);
-                    if (catId == 'all') {
-                      context.push('/catalog');
-                    } else {
-                      context.push('/catalog?categoryId=$catId');
-                    }
-                  },
-                ),
-                loading: () => _buildCategorySkeleton(context),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-
-        case 'banners':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 20)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: bannersAsync.when(
-                data: (banners) => _ReferenceBannerCarousel(banners: banners),
-                loading: () => _buildBannerSkeleton(context),
-                error: (_, __) => _ReferenceDefaultBanner(
-                  onTap: () => context.push('/catalog'),
-                ),
-              ),
-            ),
-          );
-          break;
-
-        case 'use_case':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: categoriesAsync.when(
-                data: (categories) => _ReferenceUseCaseSection(categories: categories),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-
-        case 'trending':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: allProductsAsync.when(
-                data: (products) {
-                  final trending = List<ProductModel>.from(products)
-                    ..sort((a, b) {
-                      if (a.isOnSale && !b.isOnSale) return -1;
-                      if (!a.isOnSale && b.isOnSale) return 1;
-                      return b.createdAt.compareTo(a.createdAt);
-                    });
-                  return _DynamicProductSection(
-                    title: section.title.isNotEmpty ? section.title : 'Trending Now',
-                    subtitle: section.subtitle,
-                    products: trending,
-                    displayStyle: section.displayStyle,
-                    limit: section.limit,
-                  );
-                },
-                loading: () => _buildProductGridSkeleton(context),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-
-        case 'new_arrivals':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: allProductsAsync.when(
-                data: (products) {
-                  final sorted = List<ProductModel>.from(products)
-                    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                  return _DynamicProductSection(
-                    title: section.title.isNotEmpty ? section.title : 'Newly Added',
-                    subtitle: section.subtitle,
-                    products: sorted,
-                    displayStyle: section.displayStyle,
-                    limit: section.limit,
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-
-        case 'buy_again':
-          if (currentUser != null) {
-            slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-            slivers.add(
-              SliverToBoxAdapter(
-                child: _ReferenceBuyAgainSection(
-                  userId: currentUser.uid,
-                  allProductsAsync: allProductsAsync,
-                ),
-              ),
-            );
-          }
-          break;
-
-        case 'ads':
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: adsAsync.when(
-                data: (ads) => _ReferenceSponsoredSection(
-                  ads: ads,
-                  loggedImpressions: _loggedImpressions,
-                ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-
-        case 'custom_products':
-        default:
-          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 26)));
-          slivers.add(
-            SliverToBoxAdapter(
-              child: allProductsAsync.when(
-                data: (products) => _DynamicProductSection(
-                  title: section.title,
-                  subtitle: section.subtitle,
-                  products: products,
-                  categoryId: section.categoryId,
-                  displayStyle: section.displayStyle,
-                  limit: section.limit,
-                ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-          break;
-      }
+      slivers.add(
+        SliverToBoxAdapter(
+          child: StorefrontSectionRenderer(
+            section: section,
+            allProducts: allProducts,
+            categories: categories,
+            banners: banners,
+            ads: ads,
+            brands: brands,
+            collections: collections,
+            loggedImpressions: _loggedImpressions,
+            currentUserId: currentUser != null ? (currentUser.uid as String?) : null,
+          ),
+        ),
+      );
     }
 
     return slivers;

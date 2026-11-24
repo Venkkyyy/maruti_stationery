@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/review_model.dart';
-import 'auth_provider.dart';
+import 'product_provider.dart';
 
 part 'review_provider.g.dart';
 
@@ -45,6 +45,7 @@ class ReviewNotifier extends _$ReviewNotifier {
       await _updateProductRatingStats(productId);
       state = const AsyncData(null);
       ref.invalidate(productReviewsProvider(productId));
+      ref.invalidate(watchProductProvider(productId));
     } catch (e) {
       state = AsyncError(e, StackTrace.current);
       rethrow;
@@ -59,6 +60,7 @@ class ReviewNotifier extends _$ReviewNotifier {
       await FirebaseFirestore.instance.collection('reviews').doc(reviewId).delete();
       await _updateProductRatingStats(productId);
       ref.invalidate(productReviewsProvider(productId));
+      ref.invalidate(watchProductProvider(productId));
     } catch (e) {
       rethrow;
     }

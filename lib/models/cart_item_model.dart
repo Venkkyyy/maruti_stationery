@@ -22,15 +22,17 @@ class CartItemModel {
   factory CartItemModel.fromMap(String id, Map<String, dynamic> map) {
     return CartItemModel(
       id: id,
-      productId: map['productId'] ?? '',
-      name: map['name'] ?? '',
-      image: map['image'] ?? '',
-      price: (map['price'] as num).toInt(),
-      qty: (map['qty'] as num).toInt(),
-      stock: (map['stock'] as num).toInt(),
-      selectedVariations: map['selectedVariations'] != null 
-          ? Map<String, String>.from(map['selectedVariations'])
-          : {},
+      productId: map['productId'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+      image: map['image'] as String? ?? '',
+      price: (map['price'] as num?)?.toInt() ?? 0,
+      qty: (map['qty'] as num?)?.toInt() ?? 1,
+      stock: (map['stock'] as num?)?.toInt() ?? 0,
+      selectedVariations: map['selectedVariations'] is Map
+          ? (map['selectedVariations'] as Map).map(
+              (k, v) => MapEntry(k.toString(), v.toString()),
+            )
+          : const {},
     );
   }
 

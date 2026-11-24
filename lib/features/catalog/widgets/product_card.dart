@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/image_optimizer.dart';
 import '../../../models/product_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/wishlist_provider.dart';
@@ -262,7 +263,7 @@ class ProductCard extends ConsumerWidget {
       );
     }
     return CachedNetworkImage(
-      imageUrl: p.images.first,
+      imageUrl: ImageOptimizer.getThumbnailUrl(p.images.first, width: 360, height: 360),
       fit: BoxFit.contain,
       memCacheWidth: 400,
       placeholder: (_, __) => const Center(

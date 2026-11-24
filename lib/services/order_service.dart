@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/order_model.dart';
 import '../core/errors/app_exception.dart';
-import '../core/utils/formatters.dart';
 import 'admin_fcm_service.dart';
 import 'fcm_service.dart';
 import 'gmail_automation_service.dart';
@@ -45,6 +44,13 @@ class OrderService {
     final pointsEarned = (order.total ~/ 10000) * pointsPer100;
 
     await _db.runTransaction((transaction) async {
+      // 0. Idempotency Check: prevent duplicate orders on double-submit or retry
+      final orderRef = _db.collection('orders').doc(order.id);
+      final existingOrderDoc = await transaction.get(orderRef);
+      if (existingOrderDoc.exists) {
+        return; // Already processed idempotently
+      }
+
       // First, read all product documents to validate stock
       final productRefs = order.items
           .map((item) => _db.collection('products').doc(item.productId))
@@ -72,7 +78,6 @@ class OrderService {
       }
 
       // All stock checks passed — write order (with pointsEarned) and decrement stock
-      final orderRef = _db.collection('orders').doc(order.id);
       // Write order with pointsEarned baked in
       final orderData = order.toFirestore();
       orderData['pointsEarned'] = pointsEarned;

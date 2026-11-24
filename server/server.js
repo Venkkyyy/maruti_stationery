@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const emailRoutes = require('./routes/emailRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -36,6 +37,9 @@ app.get('/health', (req, res) => {
 
 // Email API routes
 app.use('/api/email', emailRoutes);
+
+// Payment API routes (Server-side Razorpay order creation & signature verification)
+app.use('/api/payment', paymentRoutes);
 
 // Root greeting
 app.get('/', (req, res) => {

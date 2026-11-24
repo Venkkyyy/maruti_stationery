@@ -153,14 +153,20 @@ class _StaffCard extends StatelessWidget {
 
   Color _getRoleColor(StaffRole role) {
     switch (role) {
-      case StaffRole.admin:
+      case StaffRole.superAdmin:
         return AppColors.royalBlue;
-      case StaffRole.manager:
+      case StaffRole.storeManager:
         return AppColors.primary;
-      case StaffRole.orderClerk:
-        return const Color(0xFF10B981);
-      case StaffRole.inventoryClerk:
+      case StaffRole.contentManager:
+        return const Color(0xFF0D9488);
+      case StaffRole.inventoryManager:
         return const Color(0xFF8B5CF6);
+      case StaffRole.orderManager:
+        return const Color(0xFF10B981);
+      case StaffRole.supportStaff:
+        return const Color(0xFFF59E0B);
+      case StaffRole.viewer:
+        return const Color(0xFF6B7280);
     }
   }
 
@@ -269,7 +275,7 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
-  StaffRole _selectedRole = StaffRole.orderClerk;
+  StaffRole _selectedRole = StaffRole.orderManager;
   bool _isLoading = false;
 
   bool get _isEdit => widget.existingStaff != null;
@@ -281,7 +287,7 @@ class _StaffFormSheetState extends State<_StaffFormSheet> {
     _nameCtrl = TextEditingController(text: s?.name ?? '');
     _emailCtrl = TextEditingController(text: s?.email ?? '');
     _phoneCtrl = TextEditingController(text: s?.phone ?? '');
-    _selectedRole = s?.role ?? StaffRole.orderClerk;
+    _selectedRole = s?.role ?? StaffRole.orderManager;
   }
 
   @override

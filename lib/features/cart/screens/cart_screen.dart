@@ -278,7 +278,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${cartNotifier.totalItems}',
+                  '${cartAsync.value?.fold<int>(0, (total, item) => total + item.qty) ?? 0}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -331,7 +331,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             return _buildEmptyCart();
           }
 
-          final subtotal = cartNotifier.subtotal;
+          final subtotal = items.fold<int>(0, (total, item) => total + (item.price * item.qty));
           final isFreeDeliveryCoupon =
               appliedCoupon?.discountType == 'free_delivery';
           final isFreeDelivery =

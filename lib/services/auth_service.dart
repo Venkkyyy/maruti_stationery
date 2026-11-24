@@ -203,6 +203,25 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Remove device tokens on sign-out to prevent post-logout notification leaks
+        try {
+          final tokens = await _db.collection('users').doc(user.uid).collection('fcm_tokens').get();
+          for (final d in tokens.docs) {
+            await d.reference.delete();
+          }
+        } catch (_) {}
+      }
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().toList();
+      for (final key in keys) {
+        if (key.startsWith('cached_storefront_') || key.startsWith('user_')) {
+          await prefs.remove(key);
+        }
+      }
+    } catch (_) {}
     await _auth.signOut();
     await GoogleSignIn.instance.signOut();
   }

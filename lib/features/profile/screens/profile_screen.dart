@@ -405,6 +405,12 @@ class ProfileScreen extends ConsumerWidget {
                       label: 'Settings',
                       onTap: () => context.push('/profile/settings'),
                     ),
+                    _buildDivider(),
+                    _buildMenuItem(
+                      icon: Icons.security_rounded,
+                      label: 'Privacy & Data Protection',
+                      onTap: () => context.push('/profile/privacy'),
+                    ),
                   ],
                 ),
               ),

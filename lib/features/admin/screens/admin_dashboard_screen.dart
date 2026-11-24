@@ -455,12 +455,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               Expanded(
                 child: _buildActionCard(
-                  title: 'Home Layout CMS',
-                  subtitle: 'Reorder & add sections',
+                  title: 'Storefront CMS',
+                  subtitle: 'SDUI, Sections & Versions',
                   icon: Icons.dashboard_customize_rounded,
                   accentColor: const Color(0xFF6366F1),
                   isHighlighted: true,
-                  onTap: () => context.push('/admin/home-layout'),
+                  onTap: () => context.push('/admin/storefront'),
                 ),
               ),
               const SizedBox(width: 12),

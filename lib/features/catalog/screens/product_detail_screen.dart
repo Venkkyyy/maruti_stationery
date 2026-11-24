@@ -171,6 +171,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(watchProductProvider(widget.productId));
+    final liveReviews = ref.watch(productReviewsProvider(widget.productId)).value ?? [];
 
     return productAsync.when(
       loading: () => const Scaffold(
@@ -227,6 +228,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         final wishlistAsync = ref.watch(watchWishlistProvider);
         final isWishlisted =
             wishlistAsync.value?.any((p) => p.id == product.id) ?? false;
+
+        final liveCount = liveReviews.isNotEmpty ? liveReviews.length : product.reviewCount;
+        final liveAvg = liveReviews.isNotEmpty
+            ? (liveReviews.fold<double>(0.0, (acc, r) => acc + r.rating) / liveReviews.length)
+            : product.averageRating;
 
         // Auto-select initial variations
         if (_selectedVariations.isEmpty && product.variations.isNotEmpty) {
@@ -424,7 +430,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     ),
                                     child: Row(
                                       children: [
-                                        if (product.reviewCount > 0 && product.averageRating > 0) ...[
+                                        if (liveCount > 0 && liveAvg > 0) ...[
                                           const Icon(
                                             Icons.star_rounded,
                                             color: Color(0xFFF59E0B),
@@ -432,7 +438,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            product.averageRating.toStringAsFixed(1),
+                                            liveAvg.toStringAsFixed(1),
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,

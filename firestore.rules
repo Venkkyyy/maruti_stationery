@@ -1,136 +1,362 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ── Public read-only ──────────────────────────────────────────────────────
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && (
-        (request.auth.token.email != null && request.auth.token.email.lower() in ['bhupendra.jogi.mitwpu@gmail.com', 'admin@marutistationery.com']) ||
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. CORE AUTHORIZATION & RBAC HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is Super Administrator
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        // Custom Claims priority
+        request.auth.token.superAdmin == true ||
+        request.auth.token.role == 'superAdmin' ||
+        // Staff collection verification
+        (exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.isActive == true &&
+         get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['superAdmin', 'admin']) ||
+        // Fallback user doc check
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         ('isAdmin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true))
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
       );
     }
 
-    // ── Public read, Admin write ──────────────────────────────────────────────
-    match /products/{id} {
-      allow read: if true;
-      allow create, delete: if isAdmin();
-      // Allow admins full update rights; allow authenticated users to update only stock and salesCount (e.g. checkout / order cancellation)
-      allow update: if isAdmin() || (
-        request.auth != null &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'salesCount']) &&
-        request.resource.data.stock is int &&
-        request.resource.data.stock >= 0 &&
-        (!('salesCount' in request.resource.data) || (request.resource.data.salesCount is int && request.resource.data.salesCount >= 0))
+    // Check if user is active Staff Member
+    function isStaff() {
+      return isSuperAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.isActive == true
       );
     }
-    match /categories/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /banners/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
+
+    // Role-specific check
+    function hasStaffRole(role) {
+      return isSuperAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == role
+      );
     }
 
-    // ── Authenticated users only ──────────────────────────────────────────────
+    // Permission check against role or explicit customPermissions (superAdmin has universal override)
+    function hasPerm(permission) {
+      return isSuperAdmin() || (
+        isStaff() && (
+          get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'superAdmin' ||
+          (
+            'customPermissions' in get(/databases/$(database)/documents/staff/$(request.auth.uid)).data &&
+            permission in get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.customPermissions
+          )
+        )
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. CUSTOMER PROFILES & PRIVATE SUBCOLLECTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      // Only allow users to edit their own doc but NOT their isAdmin field
-      allow update: if request.auth != null && request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']));
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow delete: if isAdmin();
-      
+      allow read: if isOwner(userId) || isStaff();
+
+      // Customers can create their profile upon signup, but CANNOT make themselves admin or grant points
+      allow create: if isOwner(userId) &&
+        (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false) &&
+        (!('isDeliveryPartner' in request.resource.data) || request.resource.data.isDeliveryPartner == false) &&
+        (!('loyaltyPoints' in request.resource.data) || request.resource.data.loyaltyPoints == 0);
+
+      // Customers can update personal info (name, phone, photo) but CANNOT change protected fields
+      allow update: if (isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isAdmin', 'isDeliveryPartner', 'role', 'loyaltyPoints'
+        ])) || isSuperAdmin();
+
+      allow delete: if isSuperAdmin();
+
+      // Customer subcollections (Addresses, Wishlist, FCM Tokens)
       match /addresses/{addressId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /wishlist/{itemId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+      }
+      match /fcm_tokens/{tokenId} {
+        allow read, write: if isOwner(userId);
       }
     }
+
+    // Carts — Strictly customer-isolated
+    match /carts/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId) || isStaff();
+      }
+    }
+    match /cart/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId) || isStaff();
+      }
+    }
+
+    // Wishlists — Strictly customer-isolated
+    match /wishlists/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId) || isStaff();
+      }
+    }
+    match /wishlist/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+
+      match /items/{itemId} {
+        allow read, write: if isOwner(userId) || isStaff();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. ORDERS & TRANSACTIONS (SECURED AGAINST TAMPERING)
+    // ─────────────────────────────────────────────────────────────────────────
+
     match /orders/{orderId} {
-      // Users can read their own orders; Admins and Delivery can read/write all
-      allow read, write: if true;
+      // Customer reads only their own orders; Staff reads all
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+
+      // Customer creates order: must match their UID, initial status 'placed', paymentStatus 'pending' or 'failed' (NEVER 'paid' on client creation)
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status in ['placed', 'processing'] &&
+        request.resource.data.paymentStatus in ['pending', 'failed'] &&
+        request.resource.data.items is list &&
+        request.resource.data.items.size() > 0;
+
+      // Status, payment status, and order details can ONLY be modified by authorized Staff or backend functions
+      allow update: if isStaff() && (
+        hasPerm('orders.update') ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus', 'assignedPartner', 'trackingHistory', 'updatedAt'])
+      );
+
+      // Orders must NEVER be deleted directly (statutory tax compliance)
+      allow delete: if false;
     }
-    match /coupons/{couponId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-    match /cart/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    match /carts/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    match /wishlist/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    match /wishlists/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if isAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
-      allow update: if isAdmin() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'dislikedBy']));
-      allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
-    }
-    match /notifications/{notifId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-    
-    // Additional Collections
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+
     match /return_requests/{requestId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      // Customer can read and create return requests for their own account
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Only staff can update status (approve/reject/refund)
+      allow update: if isStaff() && hasPerm('refunds.create');
+      allow delete: if isSuperAdmin();
     }
+
     match /loyalty_transactions/{txnId} {
-      allow read, write: if request.auth != null;
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+      allow write: if isStaff();
     }
-    match /admin_notifications/{notifId} {
-      allow read, write: if request.auth != null;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. PRODUCT CATALOG, INVENTORY & PRICING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /products/{id} {
+      allow read: if true;
+      allow create, delete: if isStaff() && hasPerm('products.create');
+
+      // Staff can update full product; Clients CANNOT alter prices or arbitrary fields
+      allow update: if isStaff() || (
+        isAuthenticated() && (
+          // 1. Secure transaction during order checkout: decrement stock & increment salesCount
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'salesCount']) &&
+            request.resource.data.stock is int &&
+            request.resource.data.stock >= 0 &&
+            request.resource.data.stock <= resource.data.stock
+          ) ||
+          // 2. Rating & review aggregation update upon submitting or deleting a review
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewCount', 'averageRating']) &&
+            request.resource.data.reviewCount is int &&
+            request.resource.data.reviewCount >= 0 &&
+            (request.resource.data.averageRating is int || request.resource.data.averageRating is float) &&
+            request.resource.data.averageRating >= 0 &&
+            request.resource.data.averageRating <= 5
+          )
+        )
+      );
     }
+
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
     match /brands/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
+
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow customers to vote helpful; or staff moderation
+      allow update: if isStaff() || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'dislikedBy'])
+      );
+      allow delete: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. SERVER-DRIVEN UI (SDUI), CMS & PROMOTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /storefront_pages/{pageId} {
+      allow read: if true;
+      allow write: if isStaff() && hasPerm('storefront.manage');
+
+      match /drafts/{draftId} {
+        allow read, write: if isStaff() && hasPerm('storefront.manage');
+      }
+      match /versions/{versionId} {
+        allow read: if true;
+        allow write: if isStaff() && hasPerm('storefront.manage');
+      }
+    }
+
+    match /product_collections/{collectionId} {
+      allow read: if true;
+      allow write: if isStaff() && hasPerm('storefront.manage');
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if true;
+      allow write: if isStaff() && hasPerm('campaigns.manage');
+    }
+
+    match /banners/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
     match /ads/{adId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
 
-    // ── Store Administration (Admin only) ───────────────────────
-    match /suppliers/{supplierId} {
-      allow read, write: if isAdmin();
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isStaff();
     }
-    match /purchases/{purchaseId} {
-      allow read, write: if isAdmin();
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6. CUSTOMER PRIVACY & DPDP ACT REQUESTS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /privacy_requests/{requestId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isStaff();
+      allow delete: if isSuperAdmin();
     }
-    match /audit_logs/{logId} {
-      allow read, write: if isAdmin();
+
+    match /deletion_requests/{requestId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isStaff();
+      allow delete: if isSuperAdmin();
     }
-    match /stock_logs/{logId} {
-      allow read, write: if isAdmin();
+
+    match /consent_records/{consentId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isStaff();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Consent records are immutable legal evidence
+      allow update, delete: if false;
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 7. STORE ADMINISTRATION, INVENTORY & AUDIT (STAFF ONLY)
+    // ─────────────────────────────────────────────────────────────────────────
+
     match /staff/{staffId} {
-      allow read, write: if isAdmin();
-    }
-    match /email_logs/{logId} {
-      allow read: if isAdmin();
-      allow write: if request.auth != null;
-    }
-    match /bulk_import_batches/{batchId} {
-      allow read, write: if isAdmin();
+      // Staff can read their own profile; Super Admin reads all
+      allow read: if isStaff();
+      // Only Super Admin can invite, change roles, or suspend staff
+      // Prevents self-role escalation!
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() && (staffId != request.auth.uid || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'customPermissions']));
     }
 
-    // ── Catch-all: block ────────────────────────────────────────
+    match /suppliers/{supplierId} {
+      allow read, write: if isStaff() && hasPerm('inventory.read');
+    }
+
+    match /purchases/{purchaseId} {
+      allow read, write: if isStaff() && hasPerm('inventory.adjust');
+    }
+
+    // Audit logs & Stock movement logs are STRICTLY IMMUTABLE (Tamper-proof)
+    match /audit_logs/{logId} {
+      allow read: if isStaff() && hasPerm('security.audit.read');
+      allow create: if isStaff();
+      allow update, delete: if false; // CANNOT BE ALTERED OR DELETED
+    }
+
+    match /stock_logs/{logId} {
+      allow read: if isStaff() && hasPerm('inventory.read');
+      allow create: if isStaff();
+      allow update, delete: if false; // CANNOT BE ALTERED OR DELETED
+    }
+
+    match /admin_notifications/{notifId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated(); // For new order alerts
+      allow update: if isStaff();
+      allow delete: if isStaff();
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    match /email_logs/{logId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    match /bulk_import_batches/{batchId} {
+      allow read, write: if isStaff();
+    }
+
+    match /storefront_analytics/{id} {
+      allow read: if isStaff();
+      allow write: if isAuthenticated();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 8. DEFAULT DENY ALL UNMATCHED PATHS
+    // ─────────────────────────────────────────────────────────────────────────
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: false;
     }
   }
 }

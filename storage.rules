@@ -1,0 +1,109 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper Functions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    function isVideo() {
+      return request.resource.contentType.matches('video/(mp4|quicktime|webm)');
+    }
+
+    function isPdf() {
+      return request.resource.contentType == 'application/pdf';
+    }
+
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB max
+    }
+
+    function isValidProfileImageSize() {
+      return request.resource.size < 3 * 1024 * 1024; // 3MB max
+    }
+
+    function isValidVideoSize() {
+      return request.resource.size < 50 * 1024 * 1024; // 50MB max
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (
+        request.auth.token.role in ['superAdmin', 'admin', 'storeManager', 'inventoryManager', 'contentManager'] ||
+        request.auth.token.superAdmin == true ||
+        request.auth.token.staff == true ||
+        firestore.exists(/databases/(default)/documents/staff/$(request.auth.uid))
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Store Assets (Public Read, Staff Write ONLY)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /products/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && isImage() && isValidImageSize();
+    }
+
+    match /banners/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && isImage() && isValidImageSize();
+    }
+
+    match /categories/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && isImage() && isValidImageSize();
+    }
+
+    match /brands/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && isImage() && isValidImageSize();
+    }
+
+    match /ads/{fileName} {
+      allow read: if true;
+      allow write: if isStaff() && (
+        (isImage() && isValidImageSize()) ||
+        (isVideo() && isValidVideoSize())
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Customer Profile & Private Assets
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /users/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId) && isImage() && isValidProfileImageSize();
+    }
+
+    match /orders/{orderId}/{fileName} {
+      // Invoices & Private Order Documents
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isPdf();
+    }
+
+    match /temp/{userId}/{fileName} {
+      allow read, write: if isOwner(userId) && isValidImageSize();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Default Deny
+    // ─────────────────────────────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: false;
+    }
+  }
+}
+

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../models/home_section_model.dart';
+import '../../../models/storefront_section_model.dart';
 import '../../../models/category_model.dart';
-import '../../../providers/home_layout_provider.dart';
+import '../../../models/product_collection_model.dart';
+import '../../../providers/storefront_provider.dart';
 
 class AdminHomeLayoutScreen extends ConsumerStatefulWidget {
   const AdminHomeLayoutScreen({super.key});
@@ -18,9 +20,10 @@ class AdminHomeLayoutScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminHomeLayoutScreenState extends ConsumerState<AdminHomeLayoutScreen> {
-  List<HomeSectionModel> _sections = [];
+  List<StorefrontSectionModel> _sections = [];
   bool _isInitialized = false;
   bool _isSaving = false;
+  bool _isPublishing = false;
   bool _hasUnsavedChanges = false;
   List<CategoryModel> _availableCategories = [];
 
@@ -62,6 +65,22 @@ class _AdminHomeLayoutScreenState extends ConsumerState<AdminHomeLayoutScreen> {
     });
   }
 
+  void _duplicateSection(int index) {
+    final original = _sections[index];
+    final copy = original.copyWith(
+      id: 'sec_${const Uuid().v4().substring(0, 8)}',
+      title: '${original.title} (Copy)',
+      order: index + 1,
+    );
+    setState(() {
+      _sections.insert(index + 1, copy);
+      _hasUnsavedChanges = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Duplicated "${original.title}"')),
+    );
+  }
+
   void _deleteSection(int index) {
     final deleted = _sections[index];
     setState(() {
@@ -84,15 +103,20 @@ class _AdminHomeLayoutScreenState extends ConsumerState<AdminHomeLayoutScreen> {
     );
   }
 
-  Future<void> _saveLayout() async {
+  Future<void> _saveDraft() async {
     setState(() => _isSaving = true);
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
     try {
-      await ref.read(homeLayoutServiceProvider).saveLayout(_sections);
+      await ref.read(storefrontServiceProvider).saveDraft(
+        pageId: 'home',
+        sections: _sections,
+        userId: userId,
+      );
       if (mounted) {
         setState(() => _hasUnsavedChanges = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎉 Home screen layout updated and live for customers!'),
+            content: Text('💾 Draft saved successfully! Staged for preview & release.'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -100,7 +124,7 @@ class _AdminHomeLayoutScreenState extends ConsumerState<AdminHomeLayoutScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save layout: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to save draft: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -108,730 +132,572 @@ class _AdminHomeLayoutScreenState extends ConsumerState<AdminHomeLayoutScreen> {
     }
   }
 
-  Future<void> _resetToDefault() async {
+  Future<void> _publishToCustomers() async {
+    final validationErrors = ref.read(storefrontServiceProvider).validateSections(_sections);
+    if (validationErrors.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text('Validation Issues Found', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.red)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: validationErrors.map((err) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline, size: 16, color: Colors.red),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(err, style: GoogleFonts.poppins(fontSize: 12))),
+                ],
+              ),
+            )).toList(),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final summaryCtrl = TextEditingController(text: 'Updated home sections and layout');
     final confirm = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text('Reset to Default Layout?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: const Text('This will restore Maruti Stationery\'s standard home screen section order. Any custom sections will be removed.'),
+        title: Text('Publish to Live Customers?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('This will instantly publish your staged draft to all Maruti Stationery customers without requiring an app store update.'),
+            const SizedBox(height: 14),
+            TextField(
+              controller: summaryCtrl,
+              decoration: InputDecoration(
+                labelText: 'Release Notes / Change Summary',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Reset'),
+            child: const Text('Publish Now'),
           ),
         ],
       ),
     );
 
     if (confirm == true) {
-      setState(() {
-        _sections = List.from(HomeSectionModel.defaultSections);
-        _hasUnsavedChanges = true;
-      });
-      await _saveLayout();
-    }
-  }
-
-  void _openAddSectionDialog() {
-    final titleController = TextEditingController();
-    final subtitleController = TextEditingController();
-    String sectionType = 'custom_products'; // 'custom_products', 'new_arrivals', 'trending'
-    String? selectedCategoryId;
-    String displayStyle = 'horizontal'; // 'horizontal', 'grid'
-    int limit = 8;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Add New Section',
-                          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navyText),
-                        ),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Section Title (e.g. Back to School Specials)',
-                        labelStyle: GoogleFonts.poppins(fontSize: 13),
-                        filled: true,
-                        fillColor: AppColors.surfaceWarm,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: subtitleController,
-                      decoration: InputDecoration(
-                        labelText: 'Subtitle (Optional, e.g. Handpicked for students)',
-                        labelStyle: GoogleFonts.poppins(fontSize: 13),
-                        filled: true,
-                        fillColor: AppColors.surfaceWarm,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Section Type', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: sectionType,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.surfaceWarm,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'custom_products', child: Text('Custom Product Category / Collection')),
-                        DropdownMenuItem(value: 'new_arrivals', child: Text('Newly Added Products (New Arrivals)')),
-                        DropdownMenuItem(value: 'trending', child: Text('Trending / Best Sellers')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setSheetState(() => sectionType = val);
-                      },
-                    ),
-                    if (sectionType == 'custom_products') ...[
-                      const SizedBox(height: 14),
-                      Text('Filter by Category (Optional)', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String?>(
-                        value: _availableCategories.any((c) => c.id == selectedCategoryId) ? selectedCategoryId : null,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.surfaceWarm,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('All Products')),
-                          ..._availableCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                        ],
-                        onChanged: (val) {
-                          setSheetState(() => selectedCategoryId = val);
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Display Style', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: displayStyle,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: AppColors.surfaceWarm,
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 'horizontal', child: Text('Horizontal Scroll')),
-                                  DropdownMenuItem(value: 'grid', child: Text('2-Column Grid')),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) setSheetState(() => displayStyle = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Max Items', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
-                                value: limit,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: AppColors.surfaceWarm,
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                ),
-                                items: [4, 6, 8, 10, 12, 16].map((n) => DropdownMenuItem(value: n, child: Text('$n items'))).toList(),
-                                onChanged: (val) {
-                                  if (val != null) setSheetState(() => limit = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.royalBlue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          final title = titleController.text.trim();
-                          if (title.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter a section title')),
-                            );
-                            return;
-                          }
-
-                          String? categoryName;
-                          if (selectedCategoryId != null) {
-                            final match = _availableCategories.where((c) => c.id == selectedCategoryId);
-                            if (match.isNotEmpty) categoryName = match.first.name;
-                          }
-
-                          final newSection = HomeSectionModel(
-                            id: 'sec_custom_${const Uuid().v4().substring(0, 8)}',
-                            type: sectionType,
-                            title: title,
-                            subtitle: subtitleController.text.trim(),
-                            isEnabled: true,
-                            displayStyle: displayStyle,
-                            categoryId: selectedCategoryId,
-                            categoryName: categoryName,
-                            limit: limit,
-                            order: _sections.length,
-                          );
-
-                          setState(() {
-                            _sections.add(newSection);
-                            _hasUnsavedChanges = true;
-                          });
-
-                          Navigator.pop(sheetContext);
-                        },
-                        child: Text('Add Section to Home Screen', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+      setState(() => _isPublishing = true);
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
+      try {
+        await _saveDraft();
+        await ref.read(storefrontServiceProvider).publishDraft(
+          pageId: 'home',
+          userId: userId,
+          changeSummary: summaryCtrl.text.trim(),
         );
-      },
-    );
-  }
-
-  void _openEditSectionDialog(int index) {
-    final s = _sections[index];
-    final titleController = TextEditingController(text: s.title);
-    final subtitleController = TextEditingController(text: s.subtitle);
-    String? selectedCategoryId = s.categoryId;
-    String displayStyle = s.displayStyle;
-    int limit = s.limit;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final isProductSection = s.type == 'trending' || s.type == 'new_arrivals' || s.type == 'custom_products';
-
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Configure Section',
-                          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navyText),
-                        ),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Section Display Title',
-                        labelStyle: GoogleFonts.poppins(fontSize: 13),
-                        filled: true,
-                        fillColor: AppColors.surfaceWarm,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: subtitleController,
-                      decoration: InputDecoration(
-                        labelText: 'Subtitle (Optional)',
-                        labelStyle: GoogleFonts.poppins(fontSize: 13),
-                        filled: true,
-                        fillColor: AppColors.surfaceWarm,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    if (s.type == 'custom_products') ...[
-                      const SizedBox(height: 14),
-                      Text('Category Filter', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String?>(
-                        value: _availableCategories.any((c) => c.id == selectedCategoryId) ? selectedCategoryId : null,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.surfaceWarm,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('All Products')),
-                          ..._availableCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                        ],
-                        onChanged: (val) {
-                          setSheetState(() => selectedCategoryId = val);
-                        },
-                      ),
-                    ],
-                    if (isProductSection) ...[
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Display Style', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  value: (displayStyle == 'horizontal' || displayStyle == 'grid') ? displayStyle : 'grid',
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: AppColors.surfaceWarm,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 'horizontal', child: Text('Horizontal Scroll')),
-                                    DropdownMenuItem(value: 'grid', child: Text('2-Column Grid')),
-                                  ],
-                                  onChanged: (val) {
-                                    if (val != null) setSheetState(() => displayStyle = val);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Max Items', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navyText)),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<int>(
-                                  value: limit,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: AppColors.surfaceWarm,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                  ),
-                                  items: [4, 6, 8, 10, 12, 16].map((n) => DropdownMenuItem(value: n, child: Text('$n items'))).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) setSheetState(() => limit = val);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.royalBlue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          final title = titleController.text.trim();
-                          if (title.isEmpty) return;
-
-                          String? categoryName;
-                          if (selectedCategoryId != null) {
-                            final match = _availableCategories.where((c) => c.id == selectedCategoryId);
-                            if (match.isNotEmpty) categoryName = match.first.name;
-                          }
-
-                          setState(() {
-                            _sections[index] = _sections[index].copyWith(
-                              title: title,
-                              subtitle: subtitleController.text.trim(),
-                              categoryId: selectedCategoryId,
-                              categoryName: categoryName,
-                              displayStyle: displayStyle,
-                              limit: limit,
-                            );
-                            _hasUnsavedChanges = true;
-                          });
-
-                          Navigator.pop(sheetContext);
-                        },
-                        child: Text('Save Section Configuration', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  IconData _getIconForType(String type) {
-    switch (type) {
-      case 'categories':
-        return Icons.category_rounded;
-      case 'banners':
-        return Icons.view_carousel_rounded;
-      case 'use_case':
-        return Icons.auto_awesome_mosaic_rounded;
-      case 'trending':
-        return Icons.trending_up_rounded;
-      case 'new_arrivals':
-        return Icons.new_releases_rounded;
-      case 'buy_again':
-        return Icons.repeat_rounded;
-      case 'ads':
-        return Icons.smart_display_rounded;
-      case 'custom_products':
-      default:
-        return Icons.storefront_rounded;
-    }
-  }
-
-  Color _getColorForType(String type) {
-    switch (type) {
-      case 'categories':
-        return const Color(0xFFF59E0B);
-      case 'banners':
-        return AppColors.royalBlue;
-      case 'use_case':
-        return const Color(0xFF8B5CF6);
-      case 'trending':
-        return AppColors.primary;
-      case 'new_arrivals':
-        return const Color(0xFF10B981);
-      case 'buy_again':
-        return const Color(0xFF0284C7);
-      case 'ads':
-        return const Color(0xFFE11D48);
-      case 'custom_products':
-      default:
-        return const Color(0xFF6366F1);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🚀 Published live! Customers receive updated experience immediately.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Publishing error: $e'), backgroundColor: Colors.red));
+        }
+      } finally {
+        if (mounted) setState(() => _isPublishing = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final asyncLayout = ref.watch(homeLayoutStreamProvider);
+    final draftAsync = ref.watch(draftStorefrontStreamProvider('home'));
+    final collections = ref.watch(productCollectionsStreamProvider).value ?? [];
+
+    if (!_isInitialized && draftAsync.hasValue) {
+      _sections = List.from(draftAsync.value!.sections);
+      _isInitialized = true;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'Customer Home Layout',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.navyText, fontSize: 17),
+          'Home Screen Builder',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17, color: AppColors.navyText),
         ),
-        backgroundColor: AppColors.surface,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navyText),
-          onPressed: () {
-            if (_hasUnsavedChanges) {
-              showDialog(
-                context: context,
-                builder: (c) => AlertDialog(
-                  title: const Text('Discard Unsaved Changes?'),
-                  content: const Text('You have reordered or modified sections without saving.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(c), child: const Text('Stay')),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(c);
-                        if (context.canPop()) context.pop();
-                      },
-                      child: const Text('Discard'),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/admin/dashboard');
-              }
-            }
-          },
-        ),
         actions: [
           IconButton(
-            tooltip: 'Reset to Default',
-            icon: const Icon(Icons.restart_alt_rounded, color: AppColors.textSecondary),
-            onPressed: _resetToDefault,
+            tooltip: 'Live Device Preview',
+            icon: const Icon(Icons.phone_iphone_rounded, color: AppColors.royalBlue),
+            onPressed: () => context.push('/admin/storefront/preview'),
           ),
           IconButton(
-            tooltip: 'Add Section',
-            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.royalBlue, size: 24),
-            onPressed: _openAddSectionDialog,
+            tooltip: 'Version History & Rollback',
+            icon: const Icon(Icons.history_rounded, color: AppColors.navyText),
+            onPressed: () => context.push('/admin/storefront/history'),
           ),
+          if (_hasUnsavedChanges)
+            TextButton.icon(
+              onPressed: _isSaving ? null : _saveDraft,
+              icon: _isSaving
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.save_outlined, size: 18),
+              label: Text('Save Draft', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+            ),
+          const SizedBox(width: 8),
         ],
       ),
-      bottomNavigationBar: _hasUnsavedChanges
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                boxShadow: const [
-                  BoxShadow(color: Color(0x15000000), blurRadius: 10, offset: Offset(0, -3)),
-                ],
-              ),
-              child: SafeArea(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Unsaved Changes', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.navyText)),
-                          Text('Changes will apply to live customers', style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.royalBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: _isSaving ? null : _saveLayout,
-                      icon: _isSaving
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.save_rounded, size: 18),
-                      label: Text(_isSaving ? 'Saving...' : 'Save & Publish', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13)),
-                    ),
-                  ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: AppColors.border)),
+          boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, -2))],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    side: const BorderSide(color: AppColors.royalBlue),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => context.push('/admin/storefront/preview'),
+                  icon: const Icon(Icons.visibility_rounded, color: AppColors.royalBlue),
+                  label: Text('Preview Draft', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.royalBlue)),
                 ),
               ),
-            )
-          : null,
-      body: asyncLayout.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading layout: $err')),
-        data: (savedSections) {
-          if (!_isInitialized || !_hasUnsavedChanges) {
-            _sections = List.from(savedSections);
-            _isInitialized = true;
-          }
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  onPressed: _isPublishing ? null : _publishToCustomers,
+                  icon: _isPublishing
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.rocket_launch_rounded, color: Colors.white),
+                  label: Text('Publish Live', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.navyText,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: Text('Add Section', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white)),
+        onPressed: () => _openSectionForm(null, collections),
+      ),
+      body: draftAsync.when(
+        data: (_) {
           if (_sections.isEmpty) {
-            _sections = List.from(HomeSectionModel.defaultSections);
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.layers_clear_outlined, size: 48, color: AppColors.textHint),
+                  const SizedBox(height: 12),
+                  Text('No sections configured', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () => _openSectionForm(null, collections),
+                    child: const Text('Add First Section'),
+                  ),
+                ],
+              ),
+            );
           }
 
           return Column(
             children: [
-              // Instruction Banner
               Container(
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: _hasUnsavedChanges ? const Color(0xFFFEF3C7) : const Color(0xFFEBF3FE),
                 child: Row(
                   children: [
-                    const Icon(Icons.drag_indicator_rounded, color: AppColors.royalBlue, size: 20),
-                    const SizedBox(width: 10),
+                    Icon(
+                      _hasUnsavedChanges ? Icons.info_outline : Icons.check_circle_outline,
+                      size: 16,
+                      color: _hasUnsavedChanges ? const Color(0xFFB45309) : AppColors.royalBlue,
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Drag handles ☰ to re-order. Toggle switches to show/hide. Tap edit ✏️ to customize.',
-                        style: GoogleFonts.poppins(fontSize: 11.5, color: AppColors.navyText, fontWeight: FontWeight.w500),
+                        _hasUnsavedChanges
+                            ? 'Unsaved changes in draft. Drag to reorder, then save or publish.'
+                            : 'Draft canvas in sync with staged release.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _hasUnsavedChanges ? const Color(0xFFB45309) : AppColors.royalBlue,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-
               Expanded(
                 child: ReorderableListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
                   itemCount: _sections.length,
-                  buildDefaultDragHandles: false,
                   onReorder: _onReorder,
-                  proxyDecorator: (child, index, animation) {
-                    return Material(
-                      elevation: 6,
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      child: child,
-                    );
-                  },
                   itemBuilder: (context, index) {
                     final s = _sections[index];
-                    final color = _getColorForType(s.type);
-                    final icon = _getIconForType(s.type);
-                    final isCustom = s.type == 'custom_products';
-
-                    return Container(
-                      key: ValueKey('sec_${s.id}_$index'),
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: s.isEnabled ? AppColors.surface : AppColors.surfaceWarm.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: s.isEnabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5),
-                        ),
-                        boxShadow: s.isEnabled
-                            ? const [
-                                BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
-                              ]
-                            : null,
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        leading: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Drag handle
-                            ReorderableDragStartListener(
-                              index: index,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                child: const Icon(Icons.drag_indicator_rounded, color: AppColors.textSecondary, size: 20),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            // Type icon
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: s.isEnabled ? 0.12 : 0.05),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(icon, color: s.isEnabled ? color : AppColors.textSecondary, size: 20),
-                            ),
-                          ],
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                s.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
-                                  color: s.isEnabled ? AppColors.navyText : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                            if (s.displayStyle == 'grid')
-                              Container(
-                                margin: const EdgeInsets.only(left: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceWarm,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text('Grid', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              ),
-                          ],
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            s.subtitle.isNotEmpty
-                                ? s.subtitle
-                                : (s.categoryName != null ? 'Category: ${s.categoryName}' : 'Position ${index + 1}'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Edit
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.royalBlue),
-                              tooltip: 'Edit Section',
-                              onPressed: () => _openEditSectionDialog(index),
-                            ),
-                            // Delete if custom section
-                            if (isCustom)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-                                tooltip: 'Delete Section',
-                                onPressed: () => _deleteSection(index),
-                              ),
-                            // Toggle
-                            Switch(
-                              value: s.isEnabled,
-                              activeThumbColor: AppColors.royalBlue,
-                              onChanged: (val) => _toggleSection(index, val),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                    return _buildSectionCard(s, index, collections);
                   },
                 ),
               ),
             ],
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, __) => Center(child: Text('Error loading draft: $e')),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(StorefrontSectionModel s, int index, List<ProductCollectionModel> collections) {
+    return Container(
+      key: ValueKey(s.id),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: s.isEnabled ? AppColors.border : Colors.grey.shade300),
+        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2))],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: s.isEnabled ? AppColors.royalBlue.withValues(alpha: 0.1) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: s.isEnabled ? AppColors.royalBlue : Colors.grey,
+              ),
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                s.title.isNotEmpty ? s.title : StorefrontSectionType.getLabel(s.type),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  color: s.isEnabled ? AppColors.navyText : Colors.grey,
+                ),
+              ),
+            ),
+            Switch(
+              value: s.isEnabled,
+              activeColor: AppColors.primary,
+              onChanged: (val) => _toggleSection(index, val),
+            ),
+          ],
+        ),
+        subtitle: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceWarm,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                StorefrontSectionType.getLabel(s.type).toUpperCase(),
+                style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.royalBlue),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              s.layoutVariant.replaceAll('_', ' '),
+              style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              onPressed: () => _openSectionForm(s, collections, editIndex: index),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 18),
+              onSelected: (val) {
+                if (val == 'duplicate') _duplicateSection(index);
+                if (val == 'delete') _deleteSection(index);
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'duplicate', child: Row(children: [Icon(Icons.copy, size: 16), SizedBox(width: 8), Text('Duplicate')])),
+                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, color: Colors.red, size: 16), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))])),
+              ],
+            ),
+            const Icon(Icons.drag_indicator_rounded, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openSectionForm(StorefrontSectionModel? initial, List<ProductCollectionModel> collections, {int? editIndex}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => _SectionFormSheet(
+        section: initial,
+        categories: _availableCategories,
+        collections: collections,
+        onSave: (saved) {
+          setState(() {
+            if (editIndex != null) {
+              _sections[editIndex] = saved;
+            } else {
+              _sections.add(saved.copyWith(order: _sections.length));
+            }
+            _hasUnsavedChanges = true;
+          });
+          Navigator.pop(sheetContext);
+        },
+      ),
+    );
+  }
+}
+
+class _SectionFormSheet extends StatefulWidget {
+  final StorefrontSectionModel? section;
+  final List<CategoryModel> categories;
+  final List<ProductCollectionModel> collections;
+  final ValueChanged<StorefrontSectionModel> onSave;
+
+  const _SectionFormSheet({
+    this.section,
+    required this.categories,
+    required this.collections,
+    required this.onSave,
+  });
+
+  @override
+  State<_SectionFormSheet> createState() => _SectionFormSheetState();
+}
+
+class _SectionFormSheetState extends State<_SectionFormSheet> {
+  final _titleCtrl = TextEditingController();
+  final _subtitleCtrl = TextEditingController();
+  String _type = StorefrontSectionType.customProducts;
+  String _layoutVariant = StorefrontLayoutVariant.carouselStandard;
+  String? _collectionId;
+  String? _categoryId;
+  int _limit = 8;
+  bool _isEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.section != null) {
+      final s = widget.section!;
+      _titleCtrl.text = s.title;
+      _subtitleCtrl.text = s.subtitle;
+      _type = s.type;
+      _layoutVariant = s.layoutVariant;
+      _collectionId = s.collectionId;
+      _categoryId = s.categoryId;
+      _limit = s.limit;
+      _isEnabled = s.isEnabled;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.section != null ? 'Edit Section' : 'Add New Section',
+                style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navyText),
+              ),
+              const SizedBox(height: 14),
+
+              TextField(
+                controller: _titleCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Section Title (e.g. 🔥 Best Sellers)',
+                  filled: true,
+                  fillColor: AppColors.surfaceWarm,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: _subtitleCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Subtitle (Optional)',
+                  filled: true,
+                  fillColor: AppColors.surfaceWarm,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              Text('Section Type', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _type,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.surfaceWarm,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: StorefrontSectionType.allTypes.map((t) {
+                  return DropdownMenuItem(value: t, child: Text(StorefrontSectionType.getLabel(t)));
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _type = val);
+                },
+              ),
+              const SizedBox(height: 14),
+
+              Text('Layout Variant', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _layoutVariant,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.surfaceWarm,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: const [
+                  DropdownMenuItem(value: StorefrontLayoutVariant.carouselStandard, child: Text('Horizontal Carousel (Standard)')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.carouselCompact, child: Text('Horizontal Carousel (Compact)')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.grid2Col, child: Text('2-Column Grid')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.grid3Col, child: Text('3-Column Grid')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.categoryPills, child: Text('Category Pills')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.bannerCarousel, child: Text('Banner Carousel')),
+                  DropdownMenuItem(value: StorefrontLayoutVariant.bannerFull, child: Text('Full-Width Banner')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _layoutVariant = val);
+                },
+              ),
+              const SizedBox(height: 14),
+
+              if (widget.collections.isNotEmpty) ...[
+                Text('Linked Product Collection (Optional)', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String?>(
+                  value: widget.collections.any((c) => c.id == _collectionId) ? _collectionId : null,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.surfaceWarm,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('None (Use Default Query)')),
+                    ...widget.collections.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                  ],
+                  onChanged: (val) => setState(() => _collectionId = val),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              Row(
+                children: [
+                  Text('Item Limit: $_limit', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Expanded(
+                    child: Slider(
+                      value: _limit.toDouble(),
+                      min: 4,
+                      max: 20,
+                      divisions: 8,
+                      label: '$_limit',
+                      activeColor: AppColors.primary,
+                      onChanged: (val) => setState(() => _limit = val.toInt()),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final s = StorefrontSectionModel(
+                      id: widget.section?.id ?? 'sec_${const Uuid().v4().substring(0, 8)}',
+                      type: _type,
+                      title: _titleCtrl.text.trim().isNotEmpty ? _titleCtrl.text.trim() : StorefrontSectionType.getLabel(_type),
+                      subtitle: _subtitleCtrl.text.trim(),
+                      layoutVariant: _layoutVariant,
+                      collectionId: _collectionId,
+                      categoryId: _categoryId,
+                      limit: _limit,
+                      isEnabled: _isEnabled,
+                      order: widget.section?.order ?? 0,
+                    );
+                    widget.onSave(s);
+                  },
+                  child: Text(
+                    widget.section != null ? 'Update Section' : 'Add to Draft',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

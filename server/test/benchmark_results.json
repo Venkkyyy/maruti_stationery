@@ -1,0 +1,242 @@
+[
+  {
+    "profile": "10 Concurrent Users",
+    "concurrentUsers": 10,
+    "totalJourneys": 20,
+    "totalHttpRequests": 80,
+    "successfulRequests": 80,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.02,
+    "requestsPerSecond": 3333.33,
+    "latencies": {
+      "stepMinMs": 1.643125,
+      "stepP50Ms": 2.340125,
+      "stepP95Ms": 7.028833,
+      "stepP99Ms": 7.117625,
+      "stepMaxMs": 7.117625,
+      "stepMeanMs": 2.9,
+      "journeyP50Ms": 12.425958,
+      "journeyP95Ms": 14.176666999999998,
+      "journeyP99Ms": 14.176666999999998
+    },
+    "memoryMB": {
+      "rssBefore": 61.69,
+      "rssAfter": 65.31,
+      "heapUsedBefore": 11.42,
+      "heapUsedAfter": 10.92
+    },
+    "networkKB": 9.92,
+    "bottleneck": "Node event loop saturation approaching capacity"
+  },
+  {
+    "profile": "50 Concurrent Users",
+    "concurrentUsers": 50,
+    "totalJourneys": 100,
+    "totalHttpRequests": 400,
+    "successfulRequests": 400,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.09,
+    "requestsPerSecond": 4494.38,
+    "latencies": {
+      "stepMinMs": 0.207875,
+      "stepP50Ms": 3.052083,
+      "stepP95Ms": 49.432458,
+      "stepP99Ms": 74.2075,
+      "stepMaxMs": 78.135958,
+      "stepMeanMs": 7.71,
+      "journeyP50Ms": 18.933918,
+      "journeyP95Ms": 80.153083,
+      "journeyP99Ms": 84.37866600000001
+    },
+    "memoryMB": {
+      "rssBefore": 65.33,
+      "rssAfter": 78.72,
+      "heapUsedBefore": 10.96,
+      "heapUsedAfter": 13.94
+    },
+    "networkKB": 49.84,
+    "bottleneck": "Node event loop saturation approaching capacity"
+  },
+  {
+    "profile": "100 Concurrent Users",
+    "concurrentUsers": 100,
+    "totalJourneys": 200,
+    "totalHttpRequests": 800,
+    "successfulRequests": 800,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.14,
+    "requestsPerSecond": 5673.76,
+    "latencies": {
+      "stepMinMs": 0.182,
+      "stepP50Ms": 8.140917,
+      "stepP95Ms": 63.777334,
+      "stepP99Ms": 118.421875,
+      "stepMaxMs": 130.365125,
+      "stepMeanMs": 11.91,
+      "journeyP50Ms": 39.532209,
+      "journeyP95Ms": 124.28945699999998,
+      "journeyP99Ms": 136.098126
+    },
+    "memoryMB": {
+      "rssBefore": 78.72,
+      "rssAfter": 97.5,
+      "heapUsedBefore": 14.05,
+      "heapUsedAfter": 24.26
+    },
+    "networkKB": 99.75,
+    "bottleneck": "Node event loop saturation approaching capacity"
+  },
+  {
+    "profile": "250 Concurrent Users",
+    "concurrentUsers": 250,
+    "totalJourneys": 250,
+    "totalHttpRequests": 1000,
+    "successfulRequests": 1000,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.17,
+    "requestsPerSecond": 5988.02,
+    "latencies": {
+      "stepMinMs": 0.36275,
+      "stepP50Ms": 14.097833,
+      "stepP95Ms": 131.797,
+      "stepP99Ms": 156.725,
+      "stepMaxMs": 161.646584,
+      "stepMeanMs": 25.02,
+      "journeyP50Ms": 90.278875,
+      "journeyP95Ms": 157.91941699999998,
+      "journeyP99Ms": 163.59837499999998
+    },
+    "memoryMB": {
+      "rssBefore": 97.5,
+      "rssAfter": 110.45,
+      "heapUsedBefore": 24.47,
+      "heapUsedAfter": 24.05
+    },
+    "networkKB": 125.17,
+    "bottleneck": "Node event loop saturation approaching capacity"
+  },
+  {
+    "profile": "500 Concurrent Users",
+    "concurrentUsers": 500,
+    "totalJourneys": 500,
+    "totalHttpRequests": 2000,
+    "successfulRequests": 2000,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.37,
+    "requestsPerSecond": 5390.84,
+    "latencies": {
+      "stepMinMs": 0.218041,
+      "stepP50Ms": 36.009,
+      "stepP95Ms": 262.019542,
+      "stepP99Ms": 346.037833,
+      "stepMaxMs": 359.105709,
+      "stepMeanMs": 50.18,
+      "journeyP50Ms": 151.50037500000002,
+      "journeyP95Ms": 345.5995,
+      "journeyP99Ms": 359.496792
+    },
+    "memoryMB": {
+      "rssBefore": 110.47,
+      "rssAfter": 124.53,
+      "heapUsedBefore": 24.33,
+      "heapUsedAfter": 41.24
+    },
+    "networkKB": 250.65,
+    "bottleneck": "P95 request latency increased (>200ms)"
+  },
+  {
+    "profile": "1000 Concurrent Users",
+    "concurrentUsers": 1000,
+    "totalJourneys": 1000,
+    "totalHttpRequests": 4000,
+    "successfulRequests": 4000,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 2.15,
+    "requestsPerSecond": 1859.6,
+    "latencies": {
+      "stepMinMs": 0.148,
+      "stepP50Ms": 2.109125,
+      "stepP95Ms": 1138.31925,
+      "stepP99Ms": 2116.253417,
+      "stepMaxMs": 2144.468916,
+      "stepMeanMs": 171.88,
+      "journeyP50Ms": 384.516293,
+      "journeyP95Ms": 2113.307833,
+      "journeyP99Ms": 2140.804667
+    },
+    "memoryMB": {
+      "rssBefore": 124.53,
+      "rssAfter": 141.3,
+      "heapUsedBefore": 41.79,
+      "heapUsedAfter": 64.83
+    },
+    "networkKB": 501.63,
+    "bottleneck": "P99 request latency degradation (>500ms)"
+  },
+  {
+    "profile": "Sudden Traffic Spike (10 to 500 users)",
+    "concurrentUsers": 500,
+    "totalJourneys": 500,
+    "totalHttpRequests": 2000,
+    "successfulRequests": 2000,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.35,
+    "requestsPerSecond": 5747.13,
+    "latencies": {
+      "stepMinMs": 0.167708,
+      "stepP50Ms": 32.6045,
+      "stepP95Ms": 244.33175,
+      "stepP99Ms": 292.830958,
+      "stepMaxMs": 344.000458,
+      "stepMeanMs": 47.67,
+      "journeyP50Ms": 152.696584,
+      "journeyP95Ms": 292.98512600000004,
+      "journeyP99Ms": 303.28149899999994
+    },
+    "memoryMB": {
+      "rssBefore": 143.64,
+      "rssAfter": 164.33,
+      "heapUsedBefore": 58.47,
+      "heapUsedAfter": 83.97
+    },
+    "networkKB": 250.65,
+    "bottleneck": "P95 request latency increased (>200ms)"
+  },
+  {
+    "profile": "Sustained Traffic (50 users x 5 loops)",
+    "concurrentUsers": 50,
+    "totalJourneys": 250,
+    "totalHttpRequests": 1000,
+    "successfulRequests": 1000,
+    "failedRequests": 0,
+    "timeouts": 0,
+    "durationSec": 0.14,
+    "requestsPerSecond": 7299.27,
+    "latencies": {
+      "stepMinMs": 4.070708,
+      "stepP50Ms": 6.187125,
+      "stepP95Ms": 17.08575,
+      "stepP99Ms": 18.655125,
+      "stepMaxMs": 18.793375,
+      "stepMeanMs": 6.82,
+      "journeyP50Ms": 25.008708,
+      "journeyP95Ms": 35.227209,
+      "journeyP99Ms": 35.607749999999996
+    },
+    "memoryMB": {
+      "rssBefore": 164.33,
+      "rssAfter": 147.45,
+      "heapUsedBefore": 84.52,
+      "heapUsedAfter": 28.96
+    },
+    "networkKB": 124.61,
+    "bottleneck": "Node event loop saturation approaching capacity"
+  }
+]
