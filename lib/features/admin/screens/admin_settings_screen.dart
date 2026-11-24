@@ -146,6 +146,12 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         title: const Text('Admin Settings'),
         backgroundColor: context.colors.surface,
         automaticallyImplyLeading: false,
+        leading: context.canPop()
+            ? IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+                onPressed: () => context.pop(),
+              )
+            : null,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -243,6 +249,60 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           const Divider(),
           ListTile(
             contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.dashboard_customize_rounded, color: context.colors.primary),
+            title: Text('Customer Home Screen Layout', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Re-order sections, add product showcases, and customize layout', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/home-layout'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.description_outlined, color: context.colors.primary),
+            title: Text('Store Content & Policy CMS', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Edit About Us, Return policy, and Announcements', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/cms'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.account_balance_rounded, color: context.colors.primary),
+            title: Text('Financial & Tax Reports', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Revenue, Inward costs, GST estimates & Gross Margin', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/financial-reports'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.badge_rounded, color: context.colors.primary),
+            title: Text('Staff & Role Management', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Team access, permissions, and staff accounts', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/staff'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.security_rounded, color: context.colors.primary),
+            title: Text('Security & Audit Logs', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Chronological history of admin actions', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/audit-logs'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.history_rounded, color: context.colors.primary),
+            title: Text('Inventory Movement Logs', style: TextStyle(color: context.colors.textPrimary)),
+            subtitle: Text('Track stock additions, orders, and adjustments', style: TextStyle(color: context.colors.textSecondary, fontSize: 12)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/admin/stock-history'),
+          ),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.campaign_rounded, color: context.colors.primary),
             title: Text('Broadcast Notifications', style: TextStyle(color: context.colors.textPrimary)),
             onTap: () => context.push('/admin/settings/broadcast'),
@@ -252,9 +312,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.logout_rounded, color: context.colors.error),
             title: Text('Logout', style: TextStyle(color: context.colors.error)),
-            onTap: () {
-              ref.read(authServiceProvider).signOut();
-              context.go('/splash');
+            onTap: () async {
+              await ref.read(authServiceProvider).signOut();
+              if (context.mounted) {
+                context.go('/admin/login');
+              }
             },
           ),
         ],

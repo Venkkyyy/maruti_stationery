@@ -3,6 +3,8 @@ import '../models/order_model.dart';
 import '../core/errors/app_exception.dart';
 import '../core/utils/formatters.dart';
 import 'admin_fcm_service.dart';
+import 'fcm_service.dart';
+import 'gmail_automation_service.dart';
 import 'loyalty_service.dart';
 
 class OrderService {
@@ -48,9 +50,11 @@ class OrderService {
           .map((item) => _db.collection('products').doc(item.productId))
           .toList();
 
-      final productDocs = await Future.wait(
-        productRefs.map((ref) => transaction.get(ref)),
-      );
+      final List<DocumentSnapshot<Map<String, dynamic>>> productDocs = [];
+      for (final ref in productRefs) {
+        final doc = await transaction.get(ref);
+        productDocs.add(doc);
+      }
 
       // Validate stock for each item before making any writes
       for (int i = 0; i < order.items.length; i++) {
@@ -129,6 +133,18 @@ class OrderService {
           'orderId': order.id,
         },
       );
+
+      // Send confirmation notification to customer
+      await FCMService.sendOrderStatusNotification(
+        orderId: order.id,
+        userId: order.userId,
+        status: 'placed',
+        customTitle: 'Order Placed Successfully! 🎉',
+        customBody: 'Your order #${order.id.toUpperCase()} for $productNames has been confirmed.',
+      );
+
+      // Trigger Gmail Confirmation Automation
+      GmailAutomationService.sendOrderConfirmedEmail(order: order);
     } catch (_) {}
 
     return pointsEarned;
@@ -167,8 +183,16 @@ class OrderService {
       });
     });
 
-    // Notify admins about the cancellation
+    // Notify customer & admins about the cancellation
     try {
+      await FCMService.sendOrderStatusNotification(
+        orderId: orderId,
+        userId: userId,
+        status: 'cancelled',
+        customTitle: 'Order Cancelled',
+        customBody: 'Your order #${orderId.toUpperCase()} was cancelled.',
+      );
+
       await AdminFCMService.sendNotification(
         targetTokenOrTopic: '/topics/admin',
         title: 'Order Cancelled',

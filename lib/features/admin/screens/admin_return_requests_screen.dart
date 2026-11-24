@@ -7,7 +7,6 @@ import 'package:maruti_stationery/core/utils/formatters.dart';
 import '../../../models/return_request_model.dart';
 import '../../../services/return_request_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../models/user_model.dart';
 
 class AdminReturnRequestsScreen extends StatefulWidget {
   const AdminReturnRequestsScreen({super.key});

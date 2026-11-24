@@ -133,7 +133,13 @@ class _AdminCouponFormScreenState extends State<AdminCouponFormScreen> {
         // Dispatch FCM v1 Push Notification
         await AdminFCMService.sendNotification(
           targetTokenOrTopic: '/topics/offers',
-          title: 'New Coupon: ${couponData.code}',
+          title: 'New Coupon: ${couponData.code} 🎉',
+          body: 'Use code ${couponData.code} to get ${couponData.name}!',
+          data: {'type': 'coupon', 'code': couponData.code},
+        );
+        await AdminFCMService.sendNotification(
+          targetTokenOrTopic: '/topics/coupons',
+          title: 'New Coupon: ${couponData.code} 🎉',
           body: 'Use code ${couponData.code} to get ${couponData.name}!',
           data: {'type': 'coupon', 'code': couponData.code},
         );

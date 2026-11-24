@@ -65,11 +65,18 @@ class ProductModel {
 
   // Used for admin editing
   ProductModel copyWith({
+    String? id,
     String? name,
     String? description,
     int? price,
     int? mrp,
+    String? categoryId,
+    String? subCategoryId,
+    String? brand,
+    String? brandId,
     int? stock,
+    String? unit,
+    List<String>? tags,
     List<String>? images,
     List<String>? imageDeleteTokens,
     bool? isActive,
@@ -78,71 +85,83 @@ class ProductModel {
     Map<String, List<String>>? variations,
     Map<String, String>? specifications,
     List<String>? highlights,
-    String? brandId,
     bool? isBestSeller,
+    int? salesCount,
+    double? averageRating,
+    int? reviewCount,
+    DateTime? createdAt,
   }) {
     return ProductModel(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       price: price ?? this.price,
       mrp: mrp ?? this.mrp,
-      categoryId: categoryId,
-      subCategoryId: subCategoryId,
-      brand: brand,
+      categoryId: categoryId ?? this.categoryId,
+      subCategoryId: subCategoryId ?? this.subCategoryId,
+      brand: brand ?? this.brand,
       brandId: brandId ?? this.brandId,
       isBestSeller: isBestSeller ?? this.isBestSeller,
       images: images ?? this.images,
       imageDeleteTokens: imageDeleteTokens ?? this.imageDeleteTokens,
       stock: stock ?? this.stock,
-      unit: unit,
-      tags: tags,
+      unit: unit ?? this.unit,
+      tags: tags ?? this.tags,
       isActive: isActive ?? this.isActive,
       isReturnable: isReturnable ?? this.isReturnable,
       returnPolicy: returnPolicy ?? this.returnPolicy,
       variations: variations ?? this.variations,
       specifications: specifications ?? this.specifications,
       highlights: highlights ?? this.highlights,
-      createdAt: createdAt,
-      salesCount: salesCount,
-      averageRating: averageRating,
-      reviewCount: reviewCount,
+      createdAt: createdAt ?? this.createdAt,
+      salesCount: salesCount ?? this.salesCount,
+      averageRating: averageRating ?? this.averageRating,
+      reviewCount: reviewCount ?? this.reviewCount,
     );
   }
 
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final rawData = doc.data();
+    final data = rawData is Map<String, dynamic>
+        ? rawData
+        : (rawData is Map ? Map<String, dynamic>.from(rawData) : <String, dynamic>{});
+
     return ProductModel(
       id: doc.id,
-      name: data['name'] ?? '',
-      description: data['description'] ?? '',
-      price: (data['price'] as num).toInt(),
-      mrp: (data['mrp'] as num).toInt(),
-      categoryId: data['categoryId'] ?? '',
-      subCategoryId: data['subCategoryId'],
-      brand: data['brand'] ?? '',
-      brandId: data['brandId'],
-      isBestSeller: data['isBestSeller'] ?? false,
-      images: List<String>.from(data['images'] ?? []),
-      imageDeleteTokens: List<String>.from(data['imageDeleteTokens'] ?? []),
-      stock: (data['stock'] as num).toInt(),
-      unit: data['unit'] ?? 'piece',
-      tags: List<String>.from(data['tags'] ?? []),
+      name: data['name']?.toString() ?? '',
+      description: data['description']?.toString() ?? '',
+      price: (data['price'] as num?)?.toInt() ?? 0,
+      mrp: (data['mrp'] as num?)?.toInt() ?? 0,
+      categoryId: data['categoryId']?.toString() ?? '',
+      subCategoryId: data['subCategoryId']?.toString(),
+      brand: data['brand']?.toString() ?? '',
+      brandId: data['brandId']?.toString(),
+      isBestSeller: data['isBestSeller'] == true,
+      images: (data['images'] as List?)?.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList() ?? [],
+      imageDeleteTokens: (data['imageDeleteTokens'] as List?)?.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList() ?? [],
+      stock: (data['stock'] as num?)?.toInt() ?? 0,
+      unit: data['unit']?.toString() ?? 'piece',
+      tags: (data['tags'] as List?)?.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList() ?? [],
       isActive: data['isActive'] ?? true,
-      isReturnable: data['isReturnable'] ?? false,
-      returnPolicy: data['returnPolicy'],
-      variations: data['variations'] != null
-          ? Map<String, List<String>>.from(
-              (data['variations'] as Map<String, dynamic>).map(
-                (k, v) => MapEntry(k, List<String>.from(v)),
+      isReturnable: data['isReturnable'] == true,
+      returnPolicy: data['returnPolicy']?.toString(),
+      variations: data['variations'] is Map
+          ? (data['variations'] as Map).map(
+              (k, v) => MapEntry(
+                k.toString(),
+                (v is List) ? v.map((e) => e.toString()).toList() : <String>[],
               ),
             )
           : {},
-      specifications: data['specifications'] != null
-          ? Map<String, String>.from(data['specifications'] as Map<dynamic, dynamic>)
+      specifications: data['specifications'] is Map
+          ? (data['specifications'] as Map).map(
+              (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+            )
           : {},
-      highlights: List<String>.from(data['highlights'] ?? []),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      highlights: (data['highlights'] as List?)?.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList() ?? [],
+      createdAt: (data['createdAt'] is Timestamp)
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
       salesCount: (data['salesCount'] as num?)?.toInt() ?? 0,
       averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,

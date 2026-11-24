@@ -83,6 +83,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                   border: Border.all(color: context.colors.border),
                 ),
                 child: ListTile(
+                  onTap: () => _showEditCategorySheet(context, cat),
                   leading: Container(
                     width: 40,
                     height: 40,
@@ -165,6 +166,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   late final TextEditingController _orderController;
 
   File? _imageFile;
+  bool _removeImage = false;
   bool _isLoading = false;
 
   bool get _isEditing => widget.existingCategory != null;
@@ -201,6 +203,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
 
       setState(() {
         _imageFile = compressedFile != null ? File(compressedFile.path) : file;
+        _removeImage = false;
       });
     }
   }
@@ -219,11 +222,19 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
           'name': name,
           'order': order,
         };
-        if (_imageFile != null) {
-          // Upload new image and update URL
-          final imageUrl = await AdminCategoryService().uploadCategoryImage(_imageFile!);
-          updates['image'] = imageUrl;
+
+        if (_removeImage && _imageFile == null) {
+          // Remove existing category image completely
+          await AdminCategoryService().removeCategoryImage(widget.existingCategory!.id);
+          updates['image'] = '';
+          updates['imageDeleteToken'] = null;
+        } else if (_imageFile != null) {
+          // Upload new image and store URL + deleteToken
+          final uploadData = await AdminCategoryService().uploadCategoryImageWithToken(_imageFile!);
+          updates['image'] = uploadData['url'];
+          updates['imageDeleteToken'] = uploadData['delete_token'];
         }
+
         await AdminCategoryService().updateCategory(widget.existingCategory!.id, updates);
       } else {
         // Add new category
@@ -234,7 +245,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
           order: order,
           isActive: true,
         );
-        await AdminCategoryService().addCategory(cat, _imageFile);
+        await AdminCategoryService().addCategory(cat, _removeImage ? null : _imageFile);
       }
 
       if (mounted) {
@@ -255,6 +266,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   @override
   Widget build(BuildContext context) {
     final existingImageUrl = widget.existingCategory?.image ?? '';
+    final hasActiveImage = _imageFile != null || (existingImageUrl.isNotEmpty && !_removeImage);
 
     return Container(
       decoration: BoxDecoration(
@@ -283,46 +295,129 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
             ),
             const SizedBox(height: 16),
             Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 100, height: 100,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 104, height: 104,
                       decoration: BoxDecoration(
                         color: context.colors.surfaceGrey,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: context.colors.border),
+                        border: Border.all(
+                          color: _removeImage ? Colors.red.withValues(alpha: 0.5) : context.colors.border,
+                          width: _removeImage ? 1.5 : 1,
+                        ),
                         image: _imageFile != null
                             ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
-                            : (existingImageUrl.isNotEmpty
+                            : (existingImageUrl.isNotEmpty && !_removeImage
                                 ? DecorationImage(image: NetworkImage(existingImageUrl), fit: BoxFit.cover)
                                 : null),
                       ),
-                      child: (_imageFile == null && existingImageUrl.isEmpty)
-                          ? Icon(Icons.add_a_photo, color: context.colors.primary)
+                      child: !hasActiveImage
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo, color: context.colors.primary, size: 28),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Add Image',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.colors.primary),
+                                ),
+                              ],
+                            )
                           : null,
                     ),
-                    Positioned(
-                      bottom: 0, right: 0,
+                  ),
+                  // Edit / Replace Icon Badge
+                  Positioned(
+                    bottom: -2, right: -2,
+                    child: GestureDetector(
+                      onTap: _pickImage,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: context.colors.primary, shape: BoxShape.circle),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
                         child: const Icon(Icons.edit, size: 14, color: Colors.white),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  // Delete / Clear Icon Badge
+                  if (hasActiveImage)
+                    Positioned(
+                      top: -6, right: -6,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (_imageFile != null) {
+                              _imageFile = null;
+                            } else {
+                              _removeImage = true;
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 2)),
+                            ],
+                          ),
+                          child: const Icon(Icons.close, size: 13, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Center(
-              child: Text(
-                'Tap to ${existingImageUrl.isNotEmpty || _imageFile != null ? "change" : "add"} image',
-                style: TextStyle(fontSize: 12, color: context.colors.textHint),
-              ),
+              child: _removeImage
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.info_outline, size: 14, color: Colors.red),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Image will be removed upon save. ',
+                          style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _removeImage = false),
+                          child: Text(
+                            'Undo',
+                            style: TextStyle(fontSize: 12, color: context.colors.primary, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
+                    )
+                  : (hasActiveImage
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              if (_imageFile != null) {
+                                _imageFile = null;
+                              } else {
+                                _removeImage = true;
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          label: const Text('Remove Image', style: TextStyle(color: Colors.red, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        )
+                      : Text(
+                          'Tap the box to choose an image from gallery',
+                          style: TextStyle(fontSize: 12, color: context.colors.textHint),
+                        )),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             AppTextField(
               controller: _nameController,
               label: 'Category Name (e.g. Pens)',

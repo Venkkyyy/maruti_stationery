@@ -131,9 +131,13 @@ class _AnimatedSearchHintState extends State<AnimatedSearchHint> {
           // Static "Search " prefix
           Text('Search ', style: widget.style),
           // Typed text
-          Text(
-            '"$displayedText',
-            style: widget.style.copyWith(fontWeight: FontWeight.w600),
+          Flexible(
+            child: Text(
+              '"$displayedText',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: widget.style.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
           // Blinking cursor
           _BlinkingCursor(style: widget.style),

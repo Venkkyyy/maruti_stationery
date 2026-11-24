@@ -4,13 +4,26 @@ service cloud.firestore {
     // ── Public read-only ──────────────────────────────────────────────────────
     // Helper function to check if user is admin
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return request.auth != null && (
+        (request.auth.token.email != null && request.auth.token.email.lower() in ['bhupendra.jogi.mitwpu@gmail.com', 'admin@marutistationery.com']) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         ('isAdmin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true))
+      );
     }
 
     // ── Public read, Admin write ──────────────────────────────────────────────
     match /products/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      // Allow admins full update rights; allow authenticated users to update only stock and salesCount (e.g. checkout / order cancellation)
+      allow update: if isAdmin() || (
+        request.auth != null &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'salesCount']) &&
+        request.resource.data.stock is int &&
+        request.resource.data.stock >= 0 &&
+        (!('salesCount' in request.resource.data) || (request.resource.data.salesCount is int && request.resource.data.salesCount >= 0))
+      );
     }
     match /categories/{id} {
       allow read: if true;
@@ -58,8 +71,9 @@ service cloud.firestore {
     }
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'dislikedBy']));
+      allow delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
     }
     match /notifications/{notifId} {
       allow read: if request.auth != null;
@@ -81,13 +95,37 @@ service cloud.firestore {
     match /admin_notifications/{notifId} {
       allow read, write: if request.auth != null;
     }
-    match /brands/{brandId} {
+    match /brands/{id} {
       allow read: if true;
       allow write: if isAdmin();
     }
     match /ads/{adId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // ── Store Administration (Admin only) ───────────────────────
+    match /suppliers/{supplierId} {
+      allow read, write: if isAdmin();
+    }
+    match /purchases/{purchaseId} {
+      allow read, write: if isAdmin();
+    }
+    match /audit_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    match /stock_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    match /staff/{staffId} {
+      allow read, write: if isAdmin();
+    }
+    match /email_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if request.auth != null;
+    }
+    match /bulk_import_batches/{batchId} {
+      allow read, write: if isAdmin();
     }
 
     // ── Catch-all: block ────────────────────────────────────────

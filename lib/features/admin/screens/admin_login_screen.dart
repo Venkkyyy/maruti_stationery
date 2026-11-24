@@ -26,12 +26,19 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       final userModel = await ref.read(currentUserModelProvider.future);
       if (!mounted) return;
 
-      if (userModel == null ||
-          userModel.name.trim().isEmpty ||
-          userModel.phone.trim().isEmpty) {
+      if (userModel == null) {
+        throw Exception('User profile not found. Please try again.');
+      }
+
+      if (!userModel.isAdmin) {
+        await ref.read(authServiceProvider).signOut();
+        throw Exception('Access Denied: This account does not have Admin privileges.');
+      }
+
+      if (userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
         context.go('/admin/auth/complete-profile');
       } else {
-        context.go('/admin');
+        context.go('/admin/dashboard');
       }
     } catch (e) {
       if (!mounted) return;

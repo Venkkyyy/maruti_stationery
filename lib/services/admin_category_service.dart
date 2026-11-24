@@ -37,6 +37,25 @@ class AdminCategoryService {
     await _db.collection('categories').doc(categoryId).update(updates);
   }
 
+  Future<void> removeCategoryImage(String categoryId) async {
+    final doc = await _db.collection('categories').doc(categoryId).get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final token = data['imageDeleteToken'] as String?;
+      if (token != null && token.isNotEmpty) {
+        try {
+          await _deleteCloudinaryImageByToken(token);
+        } catch (e) {
+          print('Warning: Could not delete Cloudinary image: $e');
+        }
+      }
+    }
+    await _db.collection('categories').doc(categoryId).update({
+      'image': '',
+      'imageDeleteToken': null,
+    });
+  }
+
   Future<void> deleteCategory(String categoryId) async {
     final doc = await _db.collection('categories').doc(categoryId).get();
     if (doc.exists) {
@@ -68,6 +87,10 @@ class AdminCategoryService {
   Future<String> uploadCategoryImage(File file) async {
     final uploadData = await _uploadCategoryImageWithToken(file);
     return uploadData['url']!;
+  }
+
+  Future<Map<String, String>> uploadCategoryImageWithToken(File file) async {
+    return _uploadCategoryImageWithToken(file);
   }
 
   Future<Map<String, String>> _uploadCategoryImageWithToken(File file) async {

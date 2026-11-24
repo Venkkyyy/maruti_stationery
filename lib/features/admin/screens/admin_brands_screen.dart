@@ -83,6 +83,7 @@ class _AdminBrandsScreenState extends State<AdminBrandsScreen> {
                   border: Border.all(color: context.colors.border),
                 ),
                 child: ListTile(
+                  onTap: () => _showEditBrandSheet(context, brand),
                   leading: Container(
                     width: 40,
                     height: 40,
@@ -170,6 +171,7 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
   late final TextEditingController _nameController;
 
   File? _imageFile;
+  bool _removeLogo = false;
   bool _isLoading = false;
 
   bool get _isEditing => widget.existingBrand != null;
@@ -204,6 +206,7 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
 
       setState(() {
         _imageFile = compressedFile != null ? File(compressedFile.path) : file;
+        _removeLogo = false;
       });
     }
   }
@@ -216,7 +219,7 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
       final name = _nameController.text.trim();
 
       if (_isEditing) {
-        String logoUrl = widget.existingBrand!.logoUrl;
+        String logoUrl = _removeLogo ? '' : widget.existingBrand!.logoUrl;
         if (_imageFile != null) {
           logoUrl = await AdminBrandService().uploadBrandImage(_imageFile!);
         }
@@ -231,7 +234,7 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
         await AdminBrandService().updateBrand(updated);
       } else {
         String logoUrl = '';
-        if (_imageFile != null) {
+        if (_imageFile != null && !_removeLogo) {
           logoUrl = await AdminBrandService().uploadBrandImage(_imageFile!);
         }
         
@@ -263,6 +266,7 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
   @override
   Widget build(BuildContext context) {
     final existingImageUrl = widget.existingBrand?.logoUrl ?? '';
+    final hasActiveLogo = _imageFile != null || (existingImageUrl.isNotEmpty && !_removeLogo);
 
     return Container(
       decoration: BoxDecoration(
@@ -291,46 +295,127 @@ class _BrandFormSheetState extends State<_BrandFormSheet> {
             ),
             const SizedBox(height: 16),
             Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 100, height: 100,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 104, height: 104,
                       decoration: BoxDecoration(
                         color: context.colors.surfaceGrey,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: context.colors.border),
+                        border: Border.all(
+                          color: _removeLogo ? Colors.red.withValues(alpha: 0.5) : context.colors.border,
+                          width: _removeLogo ? 1.5 : 1,
+                        ),
                         image: _imageFile != null
                             ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.contain)
-                            : (existingImageUrl.isNotEmpty
+                            : (existingImageUrl.isNotEmpty && !_removeLogo
                                 ? DecorationImage(image: NetworkImage(existingImageUrl), fit: BoxFit.contain)
                                 : null),
                       ),
-                      child: (_imageFile == null && existingImageUrl.isEmpty)
-                          ? Icon(Icons.add_a_photo, color: context.colors.primary)
+                      child: !hasActiveLogo
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo, color: context.colors.primary, size: 28),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Add Logo',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: context.colors.primary),
+                                ),
+                              ],
+                            )
                           : null,
                     ),
-                    Positioned(
-                      bottom: 0, right: 0,
+                  ),
+                  Positioned(
+                    bottom: -2, right: -2,
+                    child: GestureDetector(
+                      onTap: _pickImage,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: context.colors.primary, shape: BoxShape.circle),
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
                         child: const Icon(Icons.edit, size: 14, color: Colors.white),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  if (hasActiveLogo)
+                    Positioned(
+                      top: -6, right: -6,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (_imageFile != null) {
+                              _imageFile = null;
+                            } else {
+                              _removeLogo = true;
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 2)),
+                            ],
+                          ),
+                          child: const Icon(Icons.close, size: 13, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Center(
-              child: Text(
-                'Tap to ${existingImageUrl.isNotEmpty || _imageFile != null ? "change" : "add"} logo',
-                style: TextStyle(fontSize: 12, color: context.colors.textHint),
-              ),
+              child: _removeLogo
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.info_outline, size: 14, color: Colors.red),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Logo will be removed upon save. ',
+                          style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w500),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _removeLogo = false),
+                          child: Text(
+                            'Undo',
+                            style: TextStyle(fontSize: 12, color: context.colors.primary, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                      ],
+                    )
+                  : (hasActiveLogo
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              if (_imageFile != null) {
+                                _imageFile = null;
+                              } else {
+                                _removeLogo = true;
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          label: const Text('Remove Logo', style: TextStyle(color: Colors.red, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        )
+                      : Text(
+                          'Tap the box to choose a logo from gallery',
+                          style: TextStyle(fontSize: 12, color: context.colors.textHint),
+                        )),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             AppTextField(
               controller: _nameController,
               label: 'Brand Name (e.g. Classmate)',

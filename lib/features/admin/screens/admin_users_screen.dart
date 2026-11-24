@@ -12,7 +12,7 @@ class AdminUsersScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<AdminUsersScreen> createState() => _AdminUsersScreenState();
 }
-
+      
 class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -63,7 +63,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       appBar: AppBar(
         title: const Text('Customers'),
         backgroundColor: context.colors.surface,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/admin/dashboard');
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: _isSendingReminder
@@ -140,7 +149,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
                     final user = UserModel.fromFirestore(docs[index]);
                     
                     return Card(

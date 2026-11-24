@@ -26,13 +26,18 @@ class BrandModel {
   }
 
   factory BrandModel.fromFirestore(DocumentSnapshot doc) {
-    final map = doc.data() as Map<String, dynamic>;
+    final raw = doc.data();
+    final map = raw is Map<String, dynamic>
+        ? raw
+        : (raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{});
     return BrandModel(
       id: doc.id,
-      name: map['name'] ?? '',
-      logoUrl: map['logoUrl'] ?? '',
+      name: map['name']?.toString() ?? '',
+      logoUrl: map['logoUrl']?.toString() ?? '',
       isActive: map['isActive'] ?? true,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (map['createdAt'] is Timestamp)
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 }

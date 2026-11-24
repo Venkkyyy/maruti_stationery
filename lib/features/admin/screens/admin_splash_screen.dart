@@ -44,15 +44,18 @@ class _AdminSplashScreenState extends ConsumerState<AdminSplashScreen>
           final userModel = await ref.read(currentUserModelProvider.future);
           if (!mounted) return;
 
-          if (userModel == null ||
-              userModel.name.trim().isEmpty ||
-              userModel.phone.trim().isEmpty) {
-            context.go('/admin/auth/complete-profile');
+          if (userModel != null && userModel.isAdmin) {
+            if (userModel.name.trim().isEmpty || userModel.phone.trim().isEmpty) {
+              context.go('/admin/auth/complete-profile');
+            } else {
+              context.go('/admin/dashboard');
+            }
           } else {
-            context.go('/admin');
+            await FirebaseAuth.instance.signOut();
+            if (mounted) context.go('/admin/login');
           }
         } catch (e) {
-          if (mounted) context.go('/admin');
+          if (mounted) context.go('/admin/login');
         }
       } else {
         if (mounted) context.go('/admin/login');

@@ -78,6 +78,26 @@ class AdminProductService {
     }
   }
 
+  /// Uploads image bytes directly and returns a map with 'url' and 'delete_token'.
+  Future<Map<String, String>> uploadImageBytesWithToken(Uint8List bytes, String filename) async {
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = _cloudinaryUploadPreset
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final responseData = await response.stream.bytesToString();
+      final json = jsonDecode(responseData);
+      return {
+        'url': json['secure_url'] as String,
+        'delete_token': (json['delete_token'] as String?) ?? '',
+      };
+    } else {
+      throw Exception('Failed to upload image to Cloudinary: ${response.statusCode}');
+    }
+  }
+
   /// Uploads images and returns a list of maps with 'url' and 'delete_token' for each.
   Future<List<Map<String, String>>> uploadImagesWithTokens(List<File> files) async {
     final List<Map<String, String>> results = [];

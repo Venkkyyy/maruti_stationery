@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../providers/delivery_provider.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../services/fcm_service.dart';
+import '../../../services/gmail_automation_service.dart';
 
 class DeliveryOrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -40,12 +42,37 @@ class _DeliveryOrderDetailScreenState extends ConsumerState<DeliveryOrderDetailS
     });
 
     try {
-      await FirebaseFirestore.instance.collection('orders').doc(widget.orderId).update({
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc(widget.orderId);
+      final orderDoc = await orderRef.get();
+      final userId = orderDoc.data()?['userId'] as String?;
+
+      await orderRef.update({
         'status': 'delivered',
         'paymentStatus': 'paid', // Update payment status assuming successful handoff
         'deliveredAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      if (userId != null) {
+        await FCMService.sendOrderStatusNotification(
+          orderId: widget.orderId,
+          userId: userId,
+          status: 'delivered',
+        );
+
+        final orderData = orderDoc.data() ?? {};
+        final addressData = orderData['address'] as Map<String, dynamic>?;
+        final items = (orderData['items'] as List?) ?? [];
+
+        // Trigger Gmail Delivered Automation (PIN is NOT included)
+        GmailAutomationService.sendOrderDeliveredEmail(
+          orderId: widget.orderId,
+          userId: userId,
+          deliveredAt: DateTime.now(),
+          addressMap: addressData,
+          itemCount: items.length,
+        );
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -67,10 +94,22 @@ class _DeliveryOrderDetailScreenState extends ConsumerState<DeliveryOrderDetailS
     });
 
     try {
-      await FirebaseFirestore.instance.collection('orders').doc(widget.orderId).update({
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc(widget.orderId);
+      final orderDoc = await orderRef.get();
+      final userId = orderDoc.data()?['userId'] as String?;
+
+      await orderRef.update({
         'status': 'shipped',
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      if (userId != null) {
+        await FCMService.sendOrderStatusNotification(
+          orderId: widget.orderId,
+          userId: userId,
+          status: 'shipped',
+        );
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

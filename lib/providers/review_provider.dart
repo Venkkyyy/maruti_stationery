@@ -42,6 +42,7 @@ class ReviewNotifier extends _$ReviewNotifier {
         'dislikedBy': [],
       });
       
+      await _updateProductRatingStats(productId);
       state = const AsyncData(null);
       ref.invalidate(productReviewsProvider(productId));
     } catch (e) {
@@ -56,9 +57,31 @@ class ReviewNotifier extends _$ReviewNotifier {
 
     try {
       await FirebaseFirestore.instance.collection('reviews').doc(reviewId).delete();
+      await _updateProductRatingStats(productId);
       ref.invalidate(productReviewsProvider(productId));
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<void> _updateProductRatingStats(String productId) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('productId', isEqualTo: productId)
+          .get();
+      final total = snap.docs.length;
+      final sum = snap.docs.fold<num>(
+        0,
+        (prev, d) => prev + ((d.data()['rating'] as num?) ?? 0),
+      );
+      final avg = total > 0 ? (sum / total) : 0.0;
+      await FirebaseFirestore.instance.collection('products').doc(productId).update({
+        'reviewCount': total,
+        'averageRating': double.parse(avg.toStringAsFixed(1)),
+      });
+    } catch (_) {
+      // Don't fail review submission if product update fails
     }
   }
 

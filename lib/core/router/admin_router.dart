@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../features/admin/screens/admin_login_screen.dart';
 // Admin panel screens
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/admin/screens/admin_product_categories_screen.dart';
+import '../../features/admin/screens/admin_bulk_product_upload_screen.dart';
 import '../../features/admin/screens/admin_product_list_screen.dart';
 import '../../features/admin/screens/admin_add_product_screen.dart';
 import '../../features/admin/screens/admin_coupons_screen.dart';
@@ -28,6 +30,15 @@ import '../../features/admin/screens/admin_ad_form_screen.dart';
 import '../../features/admin/screens/admin_users_screen.dart';
 import '../../features/admin/screens/admin_user_detail_screen.dart';
 import '../../features/admin/screens/admin_return_requests_screen.dart';
+import '../../features/admin/screens/admin_suppliers_screen.dart';
+import '../../features/admin/screens/admin_purchases_screen.dart';
+import '../../features/admin/screens/admin_purchase_form_screen.dart';
+import '../../features/admin/screens/admin_staff_screen.dart';
+import '../../features/admin/screens/admin_audit_logs_screen.dart';
+import '../../features/admin/screens/admin_stock_history_screen.dart';
+import '../../features/admin/screens/admin_financial_reports_screen.dart';
+import '../../features/admin/screens/admin_cms_screen.dart';
+import '../../features/admin/screens/admin_home_layout_screen.dart';
 
 // Shared screens still needed
 import '../../features/auth/screens/complete_profile_screen.dart';
@@ -42,6 +53,17 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: adminRootNavigatorKey,
     initialLocation: '/admin/splash',
+    redirect: (context, state) {
+      final isAuthRoute = state.uri.path == '/admin/splash' ||
+          state.uri.path == '/admin/login' ||
+          state.uri.path == '/admin/auth/complete-profile';
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser == null && !isAuthRoute) {
+        return '/admin/login';
+      }
+      return null;
+    },
     routes: [
       // Dedicated admin auth routes — completely separate from customer
       GoRoute(path: '/admin/splash', builder: (context, state) => const AdminSplashScreen()),
@@ -66,8 +88,14 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 ),
               ),
               GoRoute(
+                path: 'bulk-upload',
+                builder: (context, state) => const AdminBulkProductUploadScreen(),
+              ),
+              GoRoute(
                 path: 'add',
-                builder: (context, state) => const AdminAddProductScreen(),
+                builder: (context, state) => AdminAddProductScreen(
+                  initialCategoryId: state.extra as String?,
+                ),
               ),
               GoRoute(
                 path: 'edit/:id',
@@ -155,6 +183,20 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/returns',
             builder: (context, state) => const AdminReturnRequestsScreen(),
           ),
+          GoRoute(path: '/admin/suppliers', builder: (context, state) => const AdminSuppliersScreen()),
+          GoRoute(
+            path: '/admin/purchases',
+            builder: (context, state) => const AdminPurchasesScreen(),
+            routes: [
+              GoRoute(path: 'new', builder: (context, state) => const AdminPurchaseFormScreen()),
+            ],
+          ),
+          GoRoute(path: '/admin/staff', builder: (context, state) => const AdminStaffScreen()),
+          GoRoute(path: '/admin/audit-logs', builder: (context, state) => const AdminAuditLogsScreen()),
+          GoRoute(path: '/admin/stock-history', builder: (context, state) => const AdminStockHistoryScreen()),
+          GoRoute(path: '/admin/financial-reports', builder: (context, state) => const AdminFinancialReportsScreen()),
+          GoRoute(path: '/admin/cms', builder: (context, state) => const AdminCmsScreen()),
+          GoRoute(path: '/admin/home-layout', builder: (context, state) => const AdminHomeLayoutScreen()),
         ],
       ),
     ],

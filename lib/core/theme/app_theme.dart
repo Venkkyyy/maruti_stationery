@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:maruti_stationery/core/constants/app_text_styles.dart';
 
 class AppThemeColors {
@@ -75,21 +76,21 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 class AppTheme {
   // ── Light Colors ─────────────────────────────────────────────────────────
   static const AppThemeColors _lightColors = AppThemeColors(
-    primary: Color(0xFFF45B0B),        // Primary buttons
-    primaryLight: Color(0xFFFFF0DD),   // Selected category
-    secondary: Color(0xFFFFF0DD),      // Selected category
-    background: Color(0xFFFFF8EF),     // App background
-    surface: Color(0xFFFFFFFF),        // Product cards
-    surfaceGrey: Color(0xFFF1F3F4),
-    textPrimary: Color(0xFF183153),    // Headings
-    textSecondary: Color(0xFF6B7280),  // Product descriptions
-    textHint: Color(0xFF9AA0A6),
-    border: Color(0xFFF2D5B8),         // Borders
-    divider: Color(0xFFF2D5B8),        // Borders
-    error: Color(0xFFEA4335),
-    errorLight: Color(0xFFFCE8E6),
-    success: Color(0xFFDDF4D7),        // Discount badges
-    warning: Color(0xFFFBBC05),
+    primary: Color(0xFFEE6A2B),        // Exact Reference Vibrant Orange
+    primaryLight: Color(0xFFFFEFE6),   // Soft orange tint
+    secondary: Color(0xFF1A38C9),      // Exact Reference Royal Blue
+    background: Color(0xFFFAF7EE),     // Exact Reference warm cream canvas
+    surface: Color(0xFFFFFFFF),        // Pure white cards
+    surfaceGrey: Color(0xFFF6F3EA),    // Warm grey for placeholders
+    textPrimary: Color(0xFF111827),    // Deep slate black
+    textSecondary: Color(0xFF6B7280),  // Subtitles / grey text
+    textHint: Color(0xFF9CA3AF),       // Search placeholder
+    border: Color(0xFFE8E3D7),         // Warm subtle border
+    divider: Color(0xFFE8E3D7),
+    error: Color(0xFFEF4444),
+    errorLight: Color(0xFFFEE2E2),
+    success: Color(0xFF22C55E),        // Discount badges
+    warning: Color(0xFFF59E0B),
   );
 
   // ── Dark Colors ──────────────────────────────────────────────────────────
@@ -117,6 +118,7 @@ class AppTheme {
       brightness: brightness,
       useMaterial3: true,
       platform: TargetPlatform.iOS,
+      fontFamily: GoogleFonts.poppins().fontFamily,
       scaffoldBackgroundColor: colors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: colors.primary,
@@ -225,10 +227,16 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colors.surface,
-        elevation: 0,
+        elevation: 3,
+        shadowColor: brightness == Brightness.light
+            ? Colors.black.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: colors.border),
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: colors.border.withValues(alpha: 0.5),
+            width: 0.8,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),

@@ -172,8 +172,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 hintStyle: TextStyle(color: context.colors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                prefixIcon: Icon(Icons.search_rounded, color: context.colors.textSecondary, size: 20),
-                suffixIcon: Icon(Icons.access_time_rounded, color: context.colors.textHint, size: 20),
+                prefixIcon: Icon(Icons.search_rounded, color: context.colors.primary, size: 20),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _controller.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
               ),
               style: TextStyle(
                 fontSize: 15,

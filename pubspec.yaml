@@ -62,6 +62,7 @@ dependencies:
   # Utils
   intl: ^0.20.3
   uuid: ^4.5.3
+  archive: ^4.0.0
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.2
   image_picker: ^1.2.3
@@ -81,6 +82,10 @@ dependencies:
   pdf: ^3.13.1
   printing: ^5.15.1
   pin_code_fields: ^9.5.1
+  csv: ^8.0.0
+  file_picker: ^13.3.0
+  share_plus: ^13.3.1
+  excel_plus: ^2.29.1
 
 dev_dependencies:
   flutter_flavorizr: ^2.2.3

@@ -18,7 +18,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 class AdminAddProductScreen extends StatefulWidget {
-  const AdminAddProductScreen({super.key});
+  final String? initialCategoryId;
+  const AdminAddProductScreen({super.key, this.initialCategoryId});
 
   @override
   State<AdminAddProductScreen> createState() => _AdminAddProductScreenState();
@@ -59,7 +60,9 @@ class _AdminAddProductScreenState extends State<AdminAddProductScreen> {
       final brandSnap = await FirebaseFirestore.instance.collection('brands').orderBy('name').get();
       setState(() {
         _categories = snap.docs.map((d) => CategoryModel.fromFirestore(d)).toList();
-        if (_categories.isNotEmpty) {
+        if (widget.initialCategoryId != null && _categories.any((c) => c.id == widget.initialCategoryId)) {
+          _selectedCategory = widget.initialCategoryId;
+        } else if (_categories.isNotEmpty) {
           _selectedCategory = _categories.first.id;
         }
         _brands = brandSnap.docs.map((d) => BrandModel.fromFirestore(d)).toList();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../core/constants/app_colors.dart';
 
 class AdminScaffold extends StatelessWidget {
   final Widget child;
@@ -38,44 +40,108 @@ class AdminScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = _calculateSelectedIndex(context);
+
     return Scaffold(
-      backgroundColor: context.colors.background,
+      backgroundColor: AppColors.background,
       body: child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: context.colors.border)),
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x10000000),
+              blurRadius: 16,
+              offset: Offset(0, -4),
+            ),
+          ],
         ),
-        child: NavigationBar(
-          selectedIndex: _calculateSelectedIndex(context),
-          onDestinationSelected: (idx) => _onItemTapped(idx, context),
-          backgroundColor: context.colors.surface,
-          elevation: 0,
-          indicatorColor: context.colors.primary.withValues(alpha: 0.1),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
+        child: SafeArea(
+          top: false,
+          child: Container(
+            height: 66,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.dashboard_outlined,
+                  activeIcon: Icons.dashboard_rounded,
+                  label: 'Dashboard',
+                  isSelected: selectedIndex == 0,
+                  onTap: () => _onItemTapped(0, context),
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.inventory_2_outlined,
+                  activeIcon: Icons.inventory_2_rounded,
+                  label: 'Products',
+                  isSelected: selectedIndex == 1,
+                  onTap: () => _onItemTapped(1, context),
+                ),
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long_rounded,
+                  label: 'Orders',
+                  isSelected: selectedIndex == 2,
+                  onTap: () => _onItemTapped(2, context),
+                ),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.local_offer_outlined,
+                  activeIcon: Icons.local_offer_rounded,
+                  label: 'Coupons',
+                  isSelected: selectedIndex == 3,
+                  onTap: () => _onItemTapped(3, context),
+                ),
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.settings_outlined,
+                  activeIcon: Icons.settings_rounded,
+                  label: 'Settings',
+                  isSelected: selectedIndex == 4,
+                  onTap: () => _onItemTapped(4, context),
+                ),
+              ],
             ),
-            NavigationDestination(
-              icon: Icon(Icons.inventory_2_outlined),
-              selectedIcon: Icon(Icons.inventory_2_rounded),
-              label: 'Products',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 23,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long_rounded),
-              label: 'Orders',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.local_offer_outlined),
-              selectedIcon: Icon(Icons.local_offer_rounded),
-              label: 'Coupons',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings_rounded),
-              label: 'Settings',
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              ),
             ),
           ],
         ),

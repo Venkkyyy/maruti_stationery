@@ -19,6 +19,16 @@ class AdminBannersScreen extends ConsumerWidget {
         backgroundColor: context.colors.surface,
         foregroundColor: context.colors.textPrimary,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/admin/dashboard');
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: Icon(Icons.add_circle_outline_rounded, color: context.colors.primary),

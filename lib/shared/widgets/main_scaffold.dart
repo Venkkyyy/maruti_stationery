@@ -1,10 +1,11 @@
-import 'dart:ui';
-import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/cart_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../../providers/cart_provider.dart';
 
 class MainScaffold extends ConsumerWidget {
   final Widget child;
@@ -13,27 +14,19 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final String location = GoRouterState.of(context).matchedLocation;
-
     final cartState = ref.watch(cartProvider);
-    final bool isProductDetail = location.contains('/product/');
-    final bool showCartBar = (cartState.value?.isNotEmpty ?? false) &&
-        (location == '/home' ||
-            location == '/categories' ||
-            location == '/catalog' ||
-            isProductDetail);
+    final cartItemCount = cartState.value?.fold<int>(0, (sum, i) => sum + i.qty) ?? 0;
 
     int selectedIndex = 0;
     if (location.startsWith('/home')) {
       selectedIndex = 0;
-    } else if (location.startsWith('/categories') ||
-        location.startsWith('/catalog')) {
+    } else if (location.startsWith('/categories') || location.startsWith('/catalog')) {
       selectedIndex = 1;
-    } else if (location.startsWith('/search')) {
-      selectedIndex = 2;
     } else if (location.startsWith('/cart')) {
+      selectedIndex = 2;
+    } else if (location.startsWith('/wishlist')) {
       selectedIndex = 3;
-    } else if (location.startsWith('/profile') ||
-        location.startsWith('/orders')) {
+    } else if (location.startsWith('/profile') || location.startsWith('/orders')) {
       selectedIndex = 4;
     }
 
@@ -46,10 +39,10 @@ class MainScaffold extends ConsumerWidget {
           context.go('/categories');
           break;
         case 2:
-          context.go('/search');
+          context.go('/cart');
           break;
         case 3:
-          context.go('/cart');
+          context.go('/wishlist');
           break;
         case 4:
           context.go('/profile');
@@ -68,23 +61,41 @@ class MainScaffold extends ConsumerWidget {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: context.colors.surface,
-              title: Text('Exit App',
-                  style: TextStyle(color: context.colors.textPrimary)),
-              content: Text('Are you sure you want to exit?',
-                  style: TextStyle(color: context.colors.textSecondary)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Exit App',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              content: Text(
+                'Are you sure you want to exit Maruti Stationery?',
+                style: GoogleFonts.poppins(
+                  color: context.colors.textSecondary,
+                ),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('No',
-                      style:
-                          TextStyle(color: context.colors.textSecondary)),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: Text('Yes',
-                      style: TextStyle(
-                          color: context.colors.primary,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Exit',
+                    style: GoogleFonts.poppins(
+                      color: context.colors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -95,387 +106,177 @@ class MainScaffold extends ConsumerWidget {
         }
       },
       child: Scaffold(
-        extendBody: true,
-        body: Stack(
-          children: [
-            child,
-            if (showCartBar)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 110,
-                child: FloatingCartBar(
-                  itemCount: cartState.value
-                          ?.fold<int>(0, (sum, i) => sum + i.qty) ??
-                      0,
-                  totalPrice: cartState.value?.fold<int>(
-                          0, (sum, i) => sum + (i.price * i.qty)) ??
-                      0,
-                ),
-              ),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding:
-                const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-            child: _WaterGlassBottomNav(
-              selectedIndex: selectedIndex,
-              onTap: onTap,
-            ),
-          ),
+        backgroundColor: context.colors.background,
+        body: child,
+        bottomNavigationBar: _ReferenceBottomNavBar(
+          selectedIndex: selectedIndex,
+          cartItemCount: cartItemCount,
+          onTap: onTap,
         ),
       ),
     );
   }
 }
 
-// ── Water Glass Bottom Nav with sliding ball indicator ─────────────────────
-
-class _WaterGlassBottomNav extends StatefulWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// REFERENCE BOTTOM NAVIGATION BAR (Matches Attached Design Exactly)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ReferenceBottomNavBar extends StatelessWidget {
   final int selectedIndex;
+  final int cartItemCount;
   final ValueChanged<int> onTap;
 
-  const _WaterGlassBottomNav({
+  const _ReferenceBottomNavBar({
     required this.selectedIndex,
+    required this.cartItemCount,
     required this.onTap,
   });
 
   @override
-  State<_WaterGlassBottomNav> createState() => _WaterGlassBottomNavState();
-}
-
-class _WaterGlassBottomNavState extends State<_WaterGlassBottomNav>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _slideAnimation;
-  int _prevIndex = 0;
-
-  static const List<_NavData> _items = [
-    _NavData(Icons.home_outlined, Icons.home_rounded, 'Home'),
-    _NavData(Icons.grid_view_outlined, Icons.grid_view_rounded, 'Shop'),
-    _NavData(Icons.search_rounded, Icons.search_rounded, 'Search'),
-    _NavData(Icons.shopping_bag_outlined, Icons.shopping_bag_rounded, 'Cart'),
-    _NavData(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _prevIndex = widget.selectedIndex;
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _slideAnimation = Tween<double>(
-      begin: widget.selectedIndex.toDouble(),
-      end: widget.selectedIndex.toDouble(),
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.elasticOut,
-    ));
-  }
-
-  @override
-  void didUpdateWidget(_WaterGlassBottomNav oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedIndex != widget.selectedIndex) {
-      _slideAnimation = Tween<double>(
-        begin: _prevIndex.toDouble(),
-        end: widget.selectedIndex.toDouble(),
-      ).animate(CurvedAnimation(
-        parent: _controller,
-        curve: Curves.elasticOut,
-      ));
-      _controller.forward(from: 0);
-      _prevIndex = widget.selectedIndex;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final primary = context.colors.primary;
-    const itemCount = 5;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = context.colors.primary; // Vibrant Orange
+    final inactiveColor = isDark ? Colors.white38 : const Color(0xFF94A3B8);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(36),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.5)
+                : const Color(0x12000000),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
         child: Container(
           height: 68,
-          decoration: BoxDecoration(
-            // Water-glass gradient effect
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.28),
-                primary.withValues(alpha: 0.06),
-                Colors.white.withValues(alpha: 0.18),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(36),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.45),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: primary.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                index: 0,
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isSelected: selectedIndex == 0,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
               ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.6),
-                blurRadius: 1,
-                offset: const Offset(0, -1),
+              _buildNavItem(
+                index: 1,
+                icon: Icons.grid_view_rounded,
+                label: 'Categories',
+                isSelected: selectedIndex == 1,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.shopping_cart_outlined,
+                activeIcon: Icons.shopping_cart_rounded,
+                label: 'Cart',
+                isSelected: selectedIndex == 2,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+                badgeCount: cartItemCount,
+              ),
+              _buildNavItem(
+                index: 3,
+                icon: Icons.favorite_border_rounded,
+                activeIcon: Icons.favorite_rounded,
+                label: 'Wishlist',
+                isSelected: selectedIndex == 3,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _buildNavItem(
+                index: 4,
+                icon: Icons.person_outline_rounded,
+                activeIcon: Icons.person_rounded,
+                label: 'Profile',
+                isSelected: selectedIndex == 4,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
               ),
             ],
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final itemWidth = constraints.maxWidth / itemCount;
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Sliding indicator ball (water droplet / pill)
-                  AnimatedBuilder(
-                    animation: _slideAnimation,
-                    builder: (context, _) {
-                      final x = _slideAnimation.value * itemWidth +
-                          itemWidth / 2 -
-                          24;
-                      return Positioned(
-                        left: x,
-                        top: 8,
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                primary.withValues(alpha: 0.9),
-                                primary,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: primary.withValues(alpha: 0.5),
-                                blurRadius: 14,
-                                offset: const Offset(0, 4),
-                              ),
-                              // Inner highlight (water glass shine)
-                              BoxShadow(
-                                color: Colors.white.withValues(alpha: 0.4),
-                                blurRadius: 4,
-                                offset: const Offset(-2, -2),
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: BackdropFilter(
-                              filter:
-                                  ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.25),
-                                      Colors.transparent,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Nav items on top
-                  Row(
-                    children: List.generate(
-                      itemCount,
-                      (i) => _NavItemGlass(
-                        index: i,
-                        selectedIndex: widget.selectedIndex,
-                        data: _items[i],
-                        onTap: widget.onTap,
-                        itemWidth: constraints.maxWidth / itemCount,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
         ),
       ),
     );
   }
-}
 
-class _NavData {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  const _NavData(this.icon, this.activeIcon, this.label);
-}
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    IconData? activeIcon,
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required Color inactiveColor,
+    int badgeCount = 0,
+  }) {
+    final effectiveIcon = isSelected && activeIcon != null ? activeIcon : icon;
 
-class _NavItemGlass extends StatelessWidget {
-  final int index;
-  final int selectedIndex;
-  final _NavData data;
-  final ValueChanged<int> onTap;
-  final double itemWidth;
-
-  const _NavItemGlass({
-    required this.index,
-    required this.selectedIndex,
-    required this.data,
-    required this.onTap,
-    required this.itemWidth,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isSelected = selectedIndex == index;
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: itemWidth,
-        height: 68,
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              isSelected ? data.activeIcon : data.icon,
-              key: ValueKey(isSelected),
-              size: 26,
-              color: isSelected
-                  ? Colors.white
-                  : context.colors.textSecondary.withValues(alpha: 0.7),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Floating Cart Bar ───────────────────────────────────────────────────────
-
-class FloatingCartBar extends StatelessWidget {
-  final int itemCount;
-  final int totalPrice;
-
-  const FloatingCartBar({
-    super.key,
-    required this.itemCount,
-    required this.totalPrice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/cart'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(50),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      context.colors.primary.withValues(alpha: 0.92),
-                      context.colors.primary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(50),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.colors.primary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onTap(index),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  effectiveIcon,
+                  size: 24,
+                  color: isSelected ? activeColor : inactiveColor,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -7,
+                    child: Container(
+                      padding: const EdgeInsets.all(3.5),
                       decoration: const BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.redAccent,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.shopping_bag_rounded,
-                          color: context.colors.primary, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'View cart',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          '$itemCount Item${itemCount > 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
+                      constraints: const BoxConstraints(
+                        minWidth: 15,
+                        minHeight: 15,
                       ),
-                      child: const Icon(Icons.chevron_right_rounded,
-                          color: Colors.white, size: 24),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$badgeCount',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? activeColor : inactiveColor,
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

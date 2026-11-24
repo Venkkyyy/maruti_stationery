@@ -1,11 +1,13 @@
-import 'package:maruti_stationery/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
 import '../../../services/admin_product_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminProductListScreen extends StatefulWidget {
   final String categoryId;
@@ -23,79 +25,177 @@ class AdminProductListScreen extends StatefulWidget {
 
 class _AdminProductListScreenState extends State<AdminProductListScreen> {
   String _searchQuery = '';
+  String _filterType = 'All'; // 'All', 'In Stock', 'Out of Stock', 'Photo Pending'
 
   @override
   Widget build(BuildContext context) {
+    final isAll = widget.categoryId == 'all';
+    final displayName = isAll ? 'All' : widget.categoryName;
+
     return Scaffold(
-      backgroundColor: context.colors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('${widget.categoryName} Products'),
-        backgroundColor: context.colors.surface,
+        title: Text(
+          '$displayName Products',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.navyText, fontSize: 17),
+        ),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navyText),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Bulk Products & Photos Upload',
+            icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.royalBlue),
+            onPressed: () => context.push('/admin/products/bulk-upload'),
+          ),
+          IconButton(
+            tooltip: 'Add Single Product',
+            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+            onPressed: () => context.push('/admin/products/add', extra: isAll ? null : widget.categoryId),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: context.colors.primary,
-        onPressed: () => context.go('/admin/products/add'),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        onPressed: () => context.push('/admin/products/add', extra: isAll ? null : widget.categoryId),
+        icon: const Icon(Icons.add_rounded),
+        label: Text('Add Product', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
       ),
       body: Column(
         children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search products...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: context.colors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          // Search & Filter Section
+          Container(
+            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: Column(
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search products by name or brand...',
+                    hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: AppColors.textHint),
+                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.royalBlue),
+                    filled: true,
+                    fillColor: AppColors.surfaceWarm,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val.trim().toLowerCase();
+                    });
+                  },
                 ),
-              ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val.trim().toLowerCase();
-                });
-              },
+                const SizedBox(height: 10),
+                // Quick Filters
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All'),
+                      _buildFilterChip('Photo Pending'),
+                      _buildFilterChip('In Stock'),
+                      _buildFilterChip('Out of Stock'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
 
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('products')
-                  .where('categoryId', isEqualTo: widget.categoryId)
-                  .snapshots(),
+              stream: isAll
+                  ? FirebaseFirestore.instance.collection('products').snapshots()
+                  : FirebaseFirestore.instance
+                      .collection('products')
+                      .where('categoryId', isEqualTo: widget.categoryId)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No products found.'));
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.textHint.withValues(alpha: 0.5)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No products found in this category.',
+                            style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 14),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => context.push('/admin/products/add', extra: isAll ? null : widget.categoryId),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: Text('Add First Product', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
 
                 var products = snapshot.data!.docs
                     .map((doc) => ProductModel.fromFirestore(doc))
                     .toList();
 
+                // Sort newest first
+                products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                // Filter by type
+                if (_filterType == 'Photo Pending') {
+                  products = products.where((p) => p.images.isEmpty).toList();
+                } else if (_filterType == 'In Stock') {
+                  products = products.where((p) => p.stock > 0).toList();
+                } else if (_filterType == 'Out of Stock') {
+                  products = products.where((p) => p.stock <= 0).toList();
+                }
+
                 if (_searchQuery.isNotEmpty) {
-                  products = products.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
+                  products = products.where((p) =>
+                    p.name.toLowerCase().contains(_searchQuery) ||
+                    p.brand.toLowerCase().contains(_searchQuery)
+                  ).toList();
                 }
 
                 if (products.isEmpty) {
-                  return const Center(child: Text('No matching products found.'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textHint.withValues(alpha: 0.6)),
+                        const SizedBox(height: 10),
+                        Text(
+                          'No matching products found.',
+                          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: products.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final product = products[index];
                     return _AdminProductTile(product: product);
@@ -105,6 +205,32 @@ class _AdminProductListScreenState extends State<AdminProductListScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _filterType == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) => setState(() => _filterType = label),
+        backgroundColor: AppColors.surfaceWarm,
+        selectedColor: label == 'Photo Pending' ? AppColors.primary : AppColors.royalBlue,
+        labelStyle: GoogleFonts.poppins(
+          fontSize: 11.5,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? Colors.white : AppColors.navyText,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: isSelected ? Colors.transparent : AppColors.border,
+          ),
+        ),
+        showCheckmark: false,
       ),
     );
   }
@@ -119,13 +245,16 @@ class _AdminProductTile extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: Text('Are you sure you want to delete ${product.name}?'),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Delete Product', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.navyText)),
+        content: Text('Are you sure you want to delete "${product.name}"? This action cannot be undone.', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary))),
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: TextStyle(color: context.colors.error)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text('Delete', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -138,169 +267,192 @@ class _AdminProductTile extends StatelessWidget {
         deleteTokens: product.imageDeleteTokens,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product deleted.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.name} deleted'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasImages = product.images.isNotEmpty;
+    final isOutOfStock = product.stock <= 0;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.colors.border.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: !hasImages
+              ? AppColors.primary.withValues(alpha: 0.35)
+              : AppColors.border,
+        ),
+        boxShadow: const [
+          BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => context.push('/admin/products/edit/${product.id}'),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Thumbnail or "Photo Pending" badge
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: hasImages
+                    ? CachedNetworkImage(
+                        imageUrl: product.images.first,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(color: AppColors.surfaceWarm),
+                        errorWidget: (context, url, error) => Container(
+                          width: 72,
+                          height: 72,
+                          color: AppColors.surfaceWarm,
+                          child: const Icon(Icons.broken_image_rounded, color: AppColors.textHint),
+                        ),
+                      )
+                    : Container(
+                        width: 72,
+                        height: 72,
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_a_photo_outlined, color: AppColors.primary, size: 24),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Add Photo',
+                              style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.primary),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              if (isOutOfStock)
+                Positioned(
+                  top: 4,
+                  left: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'OOS',
+                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+
+          // Product Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image with soft shadow and rounded corners
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: context.colors.surfaceGrey,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: product.images.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: product.images.first, 
-                          fit: BoxFit.cover,
-                          memCacheWidth: 300,
-                          placeholder: (context, url) => Container(color: context.colors.surfaceGrey),
-                          errorWidget: (context, url, error) => Icon(Icons.image_not_supported_rounded, color: context.colors.textHint),
-                        )
-                      : Icon(Icons.image_not_supported_rounded, color: context.colors.textHint, size: 32),
-                ),
-                const SizedBox(width: 16),
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: context.colors.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: context.colors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              AppFormatters.formatPrice(product.price),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: context.colors.primary,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: product.stock > 5 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  product.stock > 5 ? Icons.check_circle_outline : Icons.warning_amber_rounded,
-                                  size: 12,
-                                  color: product.stock > 5 ? Colors.green : Colors.red,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Stock: ${product.stock}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: product.stock > 5 ? Colors.green : Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                Text(
+                  product.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.navyText,
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Actions (Edit, Delete, Switch)
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                const SizedBox(height: 3),
+                Text(
+                  '${product.brand}  •  Stock: ${product.stock} ${product.unit}',
+                  style: GoogleFonts.poppins(fontSize: 11.5, color: isOutOfStock ? AppColors.error : AppColors.textSecondary),
+                ),
+                const SizedBox(height: 6),
+                Row(
                   children: [
-                    Switch.adaptive(
-                      value: product.isActive,
-                      activeColor: context.colors.primary,
-                      onChanged: (val) async {
-                        await AdminProductService().updateProduct(product.id, {'isActive': val});
-                      },
-                    ),
-                    IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: context.colors.errorLight,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.delete_outline_rounded, color: context.colors.error, size: 18),
+                    Text(
+                      AppFormatters.formatPrice(product.price),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.royalBlue,
                       ),
-                      onPressed: () => _deleteProduct(context),
-                      tooltip: 'Delete Product',
                     ),
+                    if (product.mrp > product.price) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        AppFormatters.formatPrice(product.mrp),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: AppColors.textHint,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (!hasImages)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Photo Pending',
+                          style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                      ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
+
+          // Action Menu
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textHint),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            onSelected: (val) {
+              if (val == 'edit') {
+                context.push('/admin/products/edit/${product.id}');
+              } else if (val == 'delete') {
+                _deleteProduct(context);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(hasImages ? Icons.edit_rounded : Icons.add_a_photo_rounded, size: 18, color: AppColors.royalBlue),
+                    const SizedBox(width: 10),
+                    Text(hasImages ? 'Edit Product' : 'Attach Photo & Edit', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                    const SizedBox(width: 10),
+                    Text('Delete', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.error, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
-
-
-
-
-
-

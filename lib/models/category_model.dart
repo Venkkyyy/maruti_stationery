@@ -20,13 +20,16 @@ class CategoryModel {
   });
 
   factory CategoryModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final raw = doc.data();
+    final data = raw is Map<String, dynamic>
+        ? raw
+        : (raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{});
     return CategoryModel(
       id: doc.id,
-      name: data['name'] ?? '',
-      image: data['image'] ?? '',
-      imageDeleteToken: data['imageDeleteToken'],
-      parentId: data['parentId'],
+      name: data['name']?.toString() ?? '',
+      image: data['image']?.toString() ?? '',
+      imageDeleteToken: data['imageDeleteToken']?.toString(),
+      parentId: data['parentId']?.toString(),
       order: (data['order'] as num?)?.toInt() ?? 0,
       isActive: data['isActive'] ?? true,
     );

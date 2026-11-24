@@ -24,7 +24,12 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
       appBar: AppBar(
         title: const Text('Manage Coupons'),
         backgroundColor: context.colors.surface,
-        automaticallyImplyLeading: true,
+        leading: context.canPop()
+            ? IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: context.colors.textPrimary),
+                onPressed: () => context.pop(),
+              )
+            : null,
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: context.colors.primary,

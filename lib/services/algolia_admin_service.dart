@@ -54,6 +54,24 @@ class AlgoliaAdminService {
     }
   }
 
+  /// Deletes a product from Algolia index by its objectID.
+  Future<void> deleteProduct(String productId) async {
+    try {
+      final url = Uri.parse(
+        'https://' + AlgoliaService.appId + '.algolia.net/1/indexes/' +
+        AlgoliaService.indexName + '/' + productId,
+      );
+      final response = await http.delete(url, headers: _headers).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        debugPrint('Algolia: deleted product $productId');
+      } else {
+        debugPrint('Algolia Delete Error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Algolia Delete Exception: $e');
+    }
+  }
+
   /// Bulk syncs ALL products to Algolia (used from Admin Settings).
   Future<int> bulkSyncAllProducts() async {
     // Fetch ALL products (no isActive filter — sync everything)

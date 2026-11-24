@@ -22,6 +22,16 @@ class AdminAdsScreen extends ConsumerWidget {
         backgroundColor: colors.surface,
         foregroundColor: colors.textPrimary,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colors.textPrimary),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/admin/dashboard');
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/admin/ads/add'),

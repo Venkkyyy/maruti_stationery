@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/auth/screens/phone_input_screen.dart';
@@ -59,7 +58,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/auth/phone',
-        builder: (context, state) => const PhoneInputScreen(),
+        builder: (context, state) => const PhoneInputScreen(), 
       ),
 
       // Main app — ShellRoute for bottom navigation (Home, Catalog, Orders, Profile)
@@ -149,6 +148,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/categories',
             builder: (context, state) => const CategoryListScreen(),
           ),
+          GoRoute(
+            path: '/wishlist',
+            builder: (context, state) => const WishlistScreen(),
+          ),
         ],
       ),
 
@@ -180,11 +183,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ManagePaymentMethodsScreen(),
       ),
 
-      // Wishlist — outside shell
-      GoRoute(
-        path: '/wishlist',
-        builder: (context, state) => const WishlistScreen(),
-      ),
 
       // Checkout — outside shell (no bottom nav)
       GoRoute(
